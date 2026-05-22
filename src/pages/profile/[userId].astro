@@ -1,0 +1,553 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+
+const { userId } = Astro.params;
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// 1. Kiểm tra session của người dùng hiện tại
+const { data: { user: currentUser } } = await supabase.auth.getUser();
+const isOwner = currentUser?.id === userId;
+
+// 2. Tải thông tin người dùng được xem hồ sơ
+const { data: profile, error: profileError } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", userId)
+  .single();
+
+if (profileError || !profile) {
+  console.error("Lỗi fetch profile:", profileError?.message);
+  return Astro.redirect("/?error=profile-not-found");
+}
+
+// 3. Tải thông tin Gamification (Điểm tích lũy & Level)
+const { data: pointsData } = await supabase
+  .from("user_points")
+  .select("total_xp, level")
+  .eq("profile_id", userId)
+  .single();
+
+const totalXp = pointsData?.total_xp || 0;
+const level = pointsData?.level || 1;
+
+// Tính toán Level & Progress Bar giống trong CSDL
+// level = floor(sqrt(xp / 100)) + 1
+// -> xp = 100 * (level - 1)^2
+const currentLevelMinXp = 100 * Math.pow(level - 1, 2);
+const nextLevelMinXp = 100 * Math.pow(level, 2);
+const xpInCurrentLevel = totalXp - currentLevelMinXp;
+const xpForNextLevel = nextLevelMinXp - currentLevelMinXp;
+const progressPercent = Math.min(100, Math.max(0, (xpInCurrentLevel / xpForNextLevel) * 100));
+
+// 4. Tải danh sách Huy chương đã đạt được
+const { data: userBadgesData } = await supabase
+  .from("user_badges")
+  .select(`
+    earned_at,
+    badges (
+      id,
+      slug,
+      label,
+      description,
+      icon_emoji,
+      xp_required
+    )
+  `)
+  .eq("profile_id", userId);
+
+// Lọc bỏ null từ join
+const earnedBadges = userBadgesData
+  ?.map((ub: any) => ub.badges)
+  .filter((b: any) => b !== null) || [];
+
+// 5. Tải danh sách bài báo đã xuất bản của tác giả
+const { data: dbArticles } = await supabase
+  .from("articles")
+  .select("*")
+  .eq("author_id", userId)
+  .eq("status", "published")
+  .order("created_at", { ascending: false });
+
+const articles = dbArticles || [];
+
+// 6. Tải danh sách tác phẩm được phê duyệt của nghệ sĩ
+const { data: dbSubmissions } = await supabase
+  .from("submissions")
+  .select("*")
+  .eq("author_id", userId)
+  .eq("status", "approved")
+  .order("created_at", { ascending: false });
+
+const submissions = dbSubmissions || [];
+
+// 7. Thống kê bài viết, tác phẩm và lượt cảm xúc nhận được
+let totalReactionsReceived = 0;
+if (articles.length > 0) {
+  const articleSlugs = articles.map(a => a.slug);
+  const { count } = await supabase
+    .from("reactions")
+    .select("*", { count: "exact", head: true })
+    .in("article_id", articleSlugs);
+  totalReactionsReceived = count || 0;
+}
+
+const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString("vi-VN");
+---
+
+<BaseLayout title={`HỒ SƠ NGHỆ SĨ // ${profile.full_name.toUpperCase()} // VAPOR JOURNAL`} userProfile={currentUser}>
+  <!-- Nút chỉnh sửa hồ sơ (nếu là chủ sở hữu) -->
+  {isOwner && (
+    <div class="mb-6 font-retro flex justify-end">
+      <a href="/profile/edit" class="win95-btn no-underline inline-block text-black px-4 py-1.5 font-bold bg-[#fffb96]/30 border-[#fffb96]">
+        ✏️ CHỈNH SỬA HỒ SƠ
+      </a>
+    </div>
+  )}
+
+  <!-- Parallax Banner -->
+  <div class="w-full h-44 sm:h-60 border-2 border-win-dark bg-black overflow-hidden mb-6 relative select-none">
+    {profile.banner_url ? (
+      <img src={profile.banner_url} alt="Artist Banner" class="w-full h-full object-cover filter saturate-125 contrast-110 brightness-95" />
+    ) : (
+      <div class="w-full h-full bg-gradient-to-r from-vapor-purple via-[#0b001a] to-vapor-pink flex flex-col items-center justify-center p-4">
+        <h2 class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-vapor-pink to-vapor-blue uppercase tracking-widest font-retro text-center animate-[pulse_2s_infinite]">
+          {profile.full_name}
+        </h2>
+        <div class="text-[9px] tracking-[0.4em] text-vapor-green font-retro mt-2 uppercase">// RETRO DIGITAL ARTIST OASIS //</div>
+      </div>
+    )}
+  </div>
+
+  <!-- Bố cục thẻ Profile chính -->
+  <div class="grid lg:grid-cols-3 gap-8 font-retro text-black">
+    
+    <!-- Cột bên trái: Thẻ cá nhân & Thống kê & Gamification -->
+    <div class="lg:col-span-1 space-y-6">
+      
+      {/* 1. Thẻ thông tin cá nhân */}
+      <div class="win95-container bg-win-gray p-1 w-full">
+        <div class="win95-header">
+          <span>ARTIST_INFO.SYS</span>
+          <button class="win95-btn py-0 px-1">?</button>
+        </div>
+        
+        <div class="p-4 bg-win-gray flex flex-col items-center text-center space-y-4">
+          <img 
+            src={profile.avatar_url} 
+            alt={profile.full_name} 
+            class="w-24 h-24 border-2 border-win-dark filter saturate-150 contrast-110 shadow-md"
+          />
+          
+          <div class="space-y-1">
+            <h2 class="text-xl font-bold tracking-wide">{profile.full_name}</h2>
+            {profile.role === 'admin' && (
+              <span class="inline-block px-3 py-0.5 border border-vapor-pink bg-vapor-pink/10 text-vapor-pink text-[9px] font-bold uppercase tracking-wider">
+                👑 Quản Trị Viên
+              </span>
+            )}
+            {profile.role === 'editor' && (
+              <span class="inline-block px-3 py-0.5 border border-vapor-blue bg-vapor-blue/10 text-vapor-blue text-[9px] font-bold uppercase tracking-wider">
+                📼 Biên Tập Viên
+              </span>
+            )}
+            {profile.role === 'reader' && (
+              <span class="inline-block px-3 py-0.5 border border-win-dark bg-white/20 text-win-dark text-[9px] font-bold uppercase tracking-wider">
+                💾 Độc Giả
+              </span>
+            )}
+          </div>
+
+          {/* Bio Box */}
+          <div class="w-full text-left p-2.5 bg-white border border-win-dark text-xs min-h-16 shadow-inner leading-relaxed text-black/90">
+            {profile.bio ? (
+              profile.bio
+            ) : (
+              <p class="text-win-dark italic text-center py-2 text-[10px]">
+                Nghệ sĩ chưa thiết lập tiểu sử cá nhân. Rất hoài cổ.
+              </p>
+            )}
+          </div>
+
+          {/* Social Links buttons */}
+          {profile.social_links && (Object.values(profile.social_links).some(link => link)) && (
+            <div class="flex gap-2 justify-center w-full pt-2">
+              {profile.social_links.instagram && (
+                <a 
+                  href={`https://instagram.com/${profile.social_links.instagram}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="win95-btn text-[9px] font-bold px-2 py-1 flex items-center gap-1 no-underline text-black"
+                >
+                  📸 Instagram
+                </a>
+              )}
+              {profile.social_links.twitter && (
+                <a 
+                  href={`https://twitter.com/${profile.social_links.twitter}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="win95-btn text-[9px] font-bold px-2 py-1 flex items-center gap-1 no-underline text-black"
+                >
+                  🐦 Twitter
+                </a>
+              )}
+              {profile.social_links.artstation && (
+                <a 
+                  href={`https://artstation.com/${profile.social_links.artstation}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="win95-btn text-[9px] font-bold px-2 py-1 flex items-center gap-1 no-underline text-black"
+                >
+                  🎨 Artstation
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Joined date info */}
+          <div class="text-[9px] text-win-dark pt-2 w-full border-t border-win-dark/15 flex justify-between">
+            <span>NGÀY KẾT NỐI:</span>
+            <span>{joinedDate}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Thống kê & Gamification */}
+      <div class="win95-container bg-win-gray p-1 w-full">
+        <div class="win95-header">
+          <span>CONTRIBUTOR_STATS.SYS</span>
+          <button class="win95-btn py-0 px-1">?</button>
+        </div>
+        
+        <div class="p-4 bg-[#d4d4d4] space-y-4 text-xs">
+          {/* XP & Level progress bar */}
+          <div class="space-y-1.5">
+            <div class="flex justify-between font-bold text-[10px] tracking-wide uppercase">
+              <span>CẤP ĐỘ NGHỆ SĨ: LV {level}</span>
+              <span class="font-mono text-vapor-purple">{totalXp} XP</span>
+            </div>
+            
+            {/* Win95 classic progress bar */}
+            <div class="w-full bg-[#808080] border-t-2 border-l-2 border-white p-0.5 h-6 flex relative overflow-hidden shadow-inner">
+              <div 
+                class="bg-gradient-to-r from-vapor-pink to-vapor-blue h-full flex items-center justify-end pr-1 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              >
+              </div>
+              <div class="absolute inset-0 flex items-center justify-center text-[9px] font-mono text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                {Math.round(progressPercent)}% TO LEVEL {level + 1} ({xpInCurrentLevel}/{xpForNextLevel} XP)
+              </div>
+            </div>
+          </div>
+
+          {/* Simple Statistics Grid */}
+          <div class="grid grid-cols-3 gap-2 text-center pt-2">
+            <div class="p-1.5 border border-win-dark bg-white shadow-inner">
+              <span class="block text-base">📝</span>
+              <span class="block font-bold text-[10px] text-win-dark uppercase mt-0.5">BÀI VIẾT</span>
+              <span class="text-xs font-mono font-bold text-black">{articles.length}</span>
+            </div>
+            <div class="p-1.5 border border-win-dark bg-white shadow-inner">
+              <span class="block text-base">🎨</span>
+              <span class="block font-bold text-[10px] text-win-dark uppercase mt-0.5">TRANH ẢNH</span>
+              <span class="text-xs font-mono font-bold text-black">{submissions.length}</span>
+            </div>
+            <div class="p-1.5 border border-win-dark bg-white shadow-inner">
+              <span class="block text-base">🌸</span>
+              <span class="block font-bold text-[10px] text-win-dark uppercase mt-0.5">REACTIONS</span>
+              <span class="text-xs font-mono font-bold text-black">{totalReactionsReceived}</span>
+            </div>
+          </div>
+
+          {/* Badges Collection */}
+          <div class="border-t border-win-dark/30 pt-3">
+            <h4 class="font-bold text-[10px] uppercase tracking-wider mb-2 text-vapor-purple">
+              ✦ HUY CHƯƠNG ĐÃ ĐẠT ĐƯỢC ✦
+            </h4>
+            
+            {earnedBadges.length === 0 ? (
+              <div class="text-center italic text-win-dark text-[9px] py-2 bg-white/40 border border-win-dark/10">
+                Chưa nhận được huy chương nào. Đóng góp bài viết, tranh ảnh và bình luận để mở khóa!
+              </div>
+            ) : (
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {earnedBadges.map((badge: any) => (
+                  <div 
+                    key={badge.id} 
+                    class="badge-card border-2 border-white p-1.5 bg-win-gray flex items-center gap-2 select-none shadow-[1px_1px_0px_#808080]"
+                    title={`${badge.label}: ${badge.description} (${badge.xp_required} XP)`}
+                  >
+                    <span class="text-lg filter drop-shadow">{badge.icon_emoji}</span>
+                    <div class="min-w-0">
+                      <span class="block font-bold text-[10px] text-black truncate leading-tight">{badge.label}</span>
+                      <span class="block text-[8px] text-win-dark font-mono uppercase tracking-tight">Requirement: {badge.xp_required} XP</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Cột bên phải (col-span-2): Nội dung được phân chia theo Tab */}
+    <div class="lg:col-span-2 flex flex-col h-full">
+      {/* Tab Navigation buttons */}
+      <div class="flex bg-win-gray border-b border-win-dark/30 select-none">
+        <button 
+          id="tab-btn-articles" 
+          class="tab-btn active px-6 py-2 font-bold text-xs bg-[#d4d4d4] border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]"
+        >
+          📝 Bài Viết ({articles.length})
+        </button>
+        <button 
+          id="tab-btn-submissions" 
+          class="tab-btn px-6 py-2 font-bold text-xs bg-[#b8b8b8] text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30"
+        >
+          🎨 Tác Phẩm Cộng Đồng ({submissions.length})
+        </button>
+      </div>
+
+      {/* Tab Body Contents */}
+      <div class="win95-container bg-win-gray p-4 flex-grow shadow-inner mt-[-1px]">
+        
+        {/* TAB 1: BÀI VIẾT CỦA TÁC GIẢ */}
+        <div id="tab-content-articles" class="tab-pane space-y-4">
+          {articles.length === 0 ? (
+            <div class="text-center py-16 text-win-dark bg-white border border-win-dark">
+              <span class="text-3xl block mb-2">💾</span>
+              <p class="text-xs font-bold uppercase tracking-wider">CHƯA CÓ BÀI VIẾT NÀO ĐƯỢC XUẤT BẢN.</p>
+              <p class="text-[9px] text-win-dark mt-1 leading-normal">Nghệ sĩ này chưa đăng bài viết chuyên sâu nào trên Vapor Journal.</p>
+            </div>
+          ) : (
+            <div class="grid md:grid-cols-2 gap-4">
+              {articles.map((art) => (
+                <div class="win95-container bg-win-gray flex flex-col justify-between" key={art.id}>
+                  <div>
+                    <div class="win95-header py-0.5">
+                      <span class="text-[9px]">ART_VIEWER.EXE</span>
+                      <button class="win95-btn py-0 px-1">?</button>
+                    </div>
+                    <div class="p-2.5 bg-win-gray">
+                      {art.cover_url && (
+                        <img src={art.cover_url} alt={art.title} class="w-full h-32 object-cover border border-win-dark filter saturate-125 brightness-105" />
+                      )}
+                      <h3 class="text-xs font-bold text-black mt-2 mb-1.5 leading-snug line-clamp-2">{art.title}</h3>
+                      <p class="text-[10px] text-black/80 leading-normal line-clamp-2">{art.excerpt || "Khám phá thế giới nghệ thuật hoài cổ..."}</p>
+                    </div>
+                  </div>
+                  <div class="p-2.5 bg-win-gray pt-0 flex justify-between items-center border-t border-win-dark/10">
+                    <span class="text-[8px] text-win-dark font-mono">{new Date(art.created_at).toLocaleDateString("vi-VN")}</span>
+                    <a href={`/articles/${art.slug}`} class="win95-btn no-underline px-3 py-1 font-bold text-[9px] text-black">
+                      ĐỌC BÀI &gt;&gt;
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* TAB 2: TRANH ẢNH CỦA TÁC GIẢ (Masonry Grid) */}
+        <div id="tab-content-submissions" class="tab-pane hidden">
+          {submissions.length === 0 ? (
+            <div class="text-center py-16 text-win-dark bg-white border border-win-dark">
+              <span class="text-3xl block mb-2">🖼️</span>
+              <p class="text-xs font-bold uppercase tracking-wider">CHƯA CÓ TÁC PHẨM CỘNG ĐỒNG NÀO.</p>
+              <p class="text-[9px] text-win-dark mt-1 leading-normal">Tác giả chưa đóng góp tranh vẽ hoặc hình ảnh được phê duyệt lên phòng trưng bày.</p>
+            </div>
+          ) : (
+            <div class="masonry-grid w-full">
+              {submissions.map((sub, index) => (
+                <div 
+                  class="masonry-item win95-container bg-white p-1 border border-win-dark cursor-pointer transition-transform hover:scale-[1.01]" 
+                  data-index={index}
+                >
+                  <div class="overflow-hidden bg-black flex items-center justify-center max-h-72">
+                    <img 
+                      src={sub.image_url} 
+                      alt={sub.title} 
+                      class="w-full h-auto object-contain filter saturate-150 contrast-110" 
+                      loading="lazy"
+                    />
+                  </div>
+                  <div class="text-[9px] font-bold text-center mt-1.5 pb-1 text-black truncate" title={sub.title}>
+                    {sub.title}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Custom Vanilla JS Retro Image Lightbox overlay */}
+  <div id="lightbox" class="fixed inset-0 bg-black/85 flex flex-col items-center justify-center hidden z-[99999] select-none p-4">
+    <div class="win95-container max-w-4xl w-full bg-win-gray p-1">
+      <div class="win95-header">
+        <span id="lightbox-title">AESTHETIC_VIEWER.EXE</span>
+        <button id="lightbox-close" class="win95-btn py-0 px-1 font-bold">X</button>
+      </div>
+      <div class="p-4 bg-win-gray flex flex-col items-center relative">
+        <div class="relative max-h-[65vh] flex items-center justify-center bg-black border border-win-dark w-full overflow-hidden">
+          <img id="lightbox-img" src="" class="max-h-[65vh] max-w-full object-contain filter saturate-150 contrast-110" />
+          
+          {/* Controls */}
+          <button id="lightbox-prev" class="win95-btn absolute left-2 p-2 px-3.5 font-bold text-base bg-win-gray border-2 border-win-dark hover:bg-white">&lt;</button>
+          <button id="lightbox-next" class="win95-btn absolute right-2 p-2 px-3.5 font-bold text-base bg-win-gray border-2 border-win-dark hover:bg-white">&gt;</button>
+        </div>
+        <p id="lightbox-desc" class="text-xs text-black mt-3 font-retro max-w-xl text-center font-bold bg-white/40 border border-win-dark/10 p-2 w-full"></p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+{/* Masonry layout styling scoped to this page */}
+<style>
+  .masonry-grid {
+    columns: 2 220px;
+    column-gap: 0.75rem;
+    width: 100%;
+  }
+  @media (min-width: 640px) {
+    .masonry-grid {
+      columns: 3 240px;
+      column-gap: 1rem;
+    }
+  }
+  .masonry-item {
+    display: inline-block;
+    width: 100%;
+    break-inside: avoid;
+    margin-bottom: 0.75rem;
+  }
+  @media (min-width: 640px) {
+    .masonry-item {
+      margin-bottom: 1rem;
+    }
+  }
+</style>
+
+{/* Client-side interactions for tabs & lightbox */}
+<script is:inline define:vars={{ submissions }}>
+  // Đóng gói danh sách submissions vào biến cục bộ
+  window.submissionsData = submissions || [];
+  let currentImageIndex = 0;
+
+  // 1. Quản lý Hệ Thống Tab
+  const tabBtnArticles = document.getElementById("tab-btn-articles");
+  const tabBtnSubmissions = document.getElementById("tab-btn-submissions");
+  const tabContentArticles = document.getElementById("tab-content-articles");
+  const tabContentSubmissions = document.getElementById("tab-content-submissions");
+
+  if (tabBtnArticles && tabBtnSubmissions && tabContentArticles && tabContentSubmissions) {
+    tabBtnArticles.addEventListener("click", () => {
+      // Toggle button classes
+      tabBtnArticles.className = "tab-btn active px-6 py-2 font-bold text-xs bg-[#d4d4d4] border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]";
+      tabBtnSubmissions.className = "tab-btn px-6 py-2 font-bold text-xs bg-[#b8b8b8] text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30";
+      
+      // Toggle display
+      tabContentArticles.classList.remove("hidden");
+      tabContentSubmissions.classList.add("hidden");
+    });
+
+    tabBtnSubmissions.addEventListener("click", () => {
+      // Toggle button classes
+      tabBtnSubmissions.className = "tab-btn active px-6 py-2 font-bold text-xs bg-[#d4d4d4] border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]";
+      tabBtnArticles.className = "tab-btn px-6 py-2 font-bold text-xs bg-[#b8b8b8] text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30";
+      
+      // Toggle display
+      tabContentSubmissions.classList.remove("hidden");
+      tabContentArticles.classList.add("hidden");
+    });
+  }
+
+  // 2. Quản lý Lightbox xem ảnh nghệ thuật phóng to
+  const lightbox = document.getElementById("lightbox");
+  const lightboxImg = document.getElementById("lightbox-img");
+  const lightboxTitle = document.getElementById("lightbox-title");
+  const lightboxDesc = document.getElementById("lightbox-desc");
+  const lightboxClose = document.getElementById("lightbox-close");
+  const lightboxPrev = document.getElementById("lightbox-prev");
+  const lightboxNext = document.getElementById("lightbox-next");
+
+  const openLightbox = (index) => {
+    if (!window.submissionsData || !window.submissionsData[index]) return;
+    currentImageIndex = index;
+    const item = window.submissionsData[index];
+    
+    if (lightboxImg && lightboxTitle && lightboxDesc && lightbox) {
+      lightboxImg.src = item.image_url;
+      lightboxTitle.innerText = `AESTHETIC_VIEWER.EXE - ${item.title}`;
+      lightboxDesc.innerText = item.description || "Tác phẩm nghệ thuật tuyệt mỹ không chứa mô tả chi tiết.";
+      lightbox.classList.remove("hidden");
+      document.body.style.overflow = "hidden"; // block background scroll
+    }
+  };
+
+  const closeLightbox = () => {
+    if (lightbox) {
+      lightbox.classList.add("hidden");
+      document.body.style.overflow = ""; // restore scroll
+    }
+  };
+
+  const showNextImage = () => {
+    if (!window.submissionsData || window.submissionsData.length === 0) return;
+    currentImageIndex = (currentImageIndex + 1) % window.submissionsData.length;
+    openLightbox(currentImageIndex);
+  };
+
+  const showPrevImage = () => {
+    if (!window.submissionsData || window.submissionsData.length === 0) return;
+    currentImageIndex = (currentImageIndex - 1 + window.submissionsData.length) % window.submissionsData.length;
+    openLightbox(currentImageIndex);
+  };
+
+  // Gắn sự kiện click cho các item masonry
+  const masonryItems = document.querySelectorAll(".masonry-item");
+  masonryItems.forEach(item => {
+    item.addEventListener("click", () => {
+      const idx = parseInt(item.getAttribute("data-index") || "0", 10);
+      openLightbox(idx);
+    });
+  });
+
+  // Gắn sự kiện đóng
+  if (lightboxClose) {
+    lightboxClose.addEventListener("click", closeLightbox);
+  }
+  if (lightbox) {
+    // Click ngoài đóng
+    lightbox.addEventListener("click", (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+  }
+
+  // Gắn sự kiện Next/Prev
+  if (lightboxPrev) lightboxPrev.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showPrevImage();
+  });
+  if (lightboxNext) lightboxNext.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showNextImage();
+  });
+
+  // Hỗ trợ phím tắt bàn phím
+  document.addEventListener("keydown", (e) => {
+    if (lightbox && !lightbox.classList.contains("hidden")) {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowRight") showNextImage();
+      if (e.key === "ArrowLeft") showPrevImage();
+    }
+  });
+</script>

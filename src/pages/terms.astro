@@ -1,0 +1,305 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+    request: Astro.request,
+    cookies: Astro.cookies,
+});
+
+// Lấy thông tin người dùng chỉ để hiển thị trên header nếu có
+const {
+    data: { user },
+} = await supabase.auth.getUser();
+let userProfile = null;
+if (user) {
+    const { data } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url, role")
+        .eq("id", user.id)
+        .single();
+    userProfile = data;
+}
+---
+
+<BaseLayout
+    title="VAPORWAVE JOURNAL // ĐIỀU KHOẢN DỊCH VỤ & MIỄN TRỪ TRÁCH NHIỆM"
+    userProfile={userProfile}
+>
+
+    <!-- Header -->
+    <div class="text-center py-6">
+        <h1
+            class="text-3xl md:text-4xl font-extrabold uppercase tracking-widest text-vapor-pink font-retro"
+        >
+            📜 ĐIỀU KHOẢN & MIỄN TRỪ PHÁP LÝ
+        </h1>
+        <p
+            class="text-xs tracking-wider text-vapor-blue mt-2 font-retro uppercase"
+        >
+            -- KHUNG PHÁP LÝ PHI THƯƠNG MẠI & BẢO VỆ SỞ HỮU TRÍ TUỆ DỰ ÁN
+            VAPORWAVE MAGAZINE --
+        </p>
+    </div>
+
+    <!-- Main Content Window -->
+    <div class="win95-container font-retro text-black mb-10 w-full">
+        <div class="win95-header">
+            <span>LEGAL_DISCLAIMER.SYS</span>
+            <span class="text-[10px] text-vapor-yellow font-bold uppercase"
+                >VERSION 1.0 // ACTIVE</span
+            >
+        </div>
+
+        <div class="p-4 sm:p-6 bg-[#c0c0c0] space-y-6">
+            <!-- Welcome Alert -->
+            <div
+                class="bg-white border-2 border-win-dark p-4 flex gap-4 items-start shadow-inner"
+            >
+                <span class="text-3xl">⚠️</span>
+                <div class="text-xs space-y-1.5 text-win-dark">
+                    <p class="font-bold text-black uppercase">
+                        THÔNG BÁO QUAN TRỌNG DÀNH CHO KHÁCH TRUY CẬP:
+                    </p>
+                    <p class="leading-relaxed">
+                        Hệ thống này được xây dựng hoàn toàn phục vụ mục đích
+                        học tập, lưu trữ phi lợi nhuận và trải nghiệm công nghệ
+                        (Vibecoding). Bằng việc truy cập hoặc tương tác trên
+                        website, bạn mặc định đồng ý với các chính sách miễn trừ
+                        trách nhiệm pháp lý được nêu chi tiết dưới đây.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 1: Non-Commercial -->
+            <div
+                class="win95-container bg-white p-4 shadow-sm border border-win-dark"
+            >
+                <div
+                    class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3"
+                >
+                    <span class="text-xl">1</span>
+                    <h2 class="font-bold text-sm uppercase text-black">
+                        Quy chế hoạt động hoàn toàn phi thương mại
+                        (Non-Commercial Policy)
+                    </h2>
+                </div>
+                <div class="text-xs space-y-3 leading-relaxed text-black/85">
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Tuyên bố mục đích:</strong
+                        > Website này được xây dựng và vận hành hoàn toàn phục vụ
+                        mục đích học tập, trải nghiệm cá nhân, thử nghiệm lập trình
+                        tự động (vibecoding) và lưu trữ phi lợi nhuận đối với phong
+                        cách nghệ thuật Vaporwave.
+                    </p>
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Không phát sinh doanh thu:</strong
+                        > Hệ thống cam kết không tích hợp bất kỳ hình thức quảng cáo
+                        thương mại nào (như Google AdSense hoặc các mạng lưới tiếp
+                        thị liên kết), không thu phí người dùng dưới mọi hình thức
+                        (như tài khoản nâng cấp, phí tải ảnh, hay quyên góp), không
+                        kinh doanh hoặc chuyển giao dữ liệu người dùng cho bên thứ
+                        ba.
+                    </p>
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Nghĩa vụ thuế:</strong
+                        > Vì hoạt động của website hoàn toàn không phát sinh doanh
+                        thu, không có hoạt động giao dịch mua bán, trao đổi hàng hóa
+                        hay dịch vụ nào diễn ra trên hệ thống, dự án này không thuộc
+                        đối tượng phải đăng ký kinh doanh hay chịu các nghĩa vụ thuế
+                        thu nhập doanh nghiệp, thuế giá trị gia tăng hoặc thuế thu
+                        nhập cá nhân theo pháp luật về Quản lý Thuế hiện hành tại
+                        Việt Nam.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 2: UGC Safe Harbor -->
+            <div
+                class="win95-container bg-white p-4 shadow-sm border border-win-dark"
+            >
+                <div
+                    class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3"
+                >
+                    <span class="text-xl">2</span>
+                    <h2 class="font-bold text-sm uppercase text-black">
+                        Giới hạn trách nhiệm đối với nội dung người dùng (UGC
+                        Safe Harbor)
+                    </h2>
+                </div>
+                <div class="text-xs space-y-3 leading-relaxed text-black/85">
+                    <p>
+                        Theo quy định tại <strong class="text-black"
+                            >Nghị định 17/2023/NĐ-CP</strong
+                        >, website đóng vai trò là một "Doanh nghiệp cung cấp
+                        dịch vụ trung gian" cung cấp hạ tầng kết nối lưu trữ để
+                        người dùng tương tác bình luận (thông qua Supabase
+                        Realtime) và lưu trữ hình ảnh nghệ thuật (thông qua
+                        Cloudinary). BQT thiết lập cơ chế miễn trừ trách nhiệm
+                        pháp lý như sau:
+                    </p>
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li>
+                            <strong>Trách nhiệm cá nhân của người dùng:</strong> Người
+                            dùng hoàn toàn tự chịu trách nhiệm pháp lý trước mọi hình
+                            ảnh, nội dung bình luận hoặc tác phẩm do mình chủ động
+                            tải lên hệ thống. BQT không thực hiện biên tập hay kiểm
+                            duyệt trước (pre-moderation) đối với từng tệp tin ảnh
+                            và ý kiến cá nhân của người dùng.
+                        </li>
+                        <li>
+                            <strong
+                                >Quy trình Báo cáo và Gỡ bỏ (Notice and Takedown
+                                - Tuân thủ Điều 113 Nghị định 17/2023/NĐ-CP):</strong
+                            >
+                            <div class="pl-4 mt-1 space-y-1 text-win-dark">
+                                <p>
+                                    • <em>Tiếp nhận báo cáo:</em> Khi có bất kỳ chủ
+                                    thể quyền tác giả nào chứng minh được hình ảnh
+                                    hoặc nội dung do người dùng đăng tải trên website
+                                    xâm phạm quyền tác giả hợp pháp của họ, họ có
+                                    quyền gửi yêu cầu gỡ bỏ kèm theo tài liệu, chứng
+                                    cứ chứng minh quyền sở hữu đến BQT thông qua hòm
+                                    thư điện tử liên lạc công khai.
+                                </p>
+                                <p>
+                                    • <em>Thời gian xử lý nhanh chóng:</em> Ngay sau
+                                    khi tiếp nhận yêu cầu gỡ bỏ hợp lệ kèm theo chứng
+                                    cứ rõ ràng, BQT cam kết sẽ thực hiện tạm gỡ bỏ
+                                    hoặc ngăn chặn việc truy nhập tới nội dung bị
+                                    báo cáo trong vòng tối đa <strong
+                                        >72 giờ</strong
+                                    > theo đúng quy định pháp luật.
+                                </p>
+                            </div>
+                        </li>
+                        <li>
+                            <strong>Miễn trừ trách nhiệm:</strong> Sau khi thực hiện
+                            đúng quy trình gỡ bỏ nội dung xâm phạm quyền tác giả trong
+                            thời hạn luật định, BQT được miễn trừ toàn bộ trách nhiệm
+                            pháp lý liên quan đến hành vi xâm phạm bản quyền của người
+                            dùng đó theo quy định tại Nghị định 17/2023/NĐ-CP.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Section 3: Intellectual Property -->
+            <div
+                class="win95-container bg-white p-4 shadow-sm border border-win-dark"
+            >
+                <div
+                    class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3"
+                >
+                    <span class="text-xl">3</span>
+                    <h2 class="font-bold text-sm uppercase text-black">
+                        Tuyên bố quyền sở hữu trí tuệ tư liệu nghệ thuật
+                        Vaporwave
+                    </h2>
+                </div>
+                <div class="text-xs space-y-3 leading-relaxed text-black/85">
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Nguyên tắc Sử dụng Hợp lý (Fair Use):</strong
+                        > Các hình ảnh minh họa mang tính hoài cổ, biểu tượng hệ điều
+                        hành (Windows 95/98), tượng điêu khắc cổ điển hay hiệu ứng
+                        CRT được trưng bày trên website chủ yếu nhằm mục đích parody,
+                        nghiên cứu thẩm mỹ và sáng tạo nghệ thuật không gian mạng
+                        (Aesthetic Art Preservation). Các hoạt động này tuân thủ nguyên
+                        tắc "Sử dụng hợp lý" và các trường hợp ngoại lệ tại Điều 25
+                        Luật Sở hữu trí tuệ Việt Nam (trích dẫn hợp lý tác phẩm phi
+                        thương mại để minh họa mà không làm sai lệch ý đồ tác giả
+                        và không gây phương hại đến việc khai thác tác phẩm gốc của
+                        chủ sở hữu).
+                    </p>
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Tôn trọng chủ sở hữu gốc:</strong
+                        > BQT luôn tôn trọng quyền tác giả của các nghệ sĩ sáng lập
+                        phong cách. Nếu bất kỳ cá nhân, đơn vị sở hữu bản quyền nào
+                        của các tác phẩm được hiển thị trên trang không muốn tác phẩm
+                        xuất hiện tại không gian trưng bày phi thương mại này, vui
+                        lòng liên hệ trực tiếp, tác phẩm của bạn sẽ được gỡ bỏ ngay
+                        lập tức.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section 4: Operational Limitations -->
+            <div
+                class="win95-container bg-white p-4 shadow-sm border border-win-dark"
+            >
+                <div
+                    class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3"
+                >
+                    <span class="text-xl">4</span>
+                    <h2 class="font-bold text-sm uppercase text-black">
+                        Giới hạn trách nhiệm về vận hành hệ thống (Limitation of
+                        Liability)
+                    </h2>
+                </div>
+                <div class="text-xs space-y-3 leading-relaxed text-black/85">
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Hạ tầng miễn phí:</strong
+                        > Do hệ thống được triển khai trên các gói dịch vụ miễn phí
+                        giới hạn của Cloudflare Pages và Cloudinary, BQT không cam
+                        kết về tính sẵn sàng liên tục 100% của dịch vụ hoặc tính toàn
+                        vẹn tuyệt đối của dữ liệu được lưu trữ.
+                    </p>
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Sự cố bất khả kháng:</strong
+                        > BQT không chịu trách nhiệm đối với bất kỳ thiệt hại trực
+                        tiếp, gián tiếp hoặc ngẫu nhiên nào (bao gồm việc mất mát
+                        dữ liệu hình ảnh đã tải lên, lỗi kết nối thời gian thực hay
+                        các vấn đề kỹ thuật liên quan đến bên thứ ba là Google OAuth
+                        và Cloudinary) phát sinh từ quá trình người dùng sử dụng website.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Prominent Contact / Helpdesk Alert Box -->
+            <div
+                class="win95-container bg-[#fffb96]/10 border-2 border-win-dark p-6 shadow-sm text-center space-y-3"
+            >
+                <div class="text-4xl">✉️</div>
+                <h3
+                    class="font-bold text-black uppercase tracking-wider text-sm"
+                >
+                    ĐẦU MỐI TIẾP NHẬN YÊU CẦU & KHIẾU NẠI
+                </h3>
+                <p
+                    class="text-xs leading-relaxed max-w-2xl mx-auto text-black/80"
+                >
+                    Mọi thắc mắc, khiếu nại về bản quyền, yêu cầu gỡ bỏ hình ảnh
+                    hoặc bất kỳ vấn đề kỹ thuật phát sinh nào liên quan đến hoạt
+                    động của website, xin vui lòng gửi trực tiếp tới hòm thư
+                    chính thức của Ban Quản Trị:
+                </p>
+                <div
+                    class="inline-block bg-black text-[#05ffa1] font-mono text-sm sm:text-base px-4 py-2 border-2 border-win-dark shadow-inner select-all hover:scale-105 transition-transform duration-200"
+                >
+                    nongtiensonpro@gmail.com
+                </div>
+                <p class="text-[10px] text-win-dark uppercase italic">
+                    -- Cam kết phản hồi và thực hiện gỡ bỏ nội dung trong tối đa
+                    72 giờ làm việc --
+                </p>
+            </div>
+
+            <!-- Back Button -->
+            <div class="flex justify-center pt-2">
+                <a
+                    href="/"
+                    class="win95-btn font-bold px-8 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-[#dfdfdf]"
+                >
+                    ⬅️ QUAY LẠI TRANG CHỦ
+                </a>
+            </div>
+        </div>
+    </div>
+</BaseLayout>

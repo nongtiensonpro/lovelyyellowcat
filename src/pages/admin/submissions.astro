@@ -1,0 +1,213 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// Xử lý các hành động Duyệt bài (Approve / Reject)
+if (Astro.request.method === "POST" && user) {
+  const formData = await Astro.request.formData();
+  const action = formData.get("action");
+  const submissionId = formData.get("submissionId");
+
+  if (submissionId && (action === "approve" || action === "reject")) {
+    const status = action === "approve" ? "approved" : "rejected";
+    
+    // Cập nhật trạng thái duyệt tranh
+    const { error: errUpdate } = await supabase
+      .from("submissions")
+      .update({
+        status,
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString()
+      })
+      .eq("id", submissionId);
+
+    if (!errUpdate && action === "approve") {
+      // Tìm tác giả để cộng điểm thưởng 50 XP khi tranh được duyệt
+      const { data: sub } = await supabase
+        .from("submissions")
+        .select("author_id")
+        .eq("id", submissionId)
+        .single();
+        
+      if (sub?.author_id) {
+        await supabase.rpc("award_xp", {
+          p_profile_id: sub.author_id,
+          p_xp_amount: 50
+        });
+
+        // Tạo thông báo in-app cho tác giả
+        await supabase
+          .from("notifications")
+          .insert({
+            recipient: sub.author_id,
+            type: "submission_approved",
+            payload: {
+              submission_id: submissionId,
+              message: "Tác phẩm nghệ thuật của bạn đã được ban biên tập phê duyệt công khai! (+50 XP)"
+            }
+          });
+      }
+    } else if (!errUpdate && action === "reject") {
+      const { data: sub } = await supabase
+        .from("submissions")
+        .select("author_id")
+        .eq("id", submissionId)
+        .single();
+
+      if (sub?.author_id) {
+        // Tạo thông báo từ chối in-app cho tác giả
+        await supabase
+          .from("notifications")
+          .insert({
+            recipient: sub.author_id,
+            type: "submission_rejected",
+            payload: {
+              submission_id: submissionId,
+              message: "Rất tiếc, tác phẩm nghệ thuật của bạn chưa phù hợp tiêu chí chất lượng của tạp chí lần này."
+            }
+          });
+      }
+    }
+  }
+}
+
+// Lấy danh sách toàn bộ tác phẩm gửi lên
+const { data: submissions } = await supabase
+  .from("submissions")
+  .select(`
+    id,
+    title,
+    description,
+    image_url,
+    status,
+    created_at,
+    profiles:profiles!author_id (
+      full_name,
+      avatar_url
+    )
+  `)
+  .order("created_at", { ascending: false });
+
+const { count: commentsCount } = await supabase
+  .from("comments")
+  .select("*", { count: "exact", head: true });
+
+const { count: pendingSubmissionsCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "pending");
+---
+
+<BaseLayout title="VAPORWAVE MAGAZINE // DUYỆT TRANH CỘNG ĐỒNG" userProfile={userProfile}>
+  <!-- Menu Bar Quản Trị Viên -->
+  <div class="win95-container w-full mb-6 font-retro">
+    <div class="win95-header">
+      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
+    </div>
+    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
+      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
+      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
+      <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
+      <a href="/admin/submissions" class="hover:underline no-underline text-black font-bold">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1 class="text-3xl font-extrabold uppercase tracking-widest text-vapor-pink font-retro">
+      🖼️ GALLERY MODERATION
+    </h1>
+    <p class="text-xs tracking-wider text-vapor-blue mt-2 font-retro uppercase">
+      -- KIỂM DUYỆT TÁC PHẨM TẢI LÊN TỪ CỘNG ĐỒNG NGHỆ THUẬT VAPORWAVE --
+    </p>
+  </div>
+
+  <!-- Submissions Gallery Layout -->
+  <div class="win95-container font-retro text-black mb-10">
+    <div class="win95-header">
+      <span>SUBMISSION_ARCHIVE.DB</span>
+      <span class="text-[10px] text-vapor-yellow font-bold uppercase">⏳ CHỜ DUYỆT: {pendingSubmissionsCount || 0}</span>
+    </div>
+
+    <div class="p-4 bg-[#c0c0c0] grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {!submissions || submissions.length === 0 ? (
+        <div class="col-span-full p-12 text-center text-win-dark font-bold bg-white border border-win-dark shadow-inner">
+          <span class="text-4xl block mb-2">📼</span>
+          CHƯA CÓ TÁC PHẨM CỘNG ĐỒNG NÀO ĐƯỢC GỬI LÊN.
+        </div>
+      ) : (
+        submissions.map((sub: any) => (
+          <div class="win95-container bg-white flex flex-col justify-between p-2 shadow-sm border border-win-dark">
+            <div>
+              <div class="win95-header mb-2">
+                <span class="break-all font-mono text-[9px]">{sub.id}</span>
+                <span class={`px-1.5 py-0.2 border text-[8px] font-bold uppercase ${
+                  sub.status === 'approved' 
+                    ? 'bg-green-100 text-green-800 border-green-300' 
+                    : sub.status === 'pending' 
+                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300' 
+                    : 'bg-red-100 text-red-800 border-red-300'
+                }`}>
+                  {sub.status}
+                </span>
+              </div>
+              <div class="relative overflow-hidden border border-win-dark bg-black h-48 flex items-center justify-center">
+                <img 
+                  src={sub.image_url} 
+                  alt={sub.title} 
+                  class="w-full h-full object-contain filter saturate-150 contrast-110" 
+                />
+              </div>
+              <div class="p-2 space-y-1">
+                <h3 class="font-bold text-sm text-black truncate">{sub.title}</h3>
+                <p class="text-[10px] text-black/85 leading-normal min-h-8 line-clamp-2">
+                  {sub.description || "Không có mô tả..."}
+                </p>
+                <div class="border-t border-dashed border-win-dark/30 pt-2 flex items-center gap-1.5 text-[10px]">
+                  <img src={sub.profiles?.avatar_url || "/images/default-avatar.png"} class="w-4 h-4 border border-win-dark" />
+                  <span class="text-win-dark truncate">Tác giả: <strong>{sub.profiles?.full_name || "Anonymous"}</strong></span>
+                </div>
+              </div>
+            </div>
+            
+            {sub.status === 'pending' && (
+              <div class="p-2 bg-[#f0f0f0] border-t border-win-dark flex gap-2 justify-between">
+                <form method="POST" class="w-1/2 m-0">
+                  <input type="hidden" name="submissionId" value={sub.id} />
+                  <input type="hidden" name="action" value="reject" />
+                  <button type="submit" class="win95-btn w-full font-bold text-red-800 text-[10px] py-1 border-red-400">
+                    🔴 TỪ CHỐI
+                  </button>
+                </form>
+                <form method="POST" class="w-1/2 m-0">
+                  <input type="hidden" name="submissionId" value={sub.id} />
+                  <input type="hidden" name="action" value="approve" />
+                  <button type="submit" class="win95-btn w-full font-bold text-green-800 text-[10px] py-1 border-green-400">
+                    🟢 DUYỆT ẢNH
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+</BaseLayout>

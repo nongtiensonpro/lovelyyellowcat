@@ -1,141 +1,469 @@
 @import "tailwindcss";
 
-@theme {  
-  /* Khai báo hệ màu nghệ thuật Vaporwave */  
-  --color-vapor-pink: #ff71ce;  
-  --color-vapor-blue: #01cdfe;  
-  --color-vapor-green: #05ffa1;  
-  --color-vapor-yellow: #fffb96;  
-  --color-vapor-purple: #b967ff;  
-  --color-win-gray: #c0c0c0;  
-  --color-win-dark: #808080;  
-  --color-cosmic-black: #0b001a;
+@theme {
+  /* ══════════════════════════════════════════
+     NHÓM MÀU CHÍNH — Neon Signature
+     Dùng cho: tiêu đề, accent, glow, border neon
+  ══════════════════════════════════════════ */
+  --color-vapor-pink:      #ff71ce;   /* Hồng neon — màu chủ đạo */
+  --color-vapor-blue:      #01cdfe;   /* Xanh cyan — màu phụ chủ đạo */
+  --color-vapor-purple:    #b967ff;   /* Tím neon — accent */
+  --color-vapor-green:     #05ffa1;   /* Xanh lá neon — trạng thái tích cực */
+  --color-vapor-yellow:    #fffb96;   /* Vàng nhạt — highlight, cảnh báo nhẹ */
+  --color-vapor-orange:    #ff9a3c;   /* Cam hoàng hôn — accent thứ cấp */
 
-  /* Hệ thống font chữ hoài cổ */  
-  --font-retro: "MS Sans Serif", "Courier New", monospace;  
-  --font-cyber: "Satoshi", "Orbitron", sans-serif;
+  /* ══════════════════════════════════════════
+     NHÓM MÀU NỀN — Dark Space Palette
+     Dùng cho: background, surface, card
+  ══════════════════════════════════════════ */
+  --color-cosmic-black:    #0b001a;   /* Nền sâu nhất — trang, body */
+  --color-cosmic-deep:     #120024;   /* Nền card, panel */
+  --color-cosmic-mid:      #1a003a;   /* Nền hover, sidebar */
+  --color-cosmic-surface:  #240050;   /* Nền input, elevated element */
 
-  /* Cấu hình các hiệu ứng chuyển động Vaporwave đặc trưng */  
-  --animate-scanline: scanline 8s linear infinite;  
-  --animate-text-glitch: text-glitch 1.5s ease-in-out infinite alternate;  
-  --animate-crt-flicker: crt-flicker 0.15s infinite;
+  /* ══════════════════════════════════════════
+     NHÓM MÀU WIN95 — Retro OS Palette
+     Dùng cho: cửa sổ, nút, thanh tiêu đề Win95
+  ══════════════════════════════════════════ */
+  --color-win-gray:        #c0c0c0;   /* Màu xám Win95 cổ điển */
+  --color-win-light:       #dfdfdf;   /* Cạnh sáng (highlight) */
+  --color-win-dark:        #808080;   /* Cạnh tối (shadow) */
+  --color-win-darkest:     #404040;   /* Cạnh tối nhất */
+  --color-win-titlebar:    #000080;   /* Thanh tiêu đề xanh navy */
+  --color-win-titletext:   #ffffff;   /* Chữ trên thanh tiêu đề */
 
-  @keyframes scanline {  
-    0% {  
-      transform: translateY(-100%);  
-    }  
-    100% {  
-      transform: translateY(100%);  
-    }  
+  /* ══════════════════════════════════════════
+     NHÓM MÀU VĂN BẢN
+  ══════════════════════════════════════════ */
+  --color-text-primary:    #e8d5ff;   /* Chữ chính — tím nhạt trên nền tối */
+  --color-text-secondary:  #a08cc0;   /* Chữ phụ, placeholder */
+  --color-text-muted:      #604880;   /* Chữ mờ, metadata */
+  --color-text-on-win:     #000000;   /* Chữ trên nền Win95 xám */
+
+  /* ══════════════════════════════════════════
+     NHÓM MÀU TRẠNG THÁI
+  ══════════════════════════════════════════ */
+  --color-state-success:   #05ffa1;   /* = vapor-green */
+  --color-state-error:     #ff4444;   /* Đỏ lỗi */
+  --color-state-warning:   #fffb96;   /* = vapor-yellow */
+  --color-state-info:      #01cdfe;   /* = vapor-blue */
+
+  /* ══════════════════════════════════════════
+     HỆ THỐNG TYPOGRAPHY — Fluid Scaling
+  ══════════════════════════════════════════ */
+  --font-display: 'VT323', 'Press Start 2P', monospace;
+  --font-retro: 'MS Sans Serif', 'Pixelated MS Sans Serif', 'Arial', sans-serif;
+  --font-body: 'Courier New', 'Lucida Console', monospace;
+  --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+
+  --text-hero:    clamp(2.2rem, 6vw, 4rem);
+  --text-section: clamp(1.5rem, 4vw, 2.5rem);
+  --text-card:    clamp(1.1rem, 2.5vw, 1.5rem);
+  --text-body:    clamp(0.9rem, 1.5vw, 1.1rem);
+  --text-small:   clamp(0.75rem, 1.2vw, 0.875rem);
+  --text-xs:      clamp(0.65rem, 1vw, 0.75rem);
+
+  /* Breakpoints cho di động */
+  --breakpoint-xs:  480px;
+  --breakpoint-sm:  640px;
+  --breakpoint-md:  768px;
+  --breakpoint-lg:  1024px;
+  --breakpoint-xl:  1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* ══════════════════════════════════════════
+   THIẾT LẬP NỀN TẢNG & SCROLLBAR
+   ══════════════════════════════════════════ */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-cosmic-black);
+  background-image: linear-gradient(to bottom, var(--color-cosmic-black) 0%, var(--color-cosmic-deep) 100%);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-win-gray) var(--color-cosmic-deep);
+}
+
+/* Chrome/Edge/Safari scrollbar hoài cổ Windows 95 */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #e0e0e0;
+  background-image: radial-gradient(#c0c0c0 25%, transparent 25%),
+                    radial-gradient(#c0c0c0 25%, transparent 25%);
+  background-size: 4px 4px;
+  background-position: 0 0, 2px 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-win-gray);
+  box-shadow:
+    inset -1px -1px 0 var(--color-win-darkest),
+    inset  1px  1px 0 var(--color-win-light),
+    inset -2px -2px 0 var(--color-win-dark),
+    inset  2px  2px 0 var(--color-win-gray);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #d8d8d8;
+}
+
+::-webkit-scrollbar-thumb:active {
+  box-shadow:
+    inset  1px  1px 0 var(--color-win-darkest),
+    inset -1px -1px 0 var(--color-win-light);
+}
+
+/* ══════════════════════════════════════════
+   HIỆU ỨNG CRT & SCANLINES
+   ══════════════════════════════════════════ */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  opacity: 0.65;
+}
+
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(11, 0, 26, 0.55) 100%
+  );
+}
+
+.crt-scanline-animated {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 113, 206, 0),
+    rgba(255, 113, 206, 0.04) 50%,
+    rgba(255, 113, 206, 0)
+  );
+  z-index: 9998;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════
+   HỆ THỐNG KHUNG CỬA SỔ WIN95 chuẩn
+   ══════════════════════════════════════════ */
+.win95-window {
+  background: var(--color-win-gray);
+  padding: 3px;
+  box-shadow:
+    inset -1px -1px 0 var(--color-win-darkest),
+    inset  1px  1px 0 var(--color-win-light),
+    inset -2px -2px 0 var(--color-win-dark),
+    inset  2px  2px 0 var(--color-win-gray);
+}
+
+/* Kế thừa cấu trúc cũ */
+.win95-container {
+  background-color: var(--color-win-gray);
+  box-shadow:
+    inset -1px -1px 0 var(--color-win-darkest),
+    inset  1px  1px 0 var(--color-win-light),
+    inset -2px -2px 0 var(--color-win-dark),
+    inset  2px  2px 0 var(--color-win-gray);
+  padding: 3px;
+}
+
+.win95-header {
+  background: linear-gradient(to right, var(--color-win-titlebar), #1084d0);
+  color: var(--color-win-titletext);
+  font-family: var(--font-retro);
+  font-weight: bold;
+  font-size: 11px;
+  padding: 3px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+/* Nút chuẩn Win95 */
+.win95-btn {
+  background-color: var(--color-win-gray);
+  color: var(--color-text-on-win);
+  font-family: var(--font-retro);
+  font-weight: bold;
+  font-size: 11px;
+  border: none;
+  cursor: pointer;
+  box-shadow:
+    inset -1px -1px 0 var(--color-win-darkest),
+    inset  1px  1px 0 var(--color-win-light),
+    inset -2px -2px 0 var(--color-win-dark),
+    inset  2px  2px 0 var(--color-win-gray);
+  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.win95-btn:active,
+.win95-btn[aria-pressed="true"] {
+  box-shadow:
+    inset  1px  1px 0 var(--color-win-darkest),
+    inset -1px -1px 0 var(--color-win-light);
+  padding: 3px 7px 1px 9px;
+}
+
+/* Nút bấm cảm ứng thân thiện hơn */
+@media (pointer: coarse) {
+  .win95-btn,
+  button,
+  a.win95-btn {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+}
+
+.win95-raised {
+  box-shadow:
+    inset -1px -1px 0 var(--color-win-darkest),
+    inset  1px  1px 0 var(--color-win-light),
+    inset -2px -2px 0 var(--color-win-dark),
+    inset  2px  2px 0 var(--color-win-gray);
+}
+
+.win95-sunken {
+  box-shadow:
+    inset  1px  1px 0 var(--color-win-darkest),
+    inset -1px -1px 0 var(--color-win-light),
+    inset  2px  2px 0 var(--color-win-dark),
+    inset -2px -2px 0 var(--color-win-gray);
+}
+
+.win95-flat {
+  border: 1px solid var(--color-win-dark);
+}
+
+/* ══════════════════════════════════════════
+   HIỆU ỨNG CHUYỂN ĐỘNG / GLITCH
+   ══════════════════════════════════════════ */
+@keyframes scanline-move {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes crt-flicker {
+  0%   { opacity: 1; }
+  92%  { opacity: 1; }
+  93%  { opacity: 0.96; }
+  94%  { opacity: 1; }
+  96%  { opacity: 0.98; }
+  100% { opacity: 1; }
+}
+
+@keyframes glitch-soft {
+  0%, 90%, 100% {
+    text-shadow: none;
+    transform: none;
+  }
+  91% {
+    text-shadow: 2px 0 var(--color-vapor-pink), -2px 0 var(--color-vapor-blue);
+    transform: translate(1px, 0);
+  }
+  93% {
+    text-shadow: -3px 0 var(--color-vapor-pink), 3px 0 var(--color-vapor-blue);
+    transform: translate(-1px, 0);
+  }
+  95% {
+    text-shadow: none;
+    transform: translate(0, 1px);
+  }
+}
+
+@keyframes neon-pulse {
+  0%, 100% {
+    text-shadow: 0 0 4px currentColor, 0 0 10px currentColor, 0 0 18px rgba(255, 113, 206, 0.4);
+  }
+  50% {
+    text-shadow: 0 0 2px currentColor, 0 0 6px currentColor, 0 0 10px rgba(255, 113, 206, 0.2);
+  }
+}
+
+/* ══════════════════════════════════════════
+   TỐI ƯU HÓA HIỆU NĂNG THEO THIẾT BỊ (TIERS)
+   ══════════════════════════════════════════ */
+
+/* Mặc định Tier 1 & Tier 2: Không chạy animation liên tục trên mobile để tiết kiệm pin */
+body {
+  animation: none;
+}
+
+.crt-scanline-animated {
+  animation: none;
+}
+
+.text-glitch-soft {
+  text-shadow: 1px 0 0 var(--color-vapor-pink), -1px 0 0 var(--color-vapor-blue);
+}
+
+.text-neon-pulse {
+  text-shadow: 0 0 6px currentColor;
+}
+
+/* Tier 3: Thiết bị đủ mạnh & được phép chuyển động */
+@media (prefers-reduced-motion: no-preference) {
+  .text-neon-pulse {
+    animation: neon-pulse 2.5s ease-in-out infinite;
   }
 
-  @keyframes text-glitch {  
-    0% {  
-      text-shadow: 1px 0 0 var(--color-vapor-pink), -1px 0 0 var(--color-vapor-blue);  
-    }  
-    50% {  
-      text-shadow: -2px 0 0 var(--color-vapor-pink), 2px 0 0 var(--color-vapor-blue);  
-    }  
-    100% {  
-      text-shadow: 1px 1px 0 var(--color-vapor-pink), -1px -1px 0 var(--color-vapor-blue);  
-    }  
+  .text-glitch-soft {
+    animation: glitch-soft 4s infinite;
+  }
+}
+
+/* Tier 4: Màn hình lớn + Không reduced motion mới bật scanline và flicker */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  body {
+    animation: crt-flicker 10s infinite;
   }
 
-  @keyframes crt-flicker {  
-    0% { opacity: 0.985; }  
-    50% { opacity: 0.995; }  
-    100% { opacity: 0.985; }  
-  }  
+  .crt-scanline-animated {
+    animation: scanline-move 9s linear infinite;
+  }
 }
 
-/* Giao diện phủ hiệu ứng dòng quét CRT trên toàn màn hình */  
-.crt-overlay {  
-  position: relative;  
-  overflow: hidden;  
-  background-color: var(--color-cosmic-black);  
+/* ══════════════════════════════════════════
+   MOBILE UTILITIES & RESPONSIVE LAYOUTS
+   ══════════════════════════════════════════ */
+.container-vapor {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2rem);
 }
 
-.crt-overlay::before {  
-  content: " ";  
-  display: block;  
-  position: fixed;  
-  top: 0;  
-  left: 0;  
-  bottom: 0;  
-  right: 0;  
-  background: linear-gradient(  
-    rgba(18, 16, 16, 0) 50%,   
-    rgba(0, 0, 0, 0.3) 50%  
-  ), linear-gradient(  
-    90deg,   
-    rgba(255, 0, 0, 0.05),   
-    rgba(0, 255, 0, 0.02),   
-    rgba(0, 0, 255, 0.05)  
-  );  
-  background-size: 100% 4px, 3px 100%;  
-  z-index: 9999;  
-  pointer-events: none;  
+/* Touch targets & Tap Highlight */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+  touch-action: manipulation; /* Khóa double-tap zoom */
 }
 
-/* Đường quét neon di chuyển chậm từ trên xuống dưới */  
-.crt-scanline {  
-  position: fixed;  
-  top: 0;  
-  left: 0;  
-  width: 100%;  
-  height: 120px;  
-  background: linear-gradient(  
-    to bottom,  
-    rgba(255, 113, 206, 0),  
-    rgba(255, 113, 206, 0.06) 50%,  
-    rgba(255, 113, 206, 0)  
-  );  
-  z-index: 9998;  
-  pointer-events: none;  
-  animation: var(--animate-scanline);  
+/* Ngăn auto-zoom khó chịu trên iOS Safari */
+input,
+textarea,
+select {
+  font-size: max(16px, 1rem) !important;
 }
 
-/* Khung cửa sổ giao diện mô phỏng hệ điều hành Windows 95 */  
-.win95-container {  
-  background-color: var(--color-win-gray);  
-  border-top: 2px solid #ffffff;  
-  border-left: 2px solid #ffffff;  
-  border-right: 2px solid var(--color-win-dark);  
-  border-bottom: 2px solid var(--color-win-dark);  
-  box-shadow: 1px 1px 0px 0px #000000;  
-  padding: 4px;  
+/* ══════════════════════════════════════════
+   VAPORWAVE GRAPHIC STYLES
+   ══════════════════════════════════════════ */
+.vapor-grid-bg {
+  position: relative;
+  overflow: hidden;
 }
 
-.win95-header {  
-  background: linear-gradient(90deg, #000080, #1084d0);  
-  color: #ffffff;  
-  font-family: var(--font-retro);  
-  font-weight: bold;  
-  font-size: 12px;  
-  padding: 4px 8px;  
-  display: flex;  
-  justify-content: space-between;  
-  align-items: center;  
+.vapor-grid-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--color-vapor-purple) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-vapor-purple) 1px, transparent 1px);
+  background-size: 45px 45px;
+  background-position: center;
+  opacity: 0.1;
+  transform: perspective(400px) rotateX(60deg) scaleX(2.5);
+  transform-origin: bottom center;
 }
 
-.win95-btn {  
-  background-color: var(--color-win-gray);  
-  border-top: 1.5px solid #ffffff;  
-  border-left: 1.5px solid #ffffff;  
-  border-right: 1.5px solid var(--color-win-dark);  
-  border-bottom: 1.5px solid var(--color-win-dark);  
-  padding: 2px 6px;  
-  font-size: 11px;  
-  font-family: var(--font-retro);  
-  color: #000000;  
-  cursor: pointer;  
-  box-shadow: inset 0.5px 0.5px 0px 0px #ffffff;  
+.vapor-grid-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--color-cosmic-black) 0%,
+    transparent 40%,
+    transparent 70%,
+    var(--color-cosmic-black) 100%
+  );
 }
 
-.win95-btn:active {  
-  border-top: 1.5px solid var(--color-win-dark);  
-  border-left: 1.5px solid var(--color-win-dark);  
-  border-right: 1.5px solid #ffffff;  
-  border-bottom: 1.5px solid #ffffff;  
-  padding: 3px 5px 1px 7px;  
+.vapor-sun {
+  width: clamp(110px, 28vw, 190px);
+  height: clamp(55px, 14vw, 95px);
+  border-radius: 190px 190px 0 0;
+  background: linear-gradient(
+    to bottom,
+    var(--color-vapor-yellow) 0%,
+    var(--color-vapor-orange) 30%,
+    var(--color-vapor-pink) 60%,
+    var(--color-vapor-purple) 100%
+  );
+  position: relative;
+  overflow: hidden;
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    black 0px,
+    black calc(8% - 1.8px),
+    transparent calc(8% - 1.8px),
+    transparent 8%
+  );
+}
+
+/* ══════════════════════════════════════════
+   ACCESSIBILITY UTILITIES
+   ══════════════════════════════════════════ */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2.5px solid var(--color-vapor-blue);
+  outline-offset: 2.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
 }

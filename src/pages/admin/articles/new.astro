@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../../lib/supabase";
+import { ArticleEditor } from "../../../components/ArticleEditor";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại để hiển thị chào mừng
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+const { count: commentsCount } = await supabase
+  .from("comments")
+  .select("*", { count: "exact", head: true });
+
+const { count: pendingSubmissionsCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "pending");
+---
+
+<BaseLayout title="VAPORWAVE MAGAZINE // TẠO BÀI VIẾT MỚI" userProfile={userProfile}>
+  <!-- Menu Bar Quản Trị Viên -->
+  <div class="win95-container w-full mb-6 font-retro">
+    <div class="win95-header">
+      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
+    </div>
+    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
+      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
+      <a href="/admin/articles/new" class="hover:underline no-underline text-black font-bold">Viết Bài Mới</a>
+      <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
+      <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1 class="text-3xl font-extrabold uppercase tracking-widest text-vapor-pink font-retro">
+      ✍️ CREATE NEW ARCHIVE
+    </h1>
+    <p class="text-xs tracking-wider text-vapor-blue mt-2 font-retro uppercase">
+      -- TRÌNH SOẠN THẢO NỘI DUNG VAPORWAVE CAO CẤP --
+    </p>
+  </div>
+
+  <!-- React ArticleEditor Client Island -->
+  <div class="mt-4">
+    <ArticleEditor client:load />
+  </div>
+</BaseLayout>

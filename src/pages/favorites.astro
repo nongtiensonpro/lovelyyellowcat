@@ -1,0 +1,130 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../lib/supabase";
+import { GalleryGrid } from "../components/GalleryGrid";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng đăng nhập hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+let initialSubmissions = [];
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+
+  // Lấy các tác phẩm đã lưu trong mục yêu thích
+  const { data: dbFavorites } = await supabase
+    .from("favorites")
+    .select(`
+      saved_at,
+      submissions:submissions!submission_id(
+        *,
+        profiles:profiles!author_id(full_name, avatar_url)
+      )
+    `)
+    .eq("profile_id", user.id)
+    .order("saved_at", { ascending: false });
+
+  if (dbFavorites) {
+    initialSubmissions = dbFavorites
+      .map((f: any) => f.submissions)
+      .filter((s) => s !== null && s.status === "approved");
+  }
+}
+---
+
+<BaseLayout
+  title="MY_SAVED_ARCHIVES.EXE // VAPOR MAGAZINE"
+  description="Bộ sưu tập nghệ thuật hoài cổ riêng tư được lưu trữ của bạn."
+  userProfile={userProfile}
+>
+  {!userProfile ? (
+    // Màn hình Cảnh báo bảo mật hệ thống cực đẹp kiểu Windows 95
+    <div class="max-w-md mx-auto my-16 font-retro text-black">
+      <div class="win95-container bg-win-gray">
+        <div class="win95-header bg-gradient-to-r from-red-800 to-red-600">
+          <span>⚠️ SYSTEM_SECURITY_ERROR.SYS</span>
+          <button class="win95-btn py-0 px-1 font-bold">?</button>
+        </div>
+        <div class="p-4 bg-[#c0c0c0] space-y-4">
+          <div class="flex items-start gap-4">
+            <span class="text-3xl filter drop-shadow">🔒</span>
+            <div class="space-y-1">
+              <h4 class="font-extrabold text-sm uppercase text-red-800">Truy Cập Bị Từ Chối (Error 401)</h4>
+              <p class="text-[10px] leading-relaxed text-black/85">
+                Khu vực bộ sưu tập cá nhân yêu cầu mã định danh sinh trắc học và chứng thư xác thực được phân phối qua giao thức bảo mật. Vui lòng đăng nhập để mở khóa ổ đĩa lưu trữ.
+              </p>
+            </div>
+          </div>
+
+          <div class="border border-win-dark p-2 bg-white text-[9px] font-bold text-win-dark uppercase">
+            // SECURE_COMMUNICATION_LINK_OFFLINE //
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-win-dark/30">
+            <a href="/" class="win95-btn px-4 py-1.5 font-bold no-underline text-black">
+              QUAY LẠI TRANG CHỦ
+            </a>
+            <a href="/api/auth/signin" class="win95-btn px-4 py-1.5 font-bold bg-[#fffb96]/40 border-[#fffb96] no-underline text-black">
+              🔑 ĐĂNG NHẬP VỚI GOOGLE
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : (
+    // Giao diện Bộ sưu tập yêu thích của thành viên
+    <div>
+
+      {/* Tiêu đề */}
+      <div class="text-center py-6">
+        <h1 class="text-4xl md:text-6xl font-extrabold uppercase tracking-widest text-vapor-purple animate-text-glitch font-retro">
+          My Favorites
+        </h1>
+        <p class="text-xs tracking-[0.2.5em] text-vapor-pink mt-3 font-retro uppercase">
+          // YOUR PRIVATE DIGITAL GALLERY VAULT //
+        </p>
+      </div>
+
+      {/* Grid sản phẩm đã thích */}
+      <div class="mt-6 bg-[#0b001a]/40 p-4 border-2 border-win-dark/50 backdrop-blur-md">
+        <div class="win95-container bg-win-gray mb-6">
+          <div class="win95-header py-1 bg-gradient-to-r from-vapor-purple to-vapor-pink">
+            <span>SAVED_ARCHIVE_LOG.TXT</span>
+          </div>
+          <div class="p-3 bg-white text-xs font-bold text-black font-retro leading-relaxed">
+            <span class="text-vapor-purple">● Đĩa lưu trữ cá nhân bảo mật trực tuyến.</span> Bạn đã lưu <span class="text-vapor-pink">{initialSubmissions.length}</span> tác phẩm nghệ thuật cộng đồng. Những hình ảnh này chỉ hiển thị riêng tư đối với tài khoản của bạn.
+          </div>
+        </div>
+
+        {initialSubmissions.length === 0 ? (
+          <div class="win95-container bg-win-gray p-16 text-center text-win-dark font-bold">
+            <p class="text-3xl block mb-3">🤍</p>
+            <p class="text-xs uppercase">BỘ SƯU TẬP YÊU THÍCH ĐANG TRỐNG.</p>
+            <p class="text-[9px] font-normal text-win-dark/80 mt-1 max-w-sm mx-auto leading-relaxed">
+              Bạn chưa lưu bất kỳ tác phẩm nào. Hãy ghé thăm phòng triển lãm cộng đồng và nhấn nút trái tim 🤍 để lưu những tác phẩm bạn yêu thích nhất tại đây!
+            </p>
+            <a href="/gallery" class="win95-btn inline-block mt-4 px-6 py-2 no-underline text-black font-bold uppercase">
+              🌐 Đi đến Phòng Triển Lãm
+            </a>
+          </div>
+        ) : (
+          <GalleryGrid
+            client:load
+            initialSubmissions={initialSubmissions}
+            currentUser={userProfile}
+          />
+        )}
+      </div>
+    </div>
+  )}
+</BaseLayout>

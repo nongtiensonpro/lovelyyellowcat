@@ -1,0 +1,31 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../lib/supabase";
+import { SubmissionWizard } from "../components/SubmissionWizard";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let currentUser = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url")
+    .eq("id", user.id)
+    .single();
+  currentUser = data;
+}
+---
+
+<BaseLayout title="VAPORWAVE MAGAZINE // GỬI TRANH NGHỆ THUẬT CỘNG ĐỒNG" userProfile={currentUser}>
+
+  <!-- Main Wizard Component -->
+  <div class="py-4">
+    <SubmissionWizard client:load currentUser={currentUser} />
+  </div>
+</BaseLayout>

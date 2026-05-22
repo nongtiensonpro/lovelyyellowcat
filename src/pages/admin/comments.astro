@@ -1,0 +1,146 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// Xử lý các hành động POST từ Admin (Xóa bình luận)
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = formData.get("action");
+  const commentId = formData.get("commentId");
+
+  if (action === "delete" && commentId) {
+    const { error } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", commentId);
+
+    if (error) {
+      console.error("Lỗi khi xóa bình luận:", error.message);
+    }
+  }
+}
+
+// Lấy danh sách bình luận
+const { data: comments } = await supabase
+  .from("comments")
+  .select(`
+    id,
+    content,
+    created_at,
+    article_id,
+    profiles (
+      full_name,
+      avatar_url
+    )
+  `)
+  .order("created_at", { ascending: false });
+
+const { count: commentsCount } = await supabase
+  .from("comments")
+  .select("*", { count: "exact", head: true });
+
+const { count: pendingSubmissionsCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "pending");
+---
+
+<BaseLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ BÌNH LUẬN" userProfile={userProfile}>
+  <!-- Menu Bar Quản Trị Viên -->
+  <div class="win95-container w-full mb-6 font-retro">
+    <div class="win95-header">
+      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
+    </div>
+    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
+      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
+      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
+      <a href="/admin/comments" class="hover:underline no-underline text-black font-bold">Duyệt Bình Luận ({commentsCount || 0})</a>
+      <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1 class="text-3xl font-extrabold uppercase tracking-widest text-vapor-blue font-retro">
+      💬 COMMENT MODERATION
+    </h1>
+    <p class="text-xs tracking-wider text-vapor-pink mt-2 font-retro uppercase">
+      -- KIỂM DUYỆT VÀ ĐIỀU PHỐI CUỘC TRÒ CHUYỆN CỘNG ĐỒNG --
+    </p>
+  </div>
+
+  <!-- Comments Moderation Table Area -->
+  <div class="win95-container font-retro text-black mb-10">
+    <div class="win95-header">
+      <span>COMMENTS_DATABASE.DB</span>
+      <span class="text-[10px] text-vapor-green">TOTAL: {commentsCount || 0} ITEMS</span>
+    </div>
+
+    <div class="bg-white overflow-x-auto border-2 border-win-dark p-1">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-[#c0c0c0] border-b border-win-dark">
+            <th class="p-2 border-r border-win-dark font-bold w-48">NGƯỜI GỬI</th>
+            <th class="p-2 border-r border-win-dark font-bold w-44">BÀI VIẾT (ID)</th>
+            <th class="p-2 border-r border-win-dark font-bold">NỘI DUNG BÌNH LUẬN</th>
+            <th class="p-2 border-r border-win-dark font-bold w-36">NGÀY GỬI</th>
+            <th class="p-2 font-bold w-24 text-center">HÀNH ĐỘNG</th>
+          </tr>
+        </thead>
+        <tbody>
+          {!comments || comments.length === 0 ? (
+            <tr>
+              <td colspan="5" class="p-8 text-center text-win-dark font-bold">
+                CHƯA CÓ BÌNH LUẬN NÀO ĐƯỢC GỬI TRÊN HỆ THỐNG.
+              </td>
+            </tr>
+          ) : (
+            comments.map((comment: any) => (
+              <tr class="border-b border-[#e0e0e0] hover:bg-[#f5f5f5]">
+                <td class="p-2 border-r border-[#e0e0e0] font-bold text-black flex items-center gap-2">
+                  <img src={comment.profiles?.avatar_url || "/images/default-avatar.png"} class="w-6 h-6 border border-win-dark" />
+                  <span class="break-all">{comment.profiles?.full_name || "Anonymous"}</span>
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] font-mono text-[10px] text-win-dark break-all">
+                  {comment.article_id}
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] text-black italic">
+                  "{comment.content}"
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] text-win-dark text-[10px]">
+                  {new Date(comment.created_at).toLocaleString("vi-VN")}
+                </td>
+                <td class="p-2 text-center">
+                  <form method="POST" class="inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bình luận này không?');">
+                    <input type="hidden" name="action" value="delete" />
+                    <input type="hidden" name="commentId" value={comment.id} />
+                    <button type="submit" class="win95-btn font-bold text-red-700 text-[10px] px-3 py-1">
+                      ❌ XÓA
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</BaseLayout>

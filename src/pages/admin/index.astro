@@ -1,0 +1,219 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại để hiển thị chào mừng
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// Xử lý các hành động POST từ Admin (như Xóa bài viết)
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = formData.get("action");
+  const articleId = formData.get("articleId");
+
+  if (action === "delete" && articleId) {
+    const { error } = await supabase
+      .from("articles")
+      .delete()
+      .eq("id", articleId);
+
+    if (error) {
+      console.error("Lỗi khi xóa bài viết:", error.message);
+    }
+  }
+}
+
+// Lấy danh sách thống kê
+const { data: articles, error: errArt } = await supabase
+  .from("articles")
+  .select("*")
+  .order("created_at", { ascending: false });
+
+const { count: commentsCount } = await supabase
+  .from("comments")
+  .select("*", { count: "exact", head: true });
+
+const { count: pendingSubmissionsCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "pending");
+
+const { count: totalSubmissionsCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true });
+
+// Tính toán các nhóm bài viết
+const totalArticles = articles?.length || 0;
+const publishedArticles = articles?.filter(a => a.status === "published").length || 0;
+const draftArticles = articles?.filter(a => a.status === "draft").length || 0;
+---
+
+<BaseLayout title="VAPORWAVE MAGAZINE // ADMIN DASHBOARD" userProfile={userProfile}>
+  <!-- Menu Bar Quản Trị Viên -->
+  <div class="win95-container w-full mb-6 font-retro">
+    <div class="win95-header">
+      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
+    </div>
+    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
+      <a href="/admin" class="hover:underline no-underline text-black font-bold">Bảng Điều Khiển</a>
+      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
+      <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
+      <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1 class="text-4xl font-extrabold uppercase tracking-widest text-vapor-green font-retro">
+      🎛️ CONTROL PANEL
+    </h1>
+    <p class="text-xs tracking-wider text-vapor-pink mt-2 font-retro uppercase">
+      -- QUẢN TRỊ NỘI DUNG & THÀNH VIÊN VAPORWAVE --
+    </p>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid md:grid-cols-3 gap-6 mb-8 font-retro">
+    <!-- Stat Item 1: Articles -->
+    <div class="win95-container text-black">
+      <div class="win95-header">
+        <span>ARTICLE_STATS.DLL</span>
+        <button class="win95-btn py-0 px-1">?</button>
+      </div>
+      <div class="p-4 bg-[#c0c0c0] flex items-center justify-between">
+        <div>
+          <h3 class="text-xs font-bold uppercase mb-1">Tổng Số Bài Viết</h3>
+          <p class="text-3xl font-black text-vapor-purple">{totalArticles}</p>
+          <p class="text-[10px] text-black/70 mt-1">
+            Đã đăng: {publishedArticles} | Nháp: {draftArticles}
+          </p>
+        </div>
+        <span class="text-4xl">📝</span>
+      </div>
+    </div>
+
+    <!-- Stat Item 2: Comments -->
+    <div class="win95-container text-black">
+      <div class="win95-header">
+        <span>COMMENT_STATS.DLL</span>
+        <button class="win95-btn py-0 px-1">?</button>
+      </div>
+      <div class="p-4 bg-[#c0c0c0] flex items-center justify-between">
+        <div>
+          <h3 class="text-xs font-bold uppercase mb-1">Tổng Bình Luận</h3>
+          <p class="text-3xl font-black text-vapor-blue">{commentsCount || 0}</p>
+          <a href="/admin/comments" class="text-[10px] text-blue-800 underline mt-1 block">
+            Quản lý bình luận & spam >>
+          </a>
+        </div>
+        <span class="text-4xl">💬</span>
+      </div>
+    </div>
+
+    <!-- Stat Item 3: Submissions -->
+    <div class="win95-container text-black">
+      <div class="win95-header">
+        <span>GALLERY_STATS.DLL</span>
+        <button class="win95-btn py-0 px-1">?</button>
+      </div>
+      <div class="p-4 bg-[#c0c0c0] flex items-center justify-between">
+        <div>
+          <h3 class="text-xs font-bold uppercase mb-1">Tranh Cộng Đồng</h3>
+          <p class="text-3xl font-black text-vapor-pink">{totalSubmissionsCount || 0}</p>
+          <p class="text-[10px] text-black/70 mt-1">
+            Đang chờ duyệt: <span class="text-red-600 font-bold">{pendingSubmissionsCount || 0}</span>
+          </p>
+        </div>
+        <span class="text-4xl">🖼️</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Articles Table Area -->
+  <div class="win95-container font-retro text-black mb-10">
+    <div class="win95-header">
+      <span>ARTICLE_MANAGER.EXE</span>
+      <a href="/admin/articles/new" class="win95-btn text-xs font-bold py-0 px-2 text-black bg-win-gray border border-white">
+        + VIẾT BÀI MỚI
+      </a>
+    </div>
+
+    <div class="bg-white overflow-x-auto border-2 border-win-dark p-1">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-[#c0c0c0] border-b border-win-dark">
+            <th class="p-2 border-r border-win-dark font-bold">TIÊU ĐỀ BÀI VIẾT</th>
+            <th class="p-2 border-r border-win-dark font-bold w-32">SLUG</th>
+            <th class="p-2 border-r border-win-dark font-bold w-24">TRẠNG THÁI</th>
+            <th class="p-2 border-r border-win-dark font-bold w-20 text-center">LƯỢT XEM</th>
+            <th class="p-2 border-r border-win-dark font-bold w-28">NGÀY TẠO</th>
+            <th class="p-2 font-bold w-40 text-center">HÀNH ĐỘNG</th>
+          </tr>
+        </thead>
+        <tbody>
+          {!articles || articles.length === 0 ? (
+            <tr>
+              <td colspan="6" class="p-8 text-center text-win-dark font-bold">
+                CHƯA CÓ BÀI VIẾT NÀO ĐƯỢC KHỞI TẠO. HÃY NHẤN "VIẾT BÀI MỚI" ĐỂ BẮT ĐẦU.
+              </td>
+            </tr>
+          ) : (
+            articles.map((article) => (
+              <tr class="border-b border-[#e0e0e0] hover:bg-[#f0f0f0]">
+                <td class="p-2 border-r border-[#e0e0e0] font-bold text-black">
+                  {article.title}
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] font-mono text-[10px] text-win-dark break-all">
+                  {article.slug}
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0]">
+                  <span class={`px-2 py-0.5 border text-[10px] font-bold uppercase ${
+                    article.status === 'published' 
+                      ? 'bg-green-100 text-green-800 border-green-300' 
+                      : article.status === 'draft' 
+                      ? 'bg-yellow-100 text-yellow-800 border-yellow-300' 
+                      : 'bg-gray-100 text-gray-800 border-gray-300'
+                  }`}>
+                    {article.status}
+                  </span>
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] text-center font-mono font-bold">
+                  {article.view_count || 0}
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] text-win-dark text-[10px]">
+                  {new Date(article.created_at).toLocaleDateString("vi-VN")}
+                </td>
+                <td class="p-2 text-center flex justify-center gap-2">
+                  <a href={`/admin/articles/${article.id}/edit`} class="win95-btn font-bold no-underline text-black text-[10px] px-2 py-0.5">
+                    ⚙️ SỬA
+                  </a>
+                  <form method="POST" class="inline m-0" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài viết này không?');">
+                    <input type="hidden" name="action" value="delete" />
+                    <input type="hidden" name="articleId" value={article.id} />
+                    <button type="submit" class="win95-btn font-bold text-red-700 text-[10px] px-2 py-0.5">
+                      ❌ XÓA
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</BaseLayout>

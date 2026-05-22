@@ -1,0 +1,242 @@
+---
+import { SearchModal } from "./SearchModal";
+import { NotificationBell } from "./NotificationBell";
+
+interface Props {
+  userProfile?: any;
+}
+
+const { userProfile = null } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<header class="win95-container w-full mb-6 font-retro site-header relative z-50">
+  <!-- Desktop & Base Header -->
+  <div class="flex justify-between items-center bg-win-gray p-1 gap-2 min-h-[44px]">
+    <!-- Left Navigation Links (Desktop) -->
+    <div class="flex gap-2 items-center">
+      <a href="/" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath === '/' ? 'bg-vapor-pink/10' : ''}`} style="min-height: 32px;">
+        💾 Start
+      </a>
+      <div class="border-l border-white h-6 my-auto mx-0.5 hidden md:block"></div>
+      
+      <!-- Desktop Nav Link Group -->
+      <nav class="hidden md:flex gap-1.5 items-center">
+        <a href="/gallery" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/gallery') ? 'bg-vapor-pink/20 border-vapor-pink' : ''}`} style="min-height: 32px;">
+          🖼️ Triển Lãm
+        </a>
+        <a href="/artists" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/artists') ? 'bg-vapor-green/20 border-vapor-green' : ''}`} style="min-height: 32px;">
+          👥 Nghệ Sĩ
+        </a>
+        {userProfile && (
+          <a href="/favorites" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/favorites') ? 'bg-vapor-purple/20 border-vapor-purple' : ''}`} style="min-height: 32px;">
+            💜 Yêu Thích
+          </a>
+        )}
+      </nav>
+      <div class="border-l border-white h-6 my-auto mx-0.5 hidden lg:block"></div>
+      <span class="text-[10px] text-black my-auto font-bold tracking-wider hidden lg:inline">AESTHETIC_SYS_V2.EXE</span>
+    </div>
+
+    <!-- Right Controls (Desktop) -->
+    <div class="hidden md:flex gap-2 items-center flex-wrap justify-end">
+      <!-- Nút Tìm kiếm -->
+      <SearchModal client:load />
+
+      <!-- Chuông thông báo Realtime -->
+      {userProfile && <NotificationBell client:load currentUser={userProfile} />}
+
+      <!-- Nút Gửi tranh cộng đồng -->
+      {userProfile && (
+        <a href="/submit" class={`win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#05ffa1]/20 border-[#05ffa1] ${currentPath === '/submit' ? 'bg-[#05ffa1]/40' : ''}`} style="min-height: 32px;">
+          🎨 Gửi Tranh
+        </a>
+      )}
+
+      <!-- Nút Quản trị Dashboard -->
+      {userProfile && (userProfile.role === 'admin' || userProfile.role === 'editor') && (
+        <a href="/admin" class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#fffb96]/30 border-[#fffb96]" style="min-height: 32px;">
+          ⚙️ Bảng Quản Trị
+        </a>
+      )}
+
+      <div class="border-l border-white h-6 my-auto mx-1"></div>
+
+      {userProfile ? (
+        <div class="flex gap-2 items-center">
+          <a href={`/profile/${userProfile.id}`} class="flex gap-1.5 items-center no-underline hover:underline text-black">
+            <img src={userProfile.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"} class="w-6 h-6 border border-win-dark filter saturate-150 object-cover" />
+            <span class="text-xs font-bold truncate max-w-[120px]">{userProfile.full_name}</span>
+          </a>
+          <form action="/api/auth/signout" method="POST" class="m-0">
+            <button type="submit" class="win95-btn text-xs py-1" style="min-height: 28px;">Đăng xuất</button>
+          </form>
+        </div>
+      ) : (
+        <a href="/api/auth/signin" class="win95-btn text-xs font-bold text-black no-underline py-1" style="min-height: 32px;">
+          🔑 Đăng Nhập Với Google
+        </a>
+      )}
+    </div>
+
+    <!-- Mobile Navigation Toggle (Hamburger) -->
+    <div class="flex md:hidden items-center gap-2">
+      {userProfile && <NotificationBell client:load currentUser={userProfile} />}
+      <button 
+        id="hamburger-btn" 
+        class="hamburger-btn win95-btn text-black py-1 px-2.5 flex items-center justify-center font-bold" 
+        aria-label="Mở thực đơn hệ thống" 
+        aria-expanded="false"
+        aria-controls="mobile-menu-drawer"
+        style="min-height: 36px;"
+      >
+        <span class="mr-1">📂</span> Menu
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+     MOBILE MENU DRAWER — Hamburger Win95 Popup Window
+     ══════════════════════════════════════════ -->
+  <div 
+    id="mobile-menu-drawer" 
+    class="mobile-menu absolute top-[45px] left-0 right-0 hidden bg-win-gray p-1 win95-window z-50 text-black font-retro shadow-2xl"
+    aria-hidden="true"
+  >
+    <!-- Thanh tiêu đề cửa sổ Win95 của Menu di động -->
+    <div class="win95-header bg-gradient-to-r from-vapor-pink to-vapor-purple mb-2">
+      <span class="flex items-center gap-1">🗂️ SYSTEM_MENU.EXE</span>
+      <button id="close-menu-btn" class="win95-btn py-0 px-1.5 font-bold" style="min-height: 20px; font-size: 10px;" aria-label="Đóng thực đơn">✕</button>
+    </div>
+
+    <!-- Nội dung Menu điều hướng bên trong cửa sổ sunken -->
+    <div class="win95-sunken bg-cosmic-black text-white p-3 space-y-4 max-h-[70vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+      <!-- Menu Links -->
+      <div class="space-y-2">
+        <a href="/" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath === '/' ? 'bg-vapor-pink/20 border-vapor-pink text-white' : 'bg-win-gray text-black'}`}>
+          💾 TRANG CHỦ (START)
+        </a>
+        <a href="/gallery" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/gallery') ? 'bg-vapor-pink/20 border-vapor-pink text-white' : 'bg-win-gray text-black'}`}>
+          🖼️ PHÒNG TRIỂN LÃM
+        </a>
+        <a href="/artists" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/artists') ? 'bg-vapor-green/20 border-vapor-green' : 'bg-win-gray text-black'}`}>
+          👥 DANH SÁCH NGHỆ SĨ
+        </a>
+        {userProfile && (
+          <a href="/favorites" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/favorites') ? 'bg-vapor-purple/20 border-vapor-purple' : 'bg-win-gray text-black'}`}>
+            💜 TRÊN KỆ YÊU THÍCH
+          </a>
+        )}
+      </div>
+
+      <hr class="border-t border-win-dark opacity-40 my-2" />
+
+      <!-- Quick Actions (Search, Submit, Admin) -->
+      <div class="space-y-3">
+        <div class="win95-container bg-win-gray p-2 text-black space-y-2">
+          <span class="block text-[10px] font-bold text-win-dark uppercase">🔍 Tìm kiếm thông tin</span>
+          <!-- Nạp SearchModal lồng trong container -->
+          <div class="w-full flex justify-center">
+            <SearchModal client:load />
+          </div>
+        </div>
+
+        {userProfile && (
+          <div class="flex gap-2">
+            <a href="/submit" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#05ffa1]/20 border-[#05ffa1] no-underline">
+              🎨 Gửi Tranh Mới
+            </a>
+            {userProfile && (userProfile.role === 'admin' || userProfile.role === 'editor') && (
+              <a href="/admin" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#fffb96]/30 border-[#fffb96] no-underline">
+                ⚙️ Admin Panel
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+
+      <hr class="border-t border-win-dark opacity-40 my-2" />
+
+      <!-- User Profile & Session Controls -->
+      <div class="p-2 win95-container bg-win-gray text-black flex flex-col items-center gap-3">
+        {userProfile ? (
+          <>
+            <div class="flex items-center gap-2">
+              <img src={userProfile.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"} class="w-10 h-10 border border-win-dark filter saturate-150 object-cover" />
+              <div class="font-retro leading-tight">
+                <span class="block font-bold text-xs">{userProfile.full_name}</span>
+                <span class="block text-[8px] text-win-dark font-semibold uppercase">● {userProfile.role}</span>
+              </div>
+            </div>
+            <div class="flex gap-2 w-full">
+              <a href={`/profile/${userProfile.id}`} class="win95-btn flex-1 text-center py-1.5 text-black font-bold no-underline uppercase text-[10px]">
+                📁 Hồ sơ
+              </a>
+              <form action="/api/auth/signout" method="POST" class="m-0 flex-1">
+                <button type="submit" class="win95-btn w-full text-center py-1.5 text-black font-bold uppercase text-[10px]" style="min-height: auto;">
+                  🚪 Đăng xuất
+                </button>
+              </form>
+            </div>
+          </>
+        ) : (
+          <a href="/api/auth/signin" class="win95-btn w-full text-center py-2.5 text-black font-bold no-underline uppercase text-xs">
+            🔑 ĐĂNG NHẬP VỚI GOOGLE
+          </a>
+        )}
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Quản lý đóng/mở Mobile Menu Drawer
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  const closeMenuBtn = document.getElementById('close-menu-btn');
+  const mobileMenuDrawer = document.getElementById('mobile-menu-drawer');
+
+  function openMenu() {
+    if (hamburgerBtn && mobileMenuDrawer) {
+      hamburgerBtn.setAttribute('aria-expanded', 'true');
+      mobileMenuDrawer.setAttribute('aria-hidden', 'false');
+      mobileMenuDrawer.classList.remove('hidden');
+    }
+  }
+
+  function closeMenu() {
+    if (hamburgerBtn && mobileMenuDrawer) {
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      mobileMenuDrawer.setAttribute('aria-hidden', 'true');
+      mobileMenuDrawer.classList.add('hidden');
+    }
+  }
+
+  if (hamburgerBtn && mobileMenuDrawer) {
+    hamburgerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = hamburgerBtn.getAttribute('aria-expanded') === 'true';
+      if (isExpanded) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    });
+  }
+
+  if (closeMenuBtn) {
+    closeMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeMenu();
+    });
+  }
+
+  // Click ra ngoài để đóng menu
+  document.addEventListener('click', (e) => {
+    if (mobileMenuDrawer && !mobileMenuDrawer.classList.contains('hidden')) {
+      const target = e.target as HTMLElement;
+      if (mobileMenuDrawer && !mobileMenuDrawer.contains(target) && hamburgerBtn && !hamburgerBtn.contains(target)) {
+        closeMenu();
+      }
+    }
+  });
+</script>

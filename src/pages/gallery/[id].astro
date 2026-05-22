@@ -1,0 +1,211 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { ReactionBar } from "../../components/ReactionBar";
+import { RealtimeComments } from "../../components/RealtimeComments";
+import { FavoriteButton } from "../../components/FavoriteButton";
+
+const { id } = Astro.params;
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// 1. Tải thông tin người dùng đăng nhập hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// 2. Tải thông tin tác phẩm từ submissions
+const { data: submission } = await supabase
+  .from("submissions")
+  .select("*, profiles:profiles!author_id(id, full_name, avatar_url)")
+  .eq("id", id)
+  .eq("status", "approved")
+  .single();
+
+if (!submission) {
+  return Astro.redirect("/gallery");
+}
+
+// 3. Tải các bình luận ban đầu qua RPC để thực hiện SSR
+const { data: initialCommentsData } = await supabase.rpc("get_comment_tree", {
+  p_article_id: id
+});
+
+const initialComments = (initialCommentsData || []).map((c: any) => ({
+  id: c.id,
+  article_id: c.article_id,
+  content: c.content,
+  created_at: c.created_at,
+  parent_id: c.parent_id,
+  depth: c.depth,
+  profiles: {
+    id: c.profile_id,
+    full_name: c.full_name,
+    avatar_url: c.avatar_url
+  }
+}));
+
+// 4. Tạo cấu trúc Schema.org JSON-LD
+const articleJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "VisualArtwork",
+  "name": submission.title,
+  "image": submission.image_url,
+  "description": submission.description || `Khám phá tác phẩm nghệ thuật hoài cổ "${submission.title}" của nghệ sĩ ${submission.profiles?.full_name} trên Vapor Journal.`,
+  "creator": {
+    "@type": "Person",
+    "name": submission.profiles?.full_name,
+    "image": submission.profiles?.avatar_url
+  },
+  "dateCreated": submission.created_at,
+  "artMedium": "Digital Art",
+  "genre": "Vaporwave Aesthetic"
+};
+
+const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric"
+});
+---
+
+<BaseLayout
+  title={`${submission.title.toUpperCase()} // COMMUNITY_GALLERY.EXE`}
+  description={submission.description || `Khám phá bức tranh hoài cổ tuyệt đẹp "${submission.title}" của ${submission.profiles?.full_name}`}
+  ogImage={submission.image_url}
+  articleJsonLd={articleJsonLd}
+  userProfile={userProfile}
+>
+  <!-- Thanh Header điều hướng -->
+  <div class="win95-container w-full mb-6 font-retro">
+    <div class="flex flex-col sm:flex-row justify-between items-center bg-win-gray p-1 gap-2">
+      <div class="flex gap-2">
+        <a href="/gallery" class="win95-btn font-bold px-3 py-1 flex items-center gap-1 no-underline text-black">
+          ◀ Quay Lại Gallery
+        </a>
+        <div class="border-l border-white h-6 my-auto mx-1"></div>
+        <span class="text-xs text-black my-auto font-bold tracking-wider">ART_DETAILS_VIEWER.EXE</span>
+      </div>
+
+      <div class="flex gap-2 items-center text-xs">
+        <span class="text-win-dark font-bold">STATUS: COMPLETED.DLL</span>
+      </div>
+    </div>
+  </div>
+
+  {/* Khung chính 2 cột */}
+  <div class="grid lg:grid-cols-12 gap-8 items-start">
+    {/* Cột Trái: Hiển thị tranh siêu rộng (col-span-7) */}
+    <div class="lg:col-span-7 space-y-4">
+      <div class="win95-container w-full bg-win-gray">
+        <div class="win95-header">
+          <span>🖼️ CRT_MONITOR.SYS - {submission.title}</span>
+          <button class="win95-btn py-0 px-1 font-bold">?</button>
+        </div>
+
+        <div class="p-3 bg-black aspect-auto flex items-center justify-center border border-win-dark relative overflow-hidden group">
+          {/* Neon Grid overlay */}
+          <div class="absolute inset-0 opacity-10 pointer-events-none" 
+               style={{ backgroundImage: 'radial-gradient(var(--color-vapor-pink) 1px, transparent 0)', backgroundSize: '30px 30px' }} />
+
+          <img
+            src={submission.image_url}
+            alt={submission.title}
+            class="max-w-full max-h-[650px] object-contain filter saturate-125 contrast-105"
+          />
+
+          {/* CRT lines overlay */}
+          <div class="absolute inset-0 opacity-15 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none" />
+        </div>
+
+        {/* Thanh Action dưới tranh */}
+        <div class="p-3 bg-win-gray flex items-center justify-between border-t border-white gap-2 flex-wrap text-black">
+          <FavoriteButton
+            submissionId={submission.id}
+            currentUser={userProfile}
+            variant="win95"
+            client:load
+          />
+
+          <div class="text-[10px] text-win-dark font-bold font-retro">
+            LƯỢT TƯƠNG TÁC THỜI GIAN THỰC SẼ ĐỒNG BỘ QUA CYBERNET
+          </div>
+        </div>
+      </div>
+
+      {/* Bảng Reactions Deck */}
+      <ReactionBar articleId={submission.id} currentUser={userProfile} client:load />
+    </div>
+
+    {/* Cột Phải: Thông tin chi tiết, Tags & Comments (col-span-5) */}
+    <div class="lg:col-span-5 space-y-6">
+      {/* Khung Thông tin chi tiết tác phẩm */}
+      <div class="win95-container bg-win-gray">
+        <div class="win95-header">
+          <span>📂 METADATA.LOG</span>
+        </div>
+        <div class="p-4 bg-white text-black font-retro space-y-3.5 shadow-inner">
+          <h2 class="text-xl font-extrabold leading-tight text-vapor-purple border-b border-[#e6e6e6] pb-1.5 uppercase">
+            {submission.title}
+          </h2>
+          
+          <div class="flex items-center gap-2.5 bg-[#f0f0f0] border border-win-dark/30 p-2">
+            <a href={`/profile/${submission.profiles?.id}`} class="block select-none cursor-pointer">
+              <img
+                src={submission.profiles?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
+                alt={submission.profiles?.full_name}
+                class="w-10 h-10 border border-win-dark object-cover filter saturate-150 contrast-110"
+              />
+            </a>
+            <div class="min-w-0 flex-1">
+              <div class="text-[9px] text-win-dark font-bold uppercase">Nghệ sĩ phát triển</div>
+              <a href={`/profile/${submission.profiles?.id}`} class="text-xs font-bold text-black truncate hover:underline no-underline block">
+                {submission.profiles?.full_name}
+              </a>
+            </div>
+            <div class="text-[9px] text-right font-bold text-win-dark shrink-0">
+              {formattedDate}
+            </div>
+          </div>
+
+          <p class="text-xs text-black/85 leading-relaxed font-sans pt-1 break-words">
+            {submission.description || "Tác phẩm nghệ thuật hoài cổ tinh khiết từ cộng đồng. Mô tả phong phú của bức ảnh đang được cập nhật."}
+          </p>
+
+          {submission.tags && submission.tags.length > 0 && (
+            <div class="flex flex-wrap gap-1.5 pt-2">
+              {submission.tags.map((tag: string) => (
+                <a
+                  key={tag}
+                  href={`/gallery?tag=${encodeURIComponent(tag)}`}
+                  class="text-[9px] font-bold text-[#ff71ce] bg-[#ff71ce]/5 border border-[#ff71ce]/30 px-2 py-0.5 uppercase tracking-wider no-underline hover:bg-[#ff71ce]/10"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Khung bình luận lồng nhau thời gian thực */}
+      <RealtimeComments
+        articleId={submission.id}
+        initialComments={initialComments}
+        currentUser={userProfile}
+        client:load
+      />
+    </div>
+  </div>
+</BaseLayout>

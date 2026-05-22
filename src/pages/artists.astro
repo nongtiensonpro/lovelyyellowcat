@@ -1,0 +1,150 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Tải thông tin phiên người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// Tải danh sách nghệ sĩ hoạt động từ view thống kê public.artist_stats
+const { data: artists } = await supabase
+  .from("artist_stats")
+  .select("*");
+
+const activeArtists = artists || [];
+---
+
+<BaseLayout
+  title="COMMUNITY_ARTISTS.EXE // VAPOR MAGAZINE"
+  description="Khám phá và kết nối với các nghệ sĩ kỹ thuật số tích cực nhất trong cộng đồng nghệ thuật hoài cổ Vaporwave."
+  userProfile={userProfile}
+>
+  <!-- Tiêu đề Glitch lớn hoài cổ chuẩn hóa -->
+  <div class="text-center py-6">
+    <h1 class="hero-title text-glitch-soft">
+      Aesthetic Creators
+    </h1>
+    <p class="text-[9px] sm:text-xs tracking-[0.2em] text-vapor-blue mt-3 font-mono uppercase">
+      // INDEX OF THE MOST VIBRANT DIGITAL SOULS //
+    </p>
+  </div>
+
+  {/* Main Grid Component */}
+  <div class="mt-6 bg-[#0b001a]/40 p-3 sm:p-4 border-2 border-win-dark/50 backdrop-blur-md">
+    <div class="win95-container bg-win-gray mb-8">
+      <div class="win95-header py-1">
+        <span>NETWORK_LOG.LOG</span>
+      </div>
+      <div class="p-3 bg-white text-xs font-bold text-black font-retro leading-relaxed">
+        <span class="text-vapor-purple">● Khám phá danh sách nghệ sĩ xuất sắc.</span> Tổng cộng có <span class="text-vapor-pink">{activeArtists.length}</span> người dùng đã cống hiến các tác phẩm nghệ thuật kỹ thuật số và được cộng đồng đón nhận nồng nhiệt. Bạn có thể nhấn vào hồ sơ để chiêm ngưỡng toàn bộ tác phẩm của từng nghệ sĩ!
+      </div>
+    </div>
+
+    {activeArtists.length === 0 ? (
+      <div class="win95-container bg-win-gray p-16 text-center text-win-dark font-bold">
+        <p class="text-3xl block mb-3">👥</p>
+        <p class="text-xs uppercase">MẠNG LƯỚI NGHỆ SĨ CHƯA CÓ THÀNH VIÊN HOẠT ĐỘNG.</p>
+        <p class="text-[9px] font-normal text-win-dark/80 mt-1 max-w-sm mx-auto leading-relaxed">
+          Hiện tại chưa có nghệ sĩ nào đăng tranh được phê duyệt. Hãy đăng tác phẩm đầu tiên của bạn để trở thành người tiên phong trong cộng đồng Vaporwave!
+        </p>
+        <a href="/submit" class="win95-btn inline-block mt-4 px-6 py-2.5 no-underline text-black font-bold uppercase" style="min-height: 44px;">
+          🎨 Gửi Tranh Ngay
+        </a>
+      </div>
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        {activeArtists.map((artist) => {
+          const formattedLastActive = new Date(artist.last_active).toLocaleDateString("vi-VN", {
+            month: "short",
+            day: "numeric"
+          });
+
+          return (
+            <div class="win95-container bg-[#c0c0c0] p-1 flex flex-col justify-between hover:border-[#05ffa1] hover:shadow-[0_0_12px_#05ffa1] transition-all duration-300">
+              <div>
+                {/* Banner ảnh bìa */}
+                <div class="h-24 bg-gradient-to-br from-vapor-purple via-[#0b001a] to-vapor-pink relative overflow-hidden border border-win-dark">
+                  {artist.banner_url && (
+                    <img
+                      src={artist.banner_url}
+                      alt="Banner"
+                      class="w-full h-full object-cover filter saturate-125 brightness-75 contrast-105"
+                      loading="lazy"
+                    />
+                  )}
+                  {/* Quét CRT lines overlay */}
+                  <div class="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none" />
+                </div>
+
+                {/* Avatar + Tên nghệ sĩ */}
+                <div class="px-4 -mt-8 relative z-10 flex items-end gap-3 mb-3">
+                  <img
+                    src={artist.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
+                    alt={artist.full_name}
+                    class="w-16 h-16 border-2 border-win-gray bg-win-gray object-cover filter saturate-150 shadow-md shrink-0"
+                    loading="lazy"
+                  />
+                  <div class="min-w-0 pb-1 font-retro">
+                    <h3 class="text-xs sm:text-sm font-extrabold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] uppercase">
+                      {artist.full_name}
+                    </h3>
+                    <span class="text-[8px] font-bold text-vapor-green drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.9)] uppercase">
+                      ● Active Creator
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tiểu sử Bio */}
+                <div class="p-3 pt-1">
+                  <div class="win95-container bg-white p-2 text-[10px] leading-relaxed text-black/85 h-16 overflow-y-auto border-inner">
+                    {artist.bio || "Thành viên tích cực đóng góp cho tạp chí Vaporwave. Thiết kế kỹ thuật số hoài cổ là cội nguồn của mọi nguồn cảm hứng."}
+                  </div>
+                </div>
+              </div>
+
+              {/* Chỉ số Stats & Actions */}
+              <div class="p-3 pt-0 space-y-3">
+                <div class="grid grid-cols-3 gap-2 text-center text-[9px] font-retro text-black font-bold">
+                  <div class="bg-[#e6e6e6] border border-win-dark p-1">
+                    <div class="text-win-dark text-[8px] uppercase">🎨 Tranh</div>
+                    <div class="text-xs text-black mt-0.5">{artist.artwork_count}</div>
+                  </div>
+                  <div class="bg-[#e6e6e6] border border-win-dark p-1">
+                    <div class="text-win-dark text-[8px] uppercase">💜 Cảm xúc</div>
+                    <div class="text-xs text-vapor-purple mt-0.5">{artist.total_reactions}</div>
+                  </div>
+                  <div class="bg-[#e6e6e6] border border-win-dark p-1">
+                    <div class="text-win-dark text-[8px] uppercase">⚡ Active</div>
+                    <div class="text-[10px] text-vapor-blue mt-0.5">{formattedLastActive}</div>
+                  </div>
+                </div>
+
+                <a
+                  href={`/profile/${artist.id}`}
+                  class="win95-btn block text-center py-2.5 text-[10px] font-bold no-underline text-black uppercase bg-[#05ffa1]/10 border-[#05ffa1] hover:bg-[#05ffa1]/30"
+                  style={{ minHeight: "44px" }}
+                >
+                  📁 Ghé Thăm Hồ Sơ Nghệ Sĩ
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</BaseLayout>

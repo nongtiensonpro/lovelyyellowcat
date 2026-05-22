@@ -1,0 +1,66 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { GalleryGrid } from "../../components/GalleryGrid";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// Tải danh sách tác phẩm được duyệt từ database phục vụ SSR ban đầu
+const { data: dbSubmissions } = await supabase
+  .from("submissions")
+  .select("*, profiles:profiles!author_id(full_name, avatar_url)")
+  .eq("status", "approved")
+  .order("created_at", { ascending: false });
+
+const initialSubmissions = dbSubmissions || [];
+---
+
+<BaseLayout
+  title="PUBLIC_GALLERY.EXE // VAPOR MAGAZINE"
+  description="Phòng triển lãm nghệ thuật cộng đồng Vaporwave - Nơi hội tụ các tác phẩm hoài cổ kỹ thuật số đỉnh cao."
+  userProfile={userProfile}
+>
+  <!-- Tiêu đề Glitch lớn hoài cổ chuẩn hóa -->
+  <div class="text-center py-6">
+    <h1 class="hero-title text-glitch-soft">
+      Community Gallery
+    </h1>
+    <p class="text-[9px] sm:text-xs tracking-[0.2em] text-vapor-blue mt-3 font-mono uppercase">
+      // VIRTUAL ART ARCHIVE // DIGITAL NOSTALGIA //
+    </p>
+  </div>
+
+  {/* Main Grid Component */}
+  <div class="mt-6 bg-[#0b001a]/40 p-3 sm:p-4 border-2 border-win-dark/50 backdrop-blur-md">
+    <div class="win95-container bg-win-gray mb-6">
+      <div class="win95-header py-1">
+        <span>SYSTEM_STATUS.LOG</span>
+      </div>
+      <div class="p-3 bg-white text-[10px] sm:text-xs font-bold text-black font-retro leading-relaxed">
+        <span class="text-vapor-purple">● Triển lãm cộng đồng hoạt động trực tuyến.</span> Tổng cộng <span class="text-vapor-pink">{initialSubmissions.length}</span> tác phẩm đã được giám định nghệ thuật và phân phối qua mạng lưới Cybernet. Hãy dùng phím mũi tên hoặc nhấn chạy Slideshow để tận hưởng không gian ngắm tranh thư thái nhất!
+      </div>
+    </div>
+
+    <GalleryGrid
+      client:load
+      initialSubmissions={initialSubmissions}
+      currentUser={userProfile}
+    />
+  </div>
+</BaseLayout>

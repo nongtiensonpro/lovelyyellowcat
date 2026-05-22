@@ -1,0 +1,38 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { ProfileEditor } from "../../components/ProfileEditor";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// 1. Kiểm tra session của người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) {
+  // Nếu chưa đăng nhập, lập tức chuyển hướng về trang chủ
+  return Astro.redirect("/?error=unauthorized");
+}
+
+// 2. Lấy chi tiết hồ sơ người dùng để prefill vào Form chỉnh sửa
+const { data: profile, error } = await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .single();
+
+if (error || !profile) {
+  console.error("Lỗi khi fetch profile:", error?.message);
+  return Astro.redirect("/?error=profile-not-found");
+}
+---
+
+<BaseLayout title={`THAY ĐỔI HỒ SƠ // ${profile.full_name.toUpperCase()} // VAPOR JOURNAL`} userProfile={profile}>
+
+  {/* Hydrated ProfileEditor React Island */}
+  <div class="py-4">
+    <ProfileEditor client:load profile={profile} />
+  </div>
+</BaseLayout>

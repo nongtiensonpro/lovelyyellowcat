@@ -1,34 +1,92 @@
 ---
 import "../styles/global.css";
+import HeaderNav from "../components/HeaderNav.astro";
 
 interface Props {
   title: string;
   description?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+  articleJsonLd?: any;
+  userProfile?: any;
 }
 
-const { title, description = "Tạp chí nghệ thuật số phong cách Vaporwave cổ điển" } = Astro.props;
+const { 
+  title, 
+  description = "Tạp chí nghệ thuật số phong cách Vaporwave cổ điển // A Cybernetic Oasis",
+  ogImage = "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1200&h=630&fit=crop",
+  canonicalUrl,
+  articleJsonLd,
+  userProfile = null
+} = Astro.props;
+
+const currentUrl = canonicalUrl || Astro.url.href;
 ---
 
 <html lang="vi">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <!-- Google Font: Orbitron & Outfit -->
+    
+    <!-- SEO Canonical -->
+    <link rel="canonical" href={currentUrl} />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={articleJsonLd ? "article" : "website"} />
+    <meta property="og:url" content={currentUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={currentUrl} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <!-- Google Fonts: VT323, Press Start 2P, Share Tech Mono & Orbitron/Outfit fallback -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet" />
+    
+    <!-- Structured Data JSON-LD -->
+    {articleJsonLd && (
+      <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} is:inline />
+    )}
   </head>
-  <body class="crt-overlay min-h-screen text-white font-sans selection:bg-vapor-pink selection:text-black">
-    <!-- Lớp dòng quét CRT giả lập -->
-    <div class="crt-scanline"></div>
+  <body class="min-h-screen text-white font-body selection:bg-vapor-pink selection:text-black antialiased bg-cosmic-black">
+    <!-- Lớp phủ CRT toàn trang -->
+    <div class="crt-overlay" aria-hidden="true">
+      <div class="crt-scanlines"></div>
+      <div class="crt-vignette"></div>
+    </div>
+    <div class="crt-scanline-animated" aria-hidden="true"></div>
     
     <!-- Bộ khung chứa trang web -->
-    <div class="relative z-10 p-4 max-w-7xl mx-auto">
-      <slot />
+    <div class="relative z-10 p-3 sm:p-4 max-w-7xl mx-auto flex flex-col min-h-[calc(100dvh-1.5rem)] justify-between">
+      <!-- Thanh điều hướng responsive chuẩn hóa -->
+      <HeaderNav userProfile={userProfile} />
+      
+      <main class="flex-grow w-full">
+        <slot />
+      </main>
+      
+      <!-- Footer hoài cổ Windows 95 -->
+      <footer class="win95-container mt-12 mb-2 font-retro text-black bg-win-gray text-[10px] sm:text-xs">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-2 p-2">
+          <span class="text-center md:text-left">📼 VAPORWAVE ART JOURNAL &copy; 2026 // DỰ ÁN PHI THƯƠNG MẠI HỌC TẬP</span>
+          <div class="flex flex-wrap justify-center gap-3 items-center">
+            <a href="/terms" class="text-black hover:underline font-bold no-underline">📜 Điều Khoản Sử Dụng</a>
+            <span class="text-win-dark hidden sm:inline">|</span>
+            <a href="mailto:nongtiensonpro@gmail.com" class="text-black hover:underline font-bold no-underline">✉️ Trợ Giúp & Khiếu Nại</a>
+          </div>
+        </div>
+      </footer>
     </div>
   </body>
 </html>
