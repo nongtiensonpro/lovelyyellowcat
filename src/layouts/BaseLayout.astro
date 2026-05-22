@@ -1,0 +1,34 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "Tạp chí nghệ thuật số phong cách Vaporwave cổ điển" } = Astro.props;
+---
+
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <!-- Google Font: Orbitron & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="crt-overlay min-h-screen text-white font-sans selection:bg-vapor-pink selection:text-black">
+    <!-- Lớp dòng quét CRT giả lập -->
+    <div class="crt-scanline"></div>
+    
+    <!-- Bộ khung chứa trang web -->
+    <div class="relative z-10 p-4 max-w-7xl mx-auto">
+      <slot />
+    </div>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "vaporwave-art-magazine",
+  "compatibility_date": "2026-05-20",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "pages_build_output_dir": "dist"
+}

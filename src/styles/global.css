@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@theme {  
+  /* Khai báo hệ màu nghệ thuật Vaporwave */  
+  --color-vapor-pink: #ff71ce;  
+  --color-vapor-blue: #01cdfe;  
+  --color-vapor-green: #05ffa1;  
+  --color-vapor-yellow: #fffb96;  
+  --color-vapor-purple: #b967ff;  
+  --color-win-gray: #c0c0c0;  
+  --color-win-dark: #808080;  
+  --color-cosmic-black: #0b001a;
+
+  /* Hệ thống font chữ hoài cổ */  
+  --font-retro: "MS Sans Serif", "Courier New", monospace;  
+  --font-cyber: "Satoshi", "Orbitron", sans-serif;
+
+  /* Cấu hình các hiệu ứng chuyển động Vaporwave đặc trưng */  
+  --animate-scanline: scanline 8s linear infinite;  
+  --animate-text-glitch: text-glitch 1.5s ease-in-out infinite alternate;  
+  --animate-crt-flicker: crt-flicker 0.15s infinite;
+
+  @keyframes scanline {  
+    0% {  
+      transform: translateY(-100%);  
+    }  
+    100% {  
+      transform: translateY(100%);  
+    }  
+  }
+
+  @keyframes text-glitch {  
+    0% {  
+      text-shadow: 1px 0 0 var(--color-vapor-pink), -1px 0 0 var(--color-vapor-blue);  
+    }  
+    50% {  
+      text-shadow: -2px 0 0 var(--color-vapor-pink), 2px 0 0 var(--color-vapor-blue);  
+    }  
+    100% {  
+      text-shadow: 1px 1px 0 var(--color-vapor-pink), -1px -1px 0 var(--color-vapor-blue);  
+    }  
+  }
+
+  @keyframes crt-flicker {  
+    0% { opacity: 0.985; }  
+    50% { opacity: 0.995; }  
+    100% { opacity: 0.985; }  
+  }  
+}
+
+/* Giao diện phủ hiệu ứng dòng quét CRT trên toàn màn hình */  
+.crt-overlay {  
+  position: relative;  
+  overflow: hidden;  
+  background-color: var(--color-cosmic-black);  
+}
+
+.crt-overlay::before {  
+  content: " ";  
+  display: block;  
+  position: fixed;  
+  top: 0;  
+  left: 0;  
+  bottom: 0;  
+  right: 0;  
+  background: linear-gradient(  
+    rgba(18, 16, 16, 0) 50%,   
+    rgba(0, 0, 0, 0.3) 50%  
+  ), linear-gradient(  
+    90deg,   
+    rgba(255, 0, 0, 0.05),   
+    rgba(0, 255, 0, 0.02),   
+    rgba(0, 0, 255, 0.05)  
+  );  
+  background-size: 100% 4px, 3px 100%;  
+  z-index: 9999;  
+  pointer-events: none;  
+}
+
+/* Đường quét neon di chuyển chậm từ trên xuống dưới */  
+.crt-scanline {  
+  position: fixed;  
+  top: 0;  
+  left: 0;  
+  width: 100%;  
+  height: 120px;  
+  background: linear-gradient(  
+    to bottom,  
+    rgba(255, 113, 206, 0),  
+    rgba(255, 113, 206, 0.06) 50%,  
+    rgba(255, 113, 206, 0)  
+  );  
+  z-index: 9998;  
+  pointer-events: none;  
+  animation: var(--animate-scanline);  
+}
+
+/* Khung cửa sổ giao diện mô phỏng hệ điều hành Windows 95 */  
+.win95-container {  
+  background-color: var(--color-win-gray);  
+  border-top: 2px solid #ffffff;  
+  border-left: 2px solid #ffffff;  
+  border-right: 2px solid var(--color-win-dark);  
+  border-bottom: 2px solid var(--color-win-dark);  
+  box-shadow: 1px 1px 0px 0px #000000;  
+  padding: 4px;  
+}
+
+.win95-header {  
+  background: linear-gradient(90deg, #000080, #1084d0);  
+  color: #ffffff;  
+  font-family: var(--font-retro);  
+  font-weight: bold;  
+  font-size: 12px;  
+  padding: 4px 8px;  
+  display: flex;  
+  justify-content: space-between;  
+  align-items: center;  
+}
+
+.win95-btn {  
+  background-color: var(--color-win-gray);  
+  border-top: 1.5px solid #ffffff;  
+  border-left: 1.5px solid #ffffff;  
+  border-right: 1.5px solid var(--color-win-dark);  
+  border-bottom: 1.5px solid var(--color-win-dark);  
+  padding: 2px 6px;  
+  font-size: 11px;  
+  font-family: var(--font-retro);  
+  color: #000000;  
+  cursor: pointer;  
+  box-shadow: inset 0.5px 0.5px 0px 0px #ffffff;  
+}
+
+.win95-btn:active {  
+  border-top: 1.5px solid var(--color-win-dark);  
+  border-left: 1.5px solid var(--color-win-dark);  
+  border-right: 1.5px solid #ffffff;  
+  border-bottom: 1.5px solid #ffffff;  
+  padding: 3px 5px 1px 7px;  
+}

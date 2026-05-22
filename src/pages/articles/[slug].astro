@@ -1,0 +1,84 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { RealtimeComments } from "../../components/RealtimeComments";
+
+const { slug } = Astro.params;
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let currentUser = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url")
+    .eq("id", user.id)
+    .single();
+  currentUser = data;
+}
+
+// Tải danh sách bình luận ban đầu từ Supabase Server-side
+const { data: initialComments = [] } = await supabase
+  .from("comments")
+  .select("id, article_id, content, created_at, profiles(full_name, avatar_url)")
+  .eq("article_id", slug)
+  .order("created_at", { ascending: true });
+
+// Dữ liệu nội dung bài viết tĩnh giả định dựa trên Slug
+const articleData = {
+  title: slug === "retro-computing-aesthetic" 
+    ? "Hoài Niệm Windows 95: Vẻ Đẹp Của Hệ Điều Hành Cổ Điển"
+    : "Neon Dreamscape: Sự Trỗi Dậy Của Không Gian Màu Neon 3D",
+  content: "Không gian mạng (Cyberspace) và hoài cổ kỹ thuật số luôn là các chủ đề cốt lõi của nghệ thuật Vaporwave. Bằng cách sử dụng các hình ảnh kiến trúc cổ điển Hy Lạp kết hợp với giao diện desktop xám xi măng của Windows 95, các tác phẩm Vaporwave tạo ra cảm giác lơ lửng, hư vô của thời gian. Các đường kẻ CRT ngang màn hình cùng với hoạt ảnh lỗi kỹ thuật (glitch) không chỉ là công cụ trang trí, mà còn là bản tuyên ngôn phản kháng lại tính sắc sảo của thời kỳ đồ họa độ phân giải siêu cao ngày nay...",
+  cover: slug === "retro-computing-aesthetic"
+    ? "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1000&auto=format&fit=crop"
+    : "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1000&auto=format&fit=crop",
+  date: "2026-05-20"
+};
+---
+
+<BaseLayout title={`${articleData.title} // VAPOR JOURNAL`}>
+  <!-- Quay lại Trang chủ -->
+  <div class="mb-6 font-retro">
+    <a href="/" class="win95-btn no-underline inline-block text-black px-4 py-1.5 font-bold">
+      &lt;&lt; QUAY LẠI TRANG CHỦ
+    </a>
+  </div>
+
+  <!-- Chi tiết Bài báo -->
+  <div class="win95-container w-full font-retro mb-10 text-black">
+    <div class="win95-header">
+      <span>EXPLORER.EXE - {articleData.title}</span>
+      <button class="win95-btn py-0 px-1">X</button>
+    </div>
+    <div class="p-6 bg-win-gray">
+      <img src={articleData.cover} alt={articleData.title} class="w-full h-80 object-cover border-2 border-win-dark filter saturate-150 brightness-110 mb-6" />
+      <div class="border-b border-win-dark pb-4 mb-6">
+        <h1 class="text-2xl md:text-4xl font-extrabold uppercase">{articleData.title}</h1>
+        <p class="text-xs text-win-dark mt-2">Xuất bản lúc: {articleData.date} // Tác giả: AESTHETIC WRITER</p>
+      </div>
+      <article class="text-sm leading-relaxed whitespace-pre-line text-justify text-black/90">
+        {articleData.content}
+      </article>
+    </div>
+  </div>
+
+  <!-- Phân hệ bình luận thời gian thực (React Island tải trực tiếp trên client) -->
+  <div class="max-w-3xl mx-auto">
+    <h3 class="text-xl font-retro text-vapor-pink tracking-widest uppercase mb-4 text-center">
+      // THẢO LUẬN NGHỆ THUẬT //
+    </h3>
+    <RealtimeComments 
+      client:load 
+      articleId={slug || "unknown"} 
+      initialComments={initialComments} 
+      currentUser={currentUser} 
+    />
+  </div>
+</BaseLayout>

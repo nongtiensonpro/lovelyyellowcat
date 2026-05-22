@@ -1,0 +1,138 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../lib/supabase";
+import { CloudinaryUpload } from "../components/CloudinaryUpload";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin người dùng hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// Danh sách bài viết nghệ thuật Vaporwave mẫu
+const articles = [
+  {
+    slug: "retro-computing-aesthetic",
+    title: "Hoài Niệm Windows 95: Vẻ Đẹp Của Hệ Điều Hành Cổ Điển",
+    description: "Khám phá phong cách thiết kế đồ họa máy tính thời kỳ đầu, cội nguồn của làn sóng nghệ thuật hoài cổ Vaporwave.",
+    cover: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
+    date: "2026-05-20"
+  },
+  {
+    slug: "neon-dreamscape-art",
+    title: "Neon Dreamscape: Sự Trỗi Dậy Của Không Gian Màu Neon 3D",
+    description: "Tại sao những gam màu hồng rực rỡ và xanh điện tử tiếp tục thống trị nghệ thuật kỹ thuật số hiện đại.",
+    cover: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop",
+    date: "2026-05-18"
+  }
+];
+---
+
+<BaseLayout title="VAPORWAVE ART JOURNAL // HOME">
+  <!-- Thanh điều hướng Windows 95 Desktop Menu -->
+  <div class="win95-container w-full mb-6 font-retro">
+    <div class="flex justify-between items-center bg-win-gray p-1">
+      <div class="flex gap-2">
+        <button class="win95-btn font-bold px-3 py-1 flex items-center gap-1">
+          💾 Start
+        </button>
+        <div class="border-l border-white h-6 my-auto mx-1"></div>
+        <span class="text-xs text-black my-auto font-bold tracking-wider">AESTHETIC_JOURNAL_V1.EXE</span>
+      </div>
+      <div class="flex gap-3 items-center">
+        {userProfile ? (
+          <div class="flex gap-2 items-center">
+            <img src={userProfile.avatar_url} class="w-6 h-6 border border-win-dark filter saturate-150" />
+            <span class="text-xs text-black font-bold">{userProfile.full_name}</span>
+            <form action="/api/auth/signout" method="POST" class="m-0">
+              <button type="submit" class="win95-btn text-xs">Đăng xuất</button>
+            </form>
+          </div>
+        ) : (
+          <a href="/api/auth/signin" class="win95-btn text-xs font-bold text-black no-underline">
+            🔑 Đăng Nhập Bằng Google
+          </a>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <!-- Tiêu đề lớn hiệu ứng Glitch -->
+  <div class="text-center py-10">
+    <h1 class="text-5xl md:text-7xl font-extrabold uppercase tracking-widest text-vapor-pink animate-text-glitch font-retro">
+      Vapor Journal
+    </h1>
+    <p class="text-xs tracking-[0.3em] text-vapor-blue mt-4 font-retro uppercase">
+      // A Cybernetic Oasis of Digital Nostalgia //
+    </p>
+  </div>
+
+  <!-- Bố cục lưới chia 3 cột: 2 cột Articles, 1 cột Sidebar -->
+  <div class="grid lg:grid-cols-3 gap-8 mt-10">
+    <!-- Khu vực bài báo (col-span-2) -->
+    <div class="lg:col-span-2 grid md:grid-cols-2 gap-8">
+      {articles.map(article => (
+        <div class="win95-container font-retro flex flex-col justify-between">
+          <div>
+            <div class="win95-header">
+              <span>ART_VIEWER.EXE</span>
+              <button class="win95-btn py-0 px-1">?</button>
+            </div>
+            <div class="p-3 bg-win-gray">
+              <img src={article.cover} alt={article.title} class="w-full h-48 object-cover border-2 border-win-dark filter hue-rotate-15 saturate-125" />
+              <h2 class="text-lg font-bold text-black mt-3 mb-2">{article.title}</h2>
+              <p class="text-xs text-black/85 leading-relaxed">{article.description}</p>
+            </div>
+          </div>
+          <div class="p-3 bg-win-gray pt-0 flex justify-between items-center">
+            <span class="text-[10px] text-black/60">{article.date}</span>
+            <a href={`/articles/${article.slug}`} class="win95-btn no-underline inline-block px-4 py-1 text-black font-bold text-xs">
+              ĐỌC BÀI VIẾT >>
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Khu vực Sidebar (col-span-1) -->
+    <div class="lg:col-span-1 flex flex-col items-center lg:items-stretch">
+      {userProfile ? (
+        <div class="w-full space-y-4">
+          <h3 class="text-sm font-retro text-vapor-pink tracking-widest uppercase mb-1 text-center lg:text-left">
+            // VIRTUAL ART ARCHIVE //
+          </h3>
+          <CloudinaryUpload client:load />
+        </div>
+      ) : (
+        <div class="win95-container font-retro text-black p-1 bg-win-gray w-full max-w-sm">
+          <div class="win95-header">
+            <span>SECURE_ARCHIVE.SYS</span>
+            <button class="win95-btn py-0 px-1">?</button>
+          </div>
+          <div class="p-4 text-center bg-[#c0c0c0]">
+            <span class="text-3xl block mb-2">🔒</span>
+            <p class="text-xs font-bold uppercase mb-2 tracking-wide">HỆ THỐNG LƯU TRỮ KHÓA</p>
+            <p class="text-[10px] text-black/75 mb-4 leading-normal">
+              Vui lòng đăng nhập bằng Google để mở khóa cổng tải ảnh lên Cloudinary và lưu trữ tác phẩm Vaporwave.
+            </p>
+            <a href="/api/auth/signin" class="win95-btn no-underline inline-block px-4 py-2 font-bold uppercase text-xs w-full text-center">
+              🔑 Đăng Nhập Bằng Google
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+</BaseLayout>
