@@ -5,13 +5,23 @@ type CloudinaryDeleteSummary = {
   errors: string[];
 };
 
+export type CloudinaryRuntimeEnv = Partial<{
+  PUBLIC_CLOUDINARY_CLOUD_NAME: string;
+  CLOUDINARY_CLOUD_NAME: string;
+  CLOUDINARY_API_KEY: string;
+  CLOUDINARY_API_SECRET: string;
+  CLOUDINARY_URL: string;
+}>;
+
 const CLOUDINARY_UPLOAD_MARKER = "/image/upload/";
 
-function getCloudinaryConfig() {
-  const cloudName = import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME || import.meta.env.CLOUDINARY_CLOUD_NAME;
-  const directApiKey = import.meta.env.CLOUDINARY_API_KEY || import.meta.env.PUBLIC_CLOUDINARY_API_KEY;
-  const directApiSecret = import.meta.env.CLOUDINARY_API_SECRET;
-  const cloudinaryUrl = import.meta.env.CLOUDINARY_URL;
+function getCloudinaryConfig(runtimeEnv?: CloudinaryRuntimeEnv) {
+  const cloudName = runtimeEnv?.PUBLIC_CLOUDINARY_CLOUD_NAME
+    || runtimeEnv?.CLOUDINARY_CLOUD_NAME
+    || import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const directApiKey = runtimeEnv?.CLOUDINARY_API_KEY;
+  const directApiSecret = runtimeEnv?.CLOUDINARY_API_SECRET;
+  const cloudinaryUrl = runtimeEnv?.CLOUDINARY_URL;
 
   if (cloudinaryUrl && (!directApiKey || !directApiSecret || !cloudName)) {
     try {
@@ -48,10 +58,10 @@ function isCloudinaryDeliveryUrl(value: string, cloudName: string) {
   }
 }
 
-export function getCloudinaryPublicIdFromUrl(value: string | null | undefined): string | null {
+export function getCloudinaryPublicIdFromUrl(value: string | null | undefined, runtimeEnv?: CloudinaryRuntimeEnv): string | null {
   if (!value) return null;
 
-  const { cloudName } = getCloudinaryConfig();
+  const { cloudName } = getCloudinaryConfig(runtimeEnv);
   if (!cloudName || !isCloudinaryDeliveryUrl(value, cloudName)) return null;
 
   const url = new URL(value);
@@ -73,12 +83,12 @@ export function getCloudinaryPublicIdFromUrl(value: string | null | undefined): 
   return decodedPublicPath.replace(/\.[a-z0-9]+$/i, "") || null;
 }
 
-export function getCloudinaryPublicIdsFromText(value: string | null | undefined): string[] {
+export function getCloudinaryPublicIdsFromText(value: string | null | undefined, runtimeEnv?: CloudinaryRuntimeEnv): string[] {
   if (!value) return [];
 
   const candidates = value.match(/https?:\/\/res\.cloudinary\.com\/[^\s)"'<>]+/g) || [];
   const publicIds = candidates
-    .map((candidate) => getCloudinaryPublicIdFromUrl(candidate))
+    .map((candidate) => getCloudinaryPublicIdFromUrl(candidate, runtimeEnv))
     .filter((publicId): publicId is string => Boolean(publicId));
 
   return [...new Set(publicIds)];
@@ -102,7 +112,7 @@ async function createCloudinarySignature(params: Record<string, string>, apiSecr
   return sha1Hex(`${payload}${apiSecret}`);
 }
 
-export async function deleteCloudinaryImages(publicIds: string[]): Promise<CloudinaryDeleteSummary> {
+export async function deleteCloudinaryImages(publicIds: string[], runtimeEnv?: CloudinaryRuntimeEnv): Promise<CloudinaryDeleteSummary> {
   const ids = [...new Set(publicIds.filter(Boolean))];
   const summary: CloudinaryDeleteSummary = {
     attempted: ids.length,
@@ -113,7 +123,7 @@ export async function deleteCloudinaryImages(publicIds: string[]): Promise<Cloud
 
   if (ids.length === 0) return summary;
 
-  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
+  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig(runtimeEnv);
   if (!cloudName || !apiKey || !apiSecret) {
     summary.skipped = ids.length;
     summary.errors.push("Thiếu cấu hình CLOUDINARY_API_KEY hoặc CLOUDINARY_API_SECRET trên server.");

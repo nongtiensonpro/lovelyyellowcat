@@ -7,6 +7,7 @@ const supabase = createSupabaseServerClient({
   request: Astro.request,
   cookies: Astro.cookies
 });
+const runtimeEnv = (Astro.locals as any).runtime?.env;
 
 // Lấy thông tin người dùng hiện tại để hiển thị chào mừng
 const { data: { user } } = await supabase.auth.getUser();
@@ -30,7 +31,7 @@ if (Astro.request.method === "POST") {
 
   if (action === "delete" && articleId) {
     try {
-      actionResult = await deleteArticleWithRelations(supabase, articleId);
+      actionResult = await deleteArticleWithRelations(supabase, articleId, runtimeEnv);
     } catch (err: any) {
       actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
     }

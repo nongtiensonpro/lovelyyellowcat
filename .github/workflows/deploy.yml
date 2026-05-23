@@ -11,17 +11,19 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
       contents: read
       deployments: write
     steps:
       - name: Checkout mã nguồn
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cài đặt Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Cài đặt gói phụ thuộc
@@ -36,8 +38,7 @@ jobs:
           PUBLIC_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.PUBLIC_CLOUDINARY_UPLOAD_PRESET }}
 
       - name: Đăng tải trực tiếp lên Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=vaporwave-art-magazine
+        run: npx --yes wrangler@4 pages deploy dist --project-name=vaporwave-art-magazine
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

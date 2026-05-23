@@ -1,5 +1,6 @@
 import type { createSupabaseServerClient } from "./supabase";
 import {
+  type CloudinaryRuntimeEnv,
   deleteCloudinaryImages,
   formatCloudinaryDeleteSummary,
   getCloudinaryPublicIdFromUrl,
@@ -144,7 +145,8 @@ export async function deleteCommentThread(
 
 export async function deleteArticleWithRelations(
   supabase: SupabaseServerClient,
-  articleId: string
+  articleId: string,
+  runtimeEnv?: CloudinaryRuntimeEnv
 ): Promise<AdminActionResult> {
   const { data: article, error: articleError } = await supabase
     .from("articles")
@@ -183,10 +185,10 @@ export async function deleteArticleWithRelations(
   }
 
   const cloudinaryPublicIds = uniqueIds([
-    getCloudinaryPublicIdFromUrl(article.cover_url),
-    ...getCloudinaryPublicIdsFromText(article.body_md),
+    getCloudinaryPublicIdFromUrl(article.cover_url, runtimeEnv),
+    ...getCloudinaryPublicIdsFromText(article.body_md, runtimeEnv),
   ]);
-  const cloudinaryResult = await deleteCloudinaryImages(cloudinaryPublicIds);
+  const cloudinaryResult = await deleteCloudinaryImages(cloudinaryPublicIds, runtimeEnv);
   const cloudinaryMessage = formatCloudinaryDeleteSummary(cloudinaryResult);
 
   if (cloudinaryResult.errors.length > 0) {
@@ -198,7 +200,8 @@ export async function deleteArticleWithRelations(
 
 export async function deleteSubmissionWithRelations(
   supabase: SupabaseServerClient,
-  submissionId: string
+  submissionId: string,
+  runtimeEnv?: CloudinaryRuntimeEnv
 ): Promise<AdminActionResult> {
   const { data: submission, error: submissionError } = await supabase
     .from("submissions")
@@ -236,9 +239,9 @@ export async function deleteSubmissionWithRelations(
 
   const cloudinaryPublicIds = uniqueIds([
     submission.image_pid,
-    getCloudinaryPublicIdFromUrl(submission.image_url),
+    getCloudinaryPublicIdFromUrl(submission.image_url, runtimeEnv),
   ]);
-  const cloudinaryResult = await deleteCloudinaryImages(cloudinaryPublicIds);
+  const cloudinaryResult = await deleteCloudinaryImages(cloudinaryPublicIds, runtimeEnv);
   const cloudinaryMessage = formatCloudinaryDeleteSummary(cloudinaryResult);
 
   if (cloudinaryResult.errors.length > 0) {
