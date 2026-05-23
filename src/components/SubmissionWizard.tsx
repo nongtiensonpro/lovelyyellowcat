@@ -6,9 +6,10 @@ interface SubmissionWizardProps {
     full_name: string;
     avatar_url: string;
   } | null;
+  recaptchaSitekey?: string;
 }
 
-export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser }) => {
+export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser, recaptchaSitekey }) => {
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,7 +40,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
         try {
           // @ts-ignore
           widgetId = window.grecaptcha.render(recaptchaRef.current, {
-            sitekey: import.meta.env.PUBLIC_RECAPTCHA_SITEKEY,
+            sitekey: recaptchaSitekey || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY,
             theme: "dark",
             callback: (token: string) => {
               setRecaptchaToken(token);
