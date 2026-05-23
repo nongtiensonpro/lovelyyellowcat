@@ -300,12 +300,16 @@ PUBLIC_CLOUDINARY_UPLOAD_PRESET="your-unsigned-preset"
 # === Cấu hình khóa nâng cao Cloudinary (Chỉ cấu hình trên Cloudflare Dashboard hoặc local) ===
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
+
+# === Cấu hình bảo mật chống Spam Google reCAPTCHA v2 ===
+PUBLIC_RECAPTCHA_SITEKEY="your-recaptcha-site-key"
+RECAPTCHA_SECRET_KEY="your-recaptcha-secret-key"
 ```
 
 > [!IMPORTANT]
-> Toàn bộ các biến bắt đầu bằng chữ `PUBLIC_` bắt buộc phải được khai báo tại **GitHub Secrets** của repository để hệ thống GitHub Actions có thể nhúng vào quá trình đóng gói và biên dịch code tĩnh.
+> Toàn bộ các biến bắt đầu bằng chữ `PUBLIC_` (bao gồm cả `PUBLIC_RECAPTCHA_SITEKEY`) bắt buộc phải được khai báo tại **GitHub Secrets** của repository để hệ thống GitHub Actions có thể nhúng vào quá trình đóng gói và biên dịch code tĩnh.
 >
-> Các biến bảo mật phía máy chủ biên (`CLOUDINARY_API_KEY` và `CLOUDINARY_API_SECRET`) tuyệt đối không được nhúng lúc build, thay vào đó hãy khai báo trực tiếp chúng tại mục **Environment Variables** trong bảng quản trị **Cloudflare Workers Dashboard**.
+> Các biến bảo mật phía máy chủ biên (`CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, và `RECAPTCHA_SECRET_KEY`) tuyệt đối không được nhúng lúc build, thay vào đó hãy khai báo trực tiếp chúng tại mục **Environment Variables** trong bảng quản trị **Cloudflare Workers Dashboard**.
 
 ---
 

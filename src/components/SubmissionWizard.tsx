@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 interface SubmissionWizardProps {
   currentUser: {
@@ -24,6 +24,54 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+
+  // Quản lý hiển thị Google reCAPTCHA v2 (Dark Theme)
+  useEffect(() => {
+    if (step !== 1 || !recaptchaRef.current) return;
+
+    let widgetId: any = null;
+
+    const renderRecaptcha = () => {
+      // @ts-ignore
+      if (window.grecaptcha && window.grecaptcha.render) {
+        try {
+          // @ts-ignore
+          widgetId = window.grecaptcha.render(recaptchaRef.current, {
+            sitekey: import.meta.env.PUBLIC_RECAPTCHA_SITEKEY,
+            theme: "dark",
+            callback: (token: string) => {
+              setRecaptchaToken(token);
+            },
+            "expired-callback": () => {
+              setRecaptchaToken(null);
+            },
+            "error-callback": () => {
+              setRecaptchaToken(null);
+            }
+          });
+        } catch (err) {
+          console.error("Lỗi khởi tạo reCAPTCHA:", err);
+        }
+      } else {
+        setTimeout(renderRecaptcha, 250);
+      }
+    };
+
+    const timeout = setTimeout(renderRecaptcha, 150);
+
+    return () => {
+      clearTimeout(timeout);
+      // @ts-ignore
+      if (widgetId !== null && window.grecaptcha && window.grecaptcha.reset) {
+        try {
+          // @ts-ignore
+          window.grecaptcha.reset(widgetId);
+        } catch (e) {}
+      }
+    };
+  }, [step]);
 
   // Xử lý upload ảnh lên Cloudinary
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +135,8 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
           title: title.trim(),
           description: description.trim(),
           image_url: imageUrl,
-          image_pid: imagePid
+          image_pid: imagePid,
+          recaptcha_token: recaptchaToken
         })
       });
 
@@ -113,6 +162,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
     setTitle("");
     setDescription("");
     setMessage(null);
+    setRecaptchaToken(null);
   };
 
   if (!currentUser) {
@@ -206,13 +256,19 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
               onChange={handleUpload} 
               accept="image/*" 
               className="hidden" 
-              disabled={isUploading}
+              disabled={isUploading || !recaptchaToken}
             />
+
+            {/* Widget Google reCAPTCHA v2 (Dark Theme) */}
+            <div className="flex flex-col items-center justify-center p-3.5 bg-[#d4d4d4] border border-win-dark mb-4">
+              <span className="text-[9px] text-win-dark font-bold uppercase mb-2">🔒 XÁC MINH DANH TÍNH BẢO MẬT:</span>
+              <div ref={recaptchaRef}></div>
+            </div>
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isUploading || !recaptchaToken}
               className="win95-btn w-full font-bold text-xs py-2"
             >
               {isUploading ? "ĐANG XỬ LÝ..." : "📁 TÌM FILE TÁC PHẨM"}

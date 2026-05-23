@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { env } from "cloudflare:workers";
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const supabase = createSupabaseServerClient({ request, cookies });
@@ -12,10 +13,35 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   try {
     const body = await request.json();
-    const { title, description, image_url, image_pid } = body;
+    const { title, description, image_url, image_pid, recaptcha_token } = body;
 
     if (!title || !image_url || !image_pid) {
       return new Response(JSON.stringify({ error: "Vui lòng hoàn thành tải ảnh và điền tiêu đề tác phẩm." }), { status: 400 });
+    }
+
+    // 1.5 Xác thực Google reCAPTCHA v2 chống bot spam
+    const recaptchaSecret = (env as any)?.RECAPTCHA_SECRET_KEY || import.meta.env.RECAPTCHA_SECRET_KEY;
+    if (recaptchaSecret) {
+      if (!recaptcha_token) {
+        return new Response(JSON.stringify({ error: "Yêu cầu xác minh danh tính qua Google reCAPTCHA." }), { status: 400 });
+      }
+
+      const verifyRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          secret: recaptchaSecret,
+          response: recaptcha_token,
+          remoteip: request.headers.get("CF-Connecting-IP") || ""
+        })
+      });
+
+      const verifyData: any = await verifyRes.json();
+      if (!verifyData.success) {
+        return new Response(JSON.stringify({ error: "Xác thực reCAPTCHA thất bại hoặc đã hết hạn." }), { status: 400 });
+      }
+    } else {
+      console.warn("[API SUBMISSIONS] Cảnh báo: RECAPTCHA_SECRET_KEY chưa được cấu hình ở môi trường.");
     }
 
     const { data, error } = await supabase
