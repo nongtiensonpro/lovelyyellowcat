@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import { FavoriteButton } from "./FavoriteButton";
 import { GalleryLightbox } from "./GalleryLightbox";
+import { LazyImage } from "./LazyImage";
 
 const supabaseClient = getSupabaseBrowserClient();
 
@@ -277,11 +278,10 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
 
                 {/* Khung chứa ảnh (Tránh CLS giật màn hình với min-height) */}
                 <div className="relative bg-[#1a003a]/10 overflow-hidden aspect-auto min-h-[160px] max-h-[420px] border border-win-dark flex items-center justify-center">
-                  <img
+                  <LazyImage
                     src={sub.image_url}
                     alt={sub.title}
                     className="w-full h-auto max-h-full object-cover filter saturate-[1.1] contrast-[1.03] sm:group-hover:scale-[1.02] transition-transform duration-300"
-                    loading="lazy"
                     width="480"
                     height="360"
                   />

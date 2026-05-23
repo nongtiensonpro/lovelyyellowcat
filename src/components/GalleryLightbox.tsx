@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { ReactionBar } from "./ReactionBar";
 import { FavoriteButton } from "./FavoriteButton";
+import { LazyImage } from "./LazyImage";
 
 interface Submission {
   id: string;
@@ -303,7 +304,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               <div className="absolute inset-0 opacity-10 pointer-events-none" 
                    style={{ backgroundImage: 'radial-gradient(var(--color-vapor-pink) 1px, transparent 0)', backgroundSize: '24px 24px' }} />
 
-              <img
+              <LazyImage
                 src={activeSubmission.image_url}
                 alt={activeSubmission.title}
                 className="max-w-full max-h-full object-contain filter saturate-125 contrast-105"
