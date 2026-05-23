@@ -38,8 +38,10 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
   const [mainInputText, setMainInputText] = useState("");
   const [replyInputText, setReplyInputText] = useState("");
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
-  // Tải lại toàn bộ cây bình luận thông qua hàm đệ quy PostgreSQL RPC
+  // Tải lại toàn bộ cây bình luận thông qua hàm đệ quy PostgreSQL RPC (đọc công khai, không cần xác thực)
   const fetchCommentTree = async () => {
     const { data, error } = await supabaseClient.rpc("get_comment_tree", {
       p_article_id: articleId
@@ -68,7 +70,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
   useEffect(() => {
     fetchCommentTree();
 
-    // Lắng nghe realtime từ Supabase khi có bình luận mới
+    // Lắng nghe realtime từ Supabase khi có bình luận mới (đọc công khai)
     const channel = supabaseClient
       .channel(`comments-realtime-${articleId}`)
       .on(
@@ -91,49 +93,68 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
     };
   }, [articleId]);
 
+  // Gửi bình luận qua API route phía server (xác thực bằng cookie httpOnly)
+  const postComment = async (content: string, parentId: string | null, depth: number) => {
+    setErrorMessage(null);
+    setIsSending(true);
+
+    try {
+      const response = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          article_id: articleId,
+          content: content.trim(),
+          parent_id: parentId,
+          depth: depth
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        const msg = result.error || `Lỗi HTTP ${response.status}`;
+        setErrorMessage(`Không thể gửi bình luận: ${msg}`);
+        return false;
+      }
+
+      return true;
+    } catch (err: any) {
+      console.error("Lỗi mạng gửi bình luận:", err);
+      setErrorMessage(`Sự cố kết nối mạng: ${err.message || err}`);
+      return false;
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   // Gửi bình luận cấp gốc (cấp 0)
   const postMainComment = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!mainInputText.trim() || !currentUser) return;
+    if (!mainInputText.trim() || !currentUser || isSending) return;
 
-    const { error } = await supabaseClient.from("comments").insert({
-      article_id: articleId,
-      profile_id: currentUser.id,
-      content: mainInputText.trim(),
-      parent_id: null,
-      depth: 0
-    });
-
-    if (error) {
-      console.error("Lỗi gửi bình luận chính:", error.message);
-    } else {
+    const success = await postComment(mainInputText, null, 0);
+    if (success) {
       setMainInputText("");
+      fetchCommentTree(); // Tải lại ngay lập tức
     }
   };
 
   // Gửi phản hồi bình luận lồng nhau
   const postReplyComment = async (parentComment: Comment) => {
-    if (!replyInputText.trim() || !currentUser) return;
+    if (!replyInputText.trim() || !currentUser || isSending) return;
 
     const nextDepth = (parentComment.depth ?? 0) + 1;
     if (nextDepth > 3) {
-      alert("Hệ thống chỉ hỗ trợ lồng bình luận tối đa 3 cấp.");
+      setErrorMessage("Hệ thống chỉ hỗ trợ lồng bình luận tối đa 3 cấp.");
       return;
     }
 
-    const { error } = await supabaseClient.from("comments").insert({
-      article_id: articleId,
-      profile_id: currentUser.id,
-      content: replyInputText.trim(),
-      parent_id: parentComment.id,
-      depth: nextDepth
-    });
-
-    if (error) {
-      console.error("Lỗi gửi bình luận phản hồi:", error.message);
-    } else {
+    const success = await postComment(replyInputText, parentComment.id, nextDepth);
+    if (success) {
       setReplyInputText("");
       setActiveReplyId(null);
+      fetchCommentTree(); // Tải lại ngay lập tức
     }
   };
 
@@ -157,33 +178,35 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
       depthClass = "ml-12 sm:ml-16 border-l border-dashed border-win-dark/50 pl-2 sm:pl-3";
     }
 
+    const profile = comment.profiles || { id: undefined, full_name: "Ẩn danh", avatar_url: "/images/default-avatar.png" };
+
     return (
       <div key={comment.id} className={`space-y-2 mt-3 ${depthClass}`}>
         <div className="p-2.5 border border-win-dark bg-white shadow-sm flex gap-3 items-start">
-          {comment.profiles.id ? (
-            <a href={`/profile/${comment.profiles.id}`} className="block select-none cursor-pointer">
+          {profile.id ? (
+            <a href={`/profile/${profile.id}`} className="block select-none cursor-pointer">
               <img
-                src={comment.profiles.avatar_url || "/images/default-avatar.png"}
-                alt={comment.profiles.full_name}
+                src={profile.avatar_url || "/images/default-avatar.png"}
+                alt={profile.full_name}
                 className="w-7 h-7 border border-win-dark object-cover filter saturate-150 contrast-110 hover:brightness-110"
               />
             </a>
           ) : (
             <img
-              src={comment.profiles.avatar_url || "/images/default-avatar.png"}
-              alt={comment.profiles.full_name}
+              src={profile.avatar_url || "/images/default-avatar.png"}
+              alt={profile.full_name}
               className="w-7 h-7 border border-win-dark object-cover filter saturate-150 contrast-110"
             />
           )}
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-center mb-1 text-[9px] text-vapor-purple font-bold">
               <span className="truncate">
-                {comment.profiles.id ? (
-                  <a href={`/profile/${comment.profiles.id}`} className="hover:underline text-vapor-purple no-underline">
-                    {comment.profiles.full_name}
+                {profile.id ? (
+                  <a href={`/profile/${profile.id}`} className="hover:underline text-vapor-purple no-underline">
+                    {profile.full_name}
                   </a>
                 ) : (
-                  comment.profiles.full_name
+                  profile.full_name
                 )}
               </span>
               <span className="text-win-dark font-normal">
@@ -218,7 +241,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
             <input
               type="text"
               className="flex-1 p-1.5 border border-win-dark bg-white outline-none text-[10px] text-black shadow-inner"
-              placeholder={`Trả lời ${comment.profiles.full_name}...`}
+              placeholder={`Trả lời ${profile.full_name}...`}
               value={replyInputText}
               onChange={(e) => setReplyInputText(e.target.value)}
               onKeyDown={(e) => {
@@ -227,9 +250,10 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
             />
             <button
               onClick={() => postReplyComment(comment)}
+              disabled={isSending}
               className="win95-btn font-bold px-3 py-1 text-[10px]"
             >
-              GỬI
+              {isSending ? "..." : "GỬI"}
             </button>
           </div>
         )}
@@ -251,6 +275,23 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
         <span>AESTHETIC_CHAT.EXE</span>
         <span className="text-[10px] tracking-widest text-vapor-green animate-pulse">● NESTED THREAD</span>
       </div>
+
+      {/* Alert Error Box Win95 */}
+      {errorMessage && (
+        <div className="bg-[#ffccd5] border-b border-win-dark p-2 text-red-900 text-[10px] font-bold flex items-center justify-between shadow-sm">
+          <span className="flex items-center gap-1.5">
+            <span>⚠️</span>
+            <span>SYSTEM_ALERT.ERR: {errorMessage}</span>
+          </span>
+          <button 
+            type="button" 
+            onClick={() => setErrorMessage(null)} 
+            className="win95-btn px-2 py-0.5 text-[8px] font-bold uppercase shrink-0 ml-2 cursor-pointer"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
 
       {/* Danh sách bình luận */}
       <div className="p-3 bg-[#e6e6e6] space-y-3 h-80 overflow-y-auto border-b-2 border-win-dark shadow-inner">
@@ -274,8 +315,8 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
             value={mainInputText}
             onChange={(e) => setMainInputText(e.target.value)}
           />
-          <button type="submit" className="win95-btn font-bold px-6">
-            GỬI
+          <button type="submit" disabled={isSending} className="win95-btn font-bold px-6">
+            {isSending ? "..." : "GỬI"}
           </button>
         </form>
       ) : (

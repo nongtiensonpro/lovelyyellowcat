@@ -38,7 +38,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
   const particleIdRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
 
-  // Tải danh sách cảm xúc hiện có từ database
+  // Tải danh sách cảm xúc hiện có từ database (đọc công khai, không cần xác thực)
   const fetchReactions = async () => {
     const { data, error } = await supabaseClient
       .from("reactions")
@@ -53,7 +53,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
   useEffect(() => {
     fetchReactions();
 
-    // Kết nối Supabase Realtime lắng nghe các sự thay đổi bày tỏ cảm xúc
+    // Kết nối Supabase Realtime lắng nghe các sự thay đổi bày tỏ cảm xúc (đọc công khai)
     const channel = supabaseClient
       .channel(`reactions-realtime-${articleId}`)
       .on(
@@ -113,14 +113,13 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
   }, [particles.length]);
 
   // Tạo hiệu ứng hạt nổ tung (Particle Explosion)
-  const triggerParticles = (emoji: string, e: React.MouseEvent<HTMLButtonElement>) => {
+  const triggerParticles = (emoji: string, buttonRect: DOMRect) => {
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return; // Chặn chuyển động hạt nổ tung theo thiết lập của hệ thống người dùng
     }
-    const rect = e.currentTarget.getBoundingClientRect();
     // Vị trí trung tâm nút làm gốc nổ
-    const originX = rect.left + rect.width / 2 + window.scrollX;
-    const originY = rect.top + rect.height / 2 + window.scrollY;
+    const originX = buttonRect.left + buttonRect.width / 2 + window.scrollX;
+    const originY = buttonRect.top + buttonRect.height / 2 + window.scrollY;
 
     const newParticles: Particle[] = Array.from({ length: 8 }).map(() => {
       particleIdRef.current += 1;
@@ -139,7 +138,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
     setParticles((prev) => [...prev, ...newParticles]);
   };
 
-  // Người dùng ấn thích / bỏ thích Emoji
+  // Người dùng ấn thích / bỏ thích Emoji — gửi qua API route phía server
   const handleReact = async (emoji: string, e: React.MouseEvent<HTMLButtonElement>) => {
     if (!currentUser) {
       setErrorMessage("Vui lòng đăng nhập Google để bày tỏ cảm xúc nghệ thuật!");
@@ -147,38 +146,43 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
       return;
     }
 
+    // Lưu vị trí nút NGAY LẬP TỨC (đồng bộ) trước khi React xoá e.currentTarget sau async
+    const buttonRect = e.currentTarget.getBoundingClientRect();
+
     const userReaction = reactions.find(
       (r) => r.profile_id === currentUser.id && r.emoji === emoji
     );
 
-    if (userReaction) {
-      // Đã thích -> Tiến hành bỏ thích
-      const { error } = await supabaseClient
-        .from("reactions")
-        .delete()
-        .eq("article_id", articleId)
-        .eq("profile_id", currentUser.id)
-        .eq("emoji", emoji);
+    setErrorMessage(null);
 
-      if (error) {
-        console.error(error.message);
-      }
-    } else {
-      // Chưa thích -> Gửi lượt thích mới
-      const { error } = await supabaseClient
-        .from("reactions")
-        .insert({
+    try {
+      const response = await fetch("/api/reactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           article_id: articleId,
-          profile_id: currentUser.id,
-          emoji: emoji
-        });
+          emoji: emoji,
+          action: userReaction ? "remove" : "add"
+        })
+      });
 
-      if (error) {
-        console.error(error.message);
+      const result = await response.json();
+
+      if (!response.ok) {
+        const msg = result.error || `Lỗi HTTP ${response.status}`;
+        setErrorMessage(`Không thể cập nhật cảm xúc: ${msg}`);
+        setTimeout(() => setErrorMessage(null), 5000);
       } else {
-        // Chỉ bùng nổ hạt neon khi thích thành công
-        triggerParticles(emoji, e);
+        // Chỉ bùng nổ hạt neon khi thích thành công (không phải bỏ thích)
+        if (!userReaction) {
+          triggerParticles(emoji, buttonRect);
+        }
+        fetchReactions(); // Đồng bộ lại ngay lập tức
       }
+    } catch (err: any) {
+      console.error("Lỗi mạng handleReact:", err);
+      setErrorMessage(`Lỗi kết nối: ${err.message || err}`);
+      setTimeout(() => setErrorMessage(null), 5000);
     }
   };
 

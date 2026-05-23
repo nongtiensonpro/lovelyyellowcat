@@ -18,6 +18,10 @@ drop policy if exists "Allow users all access own favorites" on public.favorites
 create policy "Allow users all access own favorites" on public.favorites for all to authenticated
   using (auth.uid() = profile_id);
 
+drop policy if exists "Allow editors and admins delete favorites" on public.favorites;
+create policy "Allow editors and admins delete favorites" on public.favorites for delete to authenticated
+  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')));
+
 -- 2. Đăng ký bảng favorites vào Supabase Realtime Replication
 do $$
 begin

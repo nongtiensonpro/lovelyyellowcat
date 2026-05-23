@@ -40,7 +40,19 @@ const [commentsRes, relatedRes] = await Promise.all([
     : Promise.resolve({ data: [] })
 ]);
 
-const initialComments = commentsRes.data || [];
+const initialComments = (commentsRes.data || []).map((c: any) => ({
+  id: c.id,
+  article_id: c.article_id,
+  content: c.content,
+  created_at: c.created_at,
+  parent_id: c.parent_id,
+  depth: c.depth,
+  profiles: {
+    id: c.profile_id,
+    full_name: c.full_name,
+    avatar_url: c.avatar_url
+  }
+}));
 const relatedData = relatedRes.data || [];
 
 let article = null;

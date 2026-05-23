@@ -49,9 +49,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
     if (!currentUser) return;
     fetchNotifications();
 
-    // Kết nối Realtime lắng nghe thông báo mới được gửi riêng cho người dùng
+    // Tạo channel trước, đăng ký callback, rồi mới subscribe — tránh lỗi "cannot add after subscribe"
+    let cancelled = false;
     const channel = supabaseClient
-      .channel(`notifications-realtime-${currentUser.id}`)
+      .channel(`notifications-rt-${currentUser.id}-${Date.now()}`)
       .on(
         "postgres_changes",
         {
@@ -61,6 +62,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
           filter: `recipient=eq.${currentUser.id}`
         },
         (payload) => {
+          if (cancelled) return;
           // Thêm thông báo mới lên đầu danh sách
           setNotifications((prev) => [payload.new as Notification, ...prev]);
           
@@ -77,10 +79,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
             // Trình duyệt chặn audio-context cho đến khi tương tác, bỏ qua lỗi
           }
         }
-      )
-      .subscribe();
+      );
+
+    channel.subscribe();
 
     return () => {
+      cancelled = true;
       supabaseClient.removeChannel(channel);
     };
   }, [currentUser]);
@@ -100,33 +104,43 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
     };
   }, [isOpen]);
 
-  // Đánh dấu một thông báo đã đọc
+  // Đánh dấu một thông báo đã đọc qua API route
   const markAsRead = async (id: string) => {
-    const { error } = await supabaseClient
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("id", id);
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_read", notification_id: id })
+      });
 
-    if (!error) {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+        );
+      }
+    } catch (err) {
+      console.error("Lỗi đánh dấu đã đọc:", err);
     }
   };
 
-  // Đánh dấu tất cả đã đọc
+  // Đánh dấu tất cả đã đọc qua API route
   const markAllAsRead = async () => {
     if (!currentUser) return;
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
     if (unreadIds.length === 0) return;
 
-    const { error } = await supabaseClient
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("recipient", currentUser.id);
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_all_read" })
+      });
 
-    if (!error) {
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      if (response.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      }
+    } catch (err) {
+      console.error("Lỗi đánh dấu tất cả đã đọc:", err);
     }
   };
 

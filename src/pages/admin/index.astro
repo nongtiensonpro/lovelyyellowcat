@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { deleteArticleWithRelations } from "../../lib/adminModeration";
 import { createSupabaseServerClient } from "../../lib/supabase";
 
 const supabase = createSupabaseServerClient({
@@ -20,20 +21,21 @@ if (user) {
 }
 
 // Xử lý các hành động POST từ Admin (như Xóa bài viết)
+let actionResult: { success: boolean; message: string } | null = null;
+
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const action = formData.get("action");
-  const articleId = formData.get("articleId");
+  const articleId = formData.get("articleId") as string;
 
   if (action === "delete" && articleId) {
-    const { error } = await supabase
-      .from("articles")
-      .delete()
-      .eq("id", articleId);
-
-    if (error) {
-      console.error("Lỗi khi xóa bài viết:", error.message);
+    try {
+      actionResult = await deleteArticleWithRelations(supabase, articleId);
+    } catch (err: any) {
+      actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
     }
+  } else {
+    actionResult = { success: false, message: "Hành động không hợp lệ hoặc thiếu thông tin." };
   }
 }
 
@@ -75,6 +77,19 @@ const draftArticles = articles?.filter(a => a.status === "draft").length || 0;
       <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
     </div>
   </div>
+
+  <!-- Thông báo kết quả hành động -->
+  {actionResult && (
+    <div class={`win95-container mb-6 font-retro text-xs ${actionResult.success ? "border-vapor-green" : "border-red-600"}`}>
+      <div class={`win95-header ${actionResult.success ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
+        <span>{actionResult.success ? "✅ SYSTEM_LOG.OK" : "❌ SYSTEM_ALERT.ERR"}</span>
+      </div>
+      <div class={`p-3 text-black font-bold ${actionResult.success ? "bg-green-100" : "bg-red-100"}`}>
+        <span class="mr-2">{actionResult.success ? "🟢" : "🔴"}</span>
+        {actionResult.message}
+      </div>
+    </div>
+  )}
 
   <!-- Header -->
   <div class="text-center py-6">

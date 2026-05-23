@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { deleteSubmissionWithRelations } from "../../lib/adminModeration";
 import { createSupabaseServerClient } from "../../lib/supabase";
 
 const supabase = createSupabaseServerClient({
@@ -19,71 +20,105 @@ if (user) {
   userProfile = data;
 }
 
-// Xử lý các hành động Duyệt bài (Approve / Reject)
+// Xử lý các hành động Duyệt bài (Approve / Reject / Delete)
+let actionResult: { success: boolean; message: string } | null = null;
+
 if (Astro.request.method === "POST" && user) {
   const formData = await Astro.request.formData();
   const action = formData.get("action");
-  const submissionId = formData.get("submissionId");
+  const submissionId = formData.get("submissionId") as string;
 
   if (submissionId && (action === "approve" || action === "reject")) {
     const status = action === "approve" ? "approved" : "rejected";
     
     // Cập nhật trạng thái duyệt tranh
-    const { error: errUpdate } = await supabase
+    const { data: updatedSubmission, error: errUpdate } = await supabase
       .from("submissions")
       .update({
         status,
         reviewed_by: user.id,
         reviewed_at: new Date().toISOString()
       })
-      .eq("id", submissionId);
+      .eq("id", submissionId)
+      .select("id, author_id")
+      .maybeSingle<{ id: string; author_id: string | null }>();
 
-    if (!errUpdate && action === "approve") {
-      // Tìm tác giả để cộng điểm thưởng 50 XP khi tranh được duyệt
-      const { data: sub } = await supabase
-        .from("submissions")
-        .select("author_id")
-        .eq("id", submissionId)
-        .single();
-        
-      if (sub?.author_id) {
-        await supabase.rpc("award_xp", {
-          p_profile_id: sub.author_id,
+    if (errUpdate) {
+      actionResult = { success: false, message: `Lỗi khi ${action === "approve" ? "duyệt" : "từ chối"} tranh: ${errUpdate.message}` };
+    } else if (!updatedSubmission) {
+      actionResult = {
+        success: false,
+        message: "Không tìm thấy tranh hoặc bạn không có quyền cập nhật. Nếu đang dùng tài khoản editor, hãy chạy migration supabase_admin_moderation_fixes.sql để cập nhật RLS."
+      };
+    } else if (action === "approve") {
+      const warnings: string[] = [];
+
+      if (updatedSubmission.author_id) {
+        const { error: xpError } = await supabase.rpc("award_xp", {
+          p_profile_id: updatedSubmission.author_id,
           p_xp_amount: 50
         });
 
+        if (xpError) {
+          warnings.push(`không cộng được XP: ${xpError.message}`);
+        }
+
         // Tạo thông báo in-app cho tác giả
-        await supabase
+        const { error: notificationError } = await supabase
           .from("notifications")
           .insert({
-            recipient: sub.author_id,
+            recipient: updatedSubmission.author_id,
             type: "submission_approved",
             payload: {
               submission_id: submissionId,
               message: "Tác phẩm nghệ thuật của bạn đã được ban biên tập phê duyệt công khai! (+50 XP)"
             }
           });
-      }
-    } else if (!errUpdate && action === "reject") {
-      const { data: sub } = await supabase
-        .from("submissions")
-        .select("author_id")
-        .eq("id", submissionId)
-        .single();
 
-      if (sub?.author_id) {
+        if (notificationError) {
+          warnings.push(`không gửi được thông báo: ${notificationError.message}`);
+        }
+      }
+
+      actionResult = {
+        success: true,
+        message: warnings.length > 0
+          ? `Đã duyệt tác phẩm, nhưng ${warnings.join("; ")}.`
+          : "Đã duyệt tác phẩm thành công! Tác giả được thưởng +50 XP và đã nhận thông báo."
+      };
+    } else {
+      const warnings: string[] = [];
+
+      if (updatedSubmission.author_id) {
         // Tạo thông báo từ chối in-app cho tác giả
-        await supabase
+        const { error: notificationError } = await supabase
           .from("notifications")
           .insert({
-            recipient: sub.author_id,
+            recipient: updatedSubmission.author_id,
             type: "submission_rejected",
             payload: {
               submission_id: submissionId,
               message: "Rất tiếc, tác phẩm nghệ thuật của bạn chưa phù hợp tiêu chí chất lượng của tạp chí lần này."
             }
           });
+
+        if (notificationError) {
+          warnings.push(`không gửi được thông báo: ${notificationError.message}`);
+        }
       }
+
+      actionResult = {
+        success: true,
+        message: warnings.length > 0
+          ? `Đã từ chối tác phẩm, nhưng ${warnings.join("; ")}.`
+          : "Đã từ chối tác phẩm. Tác giả đã được thông báo."
+      };
+    }
+  } else if (submissionId && action === "delete") {
+    try {
+      actionResult = await deleteSubmissionWithRelations(supabase, submissionId);
+    } catch (err: any) {
+      actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
     }
   }
 }
@@ -128,6 +163,19 @@ const { count: pendingSubmissionsCount } = await supabase
       <a href="/admin/submissions" class="hover:underline no-underline text-black font-bold">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
     </div>
   </div>
+
+  <!-- Thông báo kết quả hành động -->
+  {actionResult && (
+    <div class={`win95-container mb-6 font-retro text-xs ${actionResult.success ? "border-vapor-green" : "border-red-600"}`}>
+      <div class={`win95-header ${actionResult.success ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
+        <span>{actionResult.success ? "✅ SYSTEM_LOG.OK" : "❌ SYSTEM_ALERT.ERR"}</span>
+      </div>
+      <div class={`p-3 text-black font-bold ${actionResult.success ? "bg-green-100" : "bg-red-100"}`}>
+        <span class="mr-2">{actionResult.success ? "🟢" : "🔴"}</span>
+        {actionResult.message}
+      </div>
+    </div>
+  )}
 
   <!-- Header -->
   <div class="text-center py-6">
@@ -189,18 +237,37 @@ const { count: pendingSubmissionsCount } = await supabase
             
             {sub.status === 'pending' && (
               <div class="p-2 bg-[#f0f0f0] border-t border-win-dark flex gap-2 justify-between">
-                <form method="POST" class="w-1/2 m-0">
+                <form method="POST" class="w-1/3 m-0">
                   <input type="hidden" name="submissionId" value={sub.id} />
                   <input type="hidden" name="action" value="reject" />
                   <button type="submit" class="win95-btn w-full font-bold text-red-800 text-[10px] py-1 border-red-400">
                     🔴 TỪ CHỐI
                   </button>
                 </form>
-                <form method="POST" class="w-1/2 m-0">
+                <form method="POST" class="w-1/3 m-0">
                   <input type="hidden" name="submissionId" value={sub.id} />
                   <input type="hidden" name="action" value="approve" />
                   <button type="submit" class="win95-btn w-full font-bold text-green-800 text-[10px] py-1 border-green-400">
-                    🟢 DUYỆT ẢNH
+                    🟢 DUYỆT
+                  </button>
+                </form>
+                <form method="POST" class="w-1/3 m-0" onsubmit="return confirm('⚠️ Xóa vĩnh viễn tranh này cùng toàn bộ dữ liệu liên quan?');">
+                  <input type="hidden" name="submissionId" value={sub.id} />
+                  <input type="hidden" name="action" value="delete" />
+                  <button type="submit" class="win95-btn w-full font-bold text-red-900 text-[10px] py-1 bg-red-200 border-red-500">
+                    ❌ XÓA
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {sub.status !== 'pending' && (
+              <div class="p-2 bg-[#f0f0f0] border-t border-win-dark flex justify-end">
+                <form method="POST" class="m-0" onsubmit="return confirm('⚠️ Xóa vĩnh viễn tranh này cùng toàn bộ dữ liệu liên quan?');">
+                  <input type="hidden" name="submissionId" value={sub.id} />
+                  <input type="hidden" name="action" value="delete" />
+                  <button type="submit" class="win95-btn font-bold text-red-900 text-[10px] py-1 px-3 bg-red-200 border-red-500">
+                    ❌ XÓA VĨNH VIỄN
                   </button>
                 </form>
               </div>

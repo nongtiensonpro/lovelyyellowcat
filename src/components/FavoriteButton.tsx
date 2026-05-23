@@ -24,7 +24,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Kiểm tra trạng thái yêu thích ban đầu từ database
+  // Kiểm tra trạng thái yêu thích ban đầu từ database (đọc công khai)
   useEffect(() => {
     if (!currentUser) return;
 
@@ -43,7 +43,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
 
     checkFavoriteStatus();
 
-    // Lắng nghe realtime để đồng bộ nếu được bấm ở nơi khác
+    // Lắng nghe realtime để đồng bộ nếu được bấm ở nơi khác (đọc công khai)
     const channel = supabaseClient
       .channel(`favorite-sync-${submissionId}`)
       .on(
@@ -70,6 +70,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     };
   }, [submissionId, currentUser]);
 
+  // Toggle yêu thích qua API route phía server (xác thực bằng cookie httpOnly)
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -84,34 +85,28 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     setIsLoading(true);
 
     try {
-      if (isFavorited) {
-        // Xóa yêu thích
-        const { error } = await supabaseClient
-          .from("favorites")
-          .delete()
-          .eq("profile_id", currentUser.id)
-          .eq("submission_id", submissionId);
+      const response = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submission_id: submissionId,
+          action: isFavorited ? "remove" : "add"
+        })
+      });
 
-        if (error) throw error;
-        setIsFavorited(false);
-        if (onToggle) onToggle(false);
-      } else {
-        // Thêm yêu thích
-        const { error } = await supabaseClient
-          .from("favorites")
-          .insert({
-            profile_id: currentUser.id,
-            submission_id: submissionId
-          });
+      const result = await response.json();
 
-        if (error) throw error;
-        setIsFavorited(true);
-        if (onToggle) onToggle(true);
+      if (!response.ok) {
+        throw new Error(result.error || `Lỗi HTTP ${response.status}`);
       }
+
+      const newState = !isFavorited;
+      setIsFavorited(newState);
+      if (onToggle) onToggle(newState);
     } catch (err: any) {
       console.error("Lỗi khi thay đổi yêu thích:", err.message);
-      setErrorMsg("Lỗi đồng bộ!");
-      setTimeout(() => setErrorMsg(null), 3000);
+      setErrorMsg(`Lỗi: ${err.message || err}`);
+      setTimeout(() => setErrorMsg(null), 5000);
     } finally {
       setIsLoading(false);
     }

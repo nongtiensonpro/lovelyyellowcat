@@ -44,7 +44,8 @@ create policy "Allow public read published articles" on public.articles for sele
 
 drop policy if exists "Allow editors and admins all access to articles" on public.articles;
 create policy "Allow editors and admins all access to articles" on public.articles for all to authenticated
-  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')));
+  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')))
+  with check (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')));
 
 -- 4. GIN Index hỗ trợ tìm kiếm Full-Text Search Tiếng Việt
 create or replace function public.immutable_array_to_string(arr text[], sep text)
@@ -91,8 +92,10 @@ drop policy if exists "Allow public to view approved submissions" on public.subm
 create policy "Allow public to view approved submissions" on public.submissions for select using (status = 'approved');
 
 drop policy if exists "Allow admins to access all submissions" on public.submissions;
-create policy "Allow admins to access all submissions" on public.submissions for all to authenticated
-  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
+drop policy if exists "Allow editors and admins access all submissions" on public.submissions;
+create policy "Allow editors and admins access all submissions" on public.submissions for all to authenticated
+  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')))
+  with check (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')));
 
 -- 6. Tạo bảng bày tỏ cảm xúc emoji (Reactions)
 create table if not exists public.reactions (
@@ -114,6 +117,10 @@ create policy "Allow authenticated insert reactions" on public.reactions for ins
 
 drop policy if exists "Allow authenticated delete own reactions" on public.reactions;
 create policy "Allow authenticated delete own reactions" on public.reactions for delete to authenticated using (auth.uid() = profile_id);
+
+drop policy if exists "Allow editors and admins delete reactions" on public.reactions;
+create policy "Allow editors and admins delete reactions" on public.reactions for delete to authenticated
+  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')));
 
 -- View đếm tổng hợp Reactions
 create or replace view public.article_reaction_counts as
@@ -261,6 +268,10 @@ drop policy if exists "Allow users to access own notifications" on public.notifi
 create policy "Allow users to access own notifications" on public.notifications for all to authenticated
   using (auth.uid() = recipient);
 
+drop policy if exists "Allow editors and admins insert notifications" on public.notifications;
+create policy "Allow editors and admins insert notifications" on public.notifications for insert to authenticated
+  with check (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')));
+
 create index if not exists notif_unread_idx on public.notifications (recipient, is_read, created_at desc) where is_read = false;
 
 -- Trigger tạo thông báo phản hồi bình luận
@@ -303,6 +314,10 @@ create trigger on_comment_created_notification
 alter table public.comments
   add column if not exists parent_id uuid references public.comments(id) on delete cascade,
   add column if not exists depth integer default 0 check (depth <= 3);
+
+drop policy if exists "Allow editors and admins delete comments" on public.comments;
+create policy "Allow editors and admins delete comments" on public.comments for delete to authenticated
+  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role in ('editor', 'admin')));
 
 -- Hàm đệ quy recursive CTE lấy cây bình luận
 create or replace function public.get_comment_tree(p_article_id text)
