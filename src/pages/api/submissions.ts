@@ -37,8 +37,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
 
       const verifyData: any = await verifyRes.json();
-      if (!verifyData.success) {
-        return new Response(JSON.stringify({ error: "Xác thực reCAPTCHA thất bại hoặc đã hết hạn." }), { status: 400 });
+      if (!verifyData.success || verifyData.score < 0.5) {
+        console.log("[reCAPTCHA v3] Bot detected. Score:", verifyData.score);
+        return new Response(JSON.stringify({ error: "Hệ thống chống bot từ chối yêu cầu của bạn (Điểm bảo mật quá thấp)." }), { status: 400 });
       }
     } else {
       console.warn("[API SUBMISSIONS] Cảnh báo: RECAPTCHA_SECRET_KEY chưa được cấu hình ở môi trường.");

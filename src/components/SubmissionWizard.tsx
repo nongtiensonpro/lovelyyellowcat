@@ -31,59 +31,30 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  const recaptchaRef = useRef<HTMLDivElement>(null);
 
-  // Quản lý hiển thị Google reCAPTCHA v2 (Dark Theme)
-  useEffect(() => {
-    if (step !== 1 || !recaptchaRef.current) return;
-
-    let widgetId: any = null;
-
-    const renderRecaptcha = () => {
+  
+  // Lấy token reCAPTCHA v3
+  const executeRecaptcha = async (action: string): Promise<string | null> => {
+    return new Promise((resolve) => {
       // @ts-ignore
-      if (window.grecaptcha && window.grecaptcha.render) {
-        const sitekey = window.__RECAPTCHA_SITEKEY__ || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY;
-        if (!sitekey) {
-          console.error("reCAPTCHA sitekey không được cấu hình. Kiểm tra biến môi trường PUBLIC_RECAPTCHA_SITEKEY.");
-          return;
-        }
-        try {
+      if (window.grecaptcha && window.grecaptcha.execute) {
+        const sitekey = window.__RECAPTCHA_SITEKEY__ || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY || "6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5";
+        // @ts-ignore
+        window.grecaptcha.ready(() => {
           // @ts-ignore
-          widgetId = window.grecaptcha.render(recaptchaRef.current, {
-            sitekey,
-            theme: "dark",
-            callback: (token: string) => {
-              setRecaptchaToken(token);
-            },
-            "expired-callback": () => {
-              setRecaptchaToken(null);
-            },
-            "error-callback": () => {
-              setRecaptchaToken(null);
-            }
+          window.grecaptcha.execute(sitekey, { action }).then((token: string) => {
+            resolve(token);
+          }).catch((err: any) => {
+            console.error("Lỗi lấy token reCAPTCHA v3:", err);
+            resolve(null);
           });
-        } catch (err) {
-          console.error("Lỗi khởi tạo reCAPTCHA:", err);
-        }
+        });
       } else {
-        setTimeout(renderRecaptcha, 250);
+        console.warn("reCAPTCHA v3 chưa tải xong");
+        resolve(null);
       }
-    };
-
-    const timeout = setTimeout(renderRecaptcha, 150);
-
-    return () => {
-      clearTimeout(timeout);
-      // @ts-ignore
-      if (widgetId !== null && window.grecaptcha && window.grecaptcha.reset) {
-        try {
-          // @ts-ignore
-          window.grecaptcha.reset(widgetId);
-        } catch (e) {}
-      }
-    };
-  }, [step]);
+    });
+  };
 
   // Xử lý upload ảnh lên Cloudinary
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,6 +110,13 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
     setIsSubmitting(true);
     setMessage(null);
 
+    const token = await executeRecaptcha("submit_artwork");
+    if (!token) {
+      setMessage({ type: "error", text: "Hệ thống bảo vệ (reCAPTCHA) gặp lỗi, vui lòng thử lại." });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/submissions", {
         method: "POST",
@@ -148,7 +126,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
           description: description.trim(),
           image_url: imageUrl,
           image_pid: imagePid,
-          recaptcha_token: recaptchaToken
+          recaptcha_token: token
         })
       });
 
@@ -174,7 +152,6 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
     setTitle("");
     setDescription("");
     setMessage(null);
-    setRecaptchaToken(null);
   };
 
   if (!currentUser) {
@@ -268,23 +245,17 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
               onChange={handleUpload} 
               accept="image/*" 
               className="hidden" 
-              disabled={isUploading || !recaptchaToken}
+              disabled={isUploading}
             />
-
-            {/* Widget Google reCAPTCHA v2 (Dark Theme) */}
-            <div className="flex flex-col items-center justify-center p-3.5 bg-[#d4d4d4] border border-win-dark mb-4">
-              <span className="text-[9px] text-win-dark font-bold uppercase mb-2">🔒 XÁC MINH DANH TÍNH BẢO MẬT:</span>
-              <div ref={recaptchaRef}></div>
-            </div>
-
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading || !recaptchaToken}
+              disabled={isUploading}
               className="win95-btn w-full font-bold text-xs py-2"
             >
               {isUploading ? "ĐANG XỬ LÝ..." : "📁 TÌM FILE TÁC PHẨM"}
             </button>
+            <p className="text-[9px] text-center text-win-dark">Được bảo vệ bởi Google reCAPTCHA</p>
           </div>
         )}
 
