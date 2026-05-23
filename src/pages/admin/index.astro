@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { deleteArticleWithRelations } from "../../lib/adminModeration";
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { env } from "cloudflare:workers";
 
 // ============================================================
 // 🔍 DEBUG: Logging chi tiết cho Cloudflare Workers Logs
@@ -33,8 +34,8 @@ try {
   });
   console.log("[ADMIN] Bước 1: ✅ Supabase client đã tạo thành công");
 
-  // Bước 1b: Lấy runtime env
-  runtimeEnv = (Astro.locals as any).runtime?.env;
+  // Bước 1b: Lấy runtime env (Astro v6: dùng import { env } from "cloudflare:workers")
+  runtimeEnv = env;
   console.log("[ADMIN] Runtime env có tồn tại:", !!runtimeEnv);
 
   // Bước 2: Lấy thông tin người dùng

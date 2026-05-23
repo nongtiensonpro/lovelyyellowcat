@@ -2,12 +2,13 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { deleteSubmissionWithRelations } from "../../lib/adminModeration";
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { env } from "cloudflare:workers";
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
   cookies: Astro.cookies
 });
-const runtimeEnv = (Astro.locals as any).runtime?.env;
+const runtimeEnv = env;
 
 // Lấy thông tin người dùng hiện tại
 const { data: { user } } = await supabase.auth.getUser();
