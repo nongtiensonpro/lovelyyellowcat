@@ -13,7 +13,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     if (!user) {
       // Chuyển hướng nếu chưa đăng nhập
-      return context.redirect("/?error=unauthorized");
+      return context.redirect(new URL("/?error=unauthorized", context.url).toString());
     }
 
     // Truy vấn thông tin vai trò trong bảng profiles
@@ -25,7 +25,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     if (error || !profile || (profile.role !== "admin" && profile.role !== "editor")) {
       // Chuyển hướng nếu không có quyền quản trị/biên tập viên
-      return context.redirect("/?error=unauthorized");
+      return context.redirect(new URL("/?error=unauthorized", context.url).toString());
     }
   }
 

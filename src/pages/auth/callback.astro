@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "../../lib/supabase";
 const requestUrl = new URL(Astro.request.url);  
 const code = requestUrl.searchParams.get("code");  
 const next = requestUrl.searchParams.get("next") || "/";
+const absoluteNext = new URL(next, requestUrl.origin).toString();
+const absoluteErrorRedirect = new URL("/?error=auth-failed", requestUrl.origin).toString();
 
 if (code) {  
   const supabase = createSupabaseServerClient({  
@@ -19,7 +21,7 @@ if (code) {
     return new Response(null, {  
       status: 307,  
       headers: {  
-        Location: next,  
+        Location: absoluteNext,  
       },  
     });  
   }  
@@ -31,7 +33,7 @@ if (code) {
 return new Response(null, {  
   status: 307,  
   headers: {  
-    Location: "/?error=auth-failed",  
+    Location: absoluteErrorRedirect,  
   },  
 });  
 ---
