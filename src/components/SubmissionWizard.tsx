@@ -1,15 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
 
+// Khai báo window global cho TypeScript
+declare global {
+  interface Window {
+    __RECAPTCHA_SITEKEY__?: string;
+  }
+}
+
 interface SubmissionWizardProps {
   currentUser: {
     id: string;
     full_name: string;
     avatar_url: string;
   } | null;
-  recaptchaSitekey?: string;
 }
 
-export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser, recaptchaSitekey }) => {
+export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser }) => {
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,10 +43,15 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser,
     const renderRecaptcha = () => {
       // @ts-ignore
       if (window.grecaptcha && window.grecaptcha.render) {
+        const sitekey = window.__RECAPTCHA_SITEKEY__ || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY;
+        if (!sitekey) {
+          console.error("reCAPTCHA sitekey không được cấu hình. Kiểm tra biến môi trường PUBLIC_RECAPTCHA_SITEKEY.");
+          return;
+        }
         try {
           // @ts-ignore
           widgetId = window.grecaptcha.render(recaptchaRef.current, {
-            sitekey: recaptchaSitekey || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY,
+            sitekey,
             theme: "dark",
             callback: (token: string) => {
               setRecaptchaToken(token);

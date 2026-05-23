@@ -23,13 +23,18 @@ if (user) {
 
 // Nạp khóa Site Key động tại thời điểm chạy (Runtime) tránh phụ thuộc vào GitHub build
 import { env } from "cloudflare:workers";
-const recaptchaSitekey = (env as any)?.PUBLIC_RECAPTCHA_SITEKEY || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY;
+const recaptchaSitekey = (env as any)?.PUBLIC_RECAPTCHA_SITEKEY || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY || "";
 ---
 
 <BaseLayout title="VAPORWAVE MAGAZINE // GỬI TRANH NGHỆ THUẬT CỘNG ĐỒNG" userProfile={currentUser}>
 
+  <!-- Inject reCAPTCHA sitekey as window global for client-side React component -->
+  <script define:vars={{ recaptchaSitekey }}>
+    window.__RECAPTCHA_SITEKEY__ = recaptchaSitekey;
+  </script>
+
   <!-- Main Wizard Component -->
   <div class="py-4">
-    <SubmissionWizard client:load currentUser={currentUser} recaptchaSitekey={recaptchaSitekey} />
+    <SubmissionWizard client:load currentUser={currentUser} />
   </div>
 </BaseLayout>

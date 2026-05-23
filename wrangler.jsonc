@@ -4,6 +4,9 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "vars": {
+    "PUBLIC_RECAPTCHA_SITEKEY": "6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5"
+  },
   "observability": {
     "enabled": false,
     "head_sampling_rate": 1,
