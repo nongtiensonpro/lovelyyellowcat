@@ -3,69 +3,152 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { deleteArticleWithRelations } from "../../lib/adminModeration";
 import { createSupabaseServerClient } from "../../lib/supabase";
 
-const supabase = createSupabaseServerClient({
-  request: Astro.request,
-  cookies: Astro.cookies
-});
-const runtimeEnv = (Astro.locals as any).runtime?.env;
-
-// Lấy thông tin người dùng hiện tại để hiển thị chào mừng
-const { data: { user } } = await supabase.auth.getUser();
-let userProfile = null;
-if (user) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-  userProfile = data;
-}
-
-// Xử lý các hành động POST từ Admin (như Xóa bài viết)
+// ============================================================
+// 🔍 DEBUG: Logging chi tiết cho Cloudflare Workers Logs
+// ============================================================
+let debugError: string | null = null;
+let userProfile: any = null;
 let actionResult: { success: boolean; message: string } | null = null;
+let articles: any[] | null = null;
+let commentsCount: number | null = 0;
+let pendingSubmissionsCount: number | null = 0;
+let totalSubmissionsCount: number | null = 0;
+let totalArticles = 0;
+let publishedArticles = 0;
+let draftArticles = 0;
+let runtimeEnv: any = undefined;
 
-if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  const action = formData.get("action");
-  const articleId = formData.get("articleId") as string;
+try {
+  console.log("[ADMIN] ====== BẮT ĐẦU RENDER /admin ======");
+  console.log("[ADMIN] Request URL:", Astro.request.url);
+  console.log("[ADMIN] Request Method:", Astro.request.method);
+  console.log("[ADMIN] Cookie header present:", !!Astro.request.headers.get("Cookie"));
+  console.log("[ADMIN] Cookie header length:", (Astro.request.headers.get("Cookie") || "").length);
 
-  if (action === "delete" && articleId) {
-    try {
-      actionResult = await deleteArticleWithRelations(supabase, articleId, runtimeEnv);
-    } catch (err: any) {
-      actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
-    }
-  } else {
-    actionResult = { success: false, message: "Hành động không hợp lệ hoặc thiếu thông tin." };
+  // Bước 1: Tạo Supabase client
+  console.log("[ADMIN] Bước 1: Đang tạo Supabase client...");
+  const supabase = createSupabaseServerClient({
+    request: Astro.request,
+    cookies: Astro.cookies
+  });
+  console.log("[ADMIN] Bước 1: ✅ Supabase client đã tạo thành công");
+
+  // Bước 1b: Lấy runtime env
+  runtimeEnv = (Astro.locals as any).runtime?.env;
+  console.log("[ADMIN] Runtime env có tồn tại:", !!runtimeEnv);
+
+  // Bước 2: Lấy thông tin người dùng
+  console.log("[ADMIN] Bước 2: Đang gọi supabase.auth.getUser()...");
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const user = userData?.user;
+  console.log("[ADMIN] Bước 2: getUser hoàn tất. User ID:", user?.id || "KHÔNG CÓ");
+  if (userError) {
+    console.error("[ADMIN] Bước 2: ⚠️ getUser error:", userError.message);
   }
+
+  // Bước 3: Lấy profile
+  if (user) {
+    console.log("[ADMIN] Bước 3: Đang truy vấn bảng profiles cho user:", user.id);
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    
+    if (profileError) {
+      console.error("[ADMIN] Bước 3: ⚠️ Profile query error:", profileError.message, profileError.code);
+    } else {
+      console.log("[ADMIN] Bước 3: ✅ Profile tìm thấy. Role:", profileData?.role);
+    }
+    userProfile = profileData;
+  } else {
+    console.log("[ADMIN] Bước 3: ⏭️ Bỏ qua (không có user)");
+  }
+
+  // Bước 4: Xử lý POST action
+  if (Astro.request.method === "POST") {
+    console.log("[ADMIN] Bước 4: Đang xử lý POST action...");
+    const formData = await Astro.request.formData();
+    const action = formData.get("action");
+    const articleId = formData.get("articleId") as string;
+
+    if (action === "delete" && articleId) {
+      try {
+        actionResult = await deleteArticleWithRelations(supabase, articleId, runtimeEnv);
+        console.log("[ADMIN] Bước 4: ✅ Delete kết quả:", actionResult.message);
+      } catch (err: any) {
+        console.error("[ADMIN] Bước 4: ❌ Delete lỗi:", err.message);
+        actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
+      }
+    } else {
+      actionResult = { success: false, message: "Hành động không hợp lệ hoặc thiếu thông tin." };
+    }
+  }
+
+  // Bước 5: Lấy danh sách thống kê
+  console.log("[ADMIN] Bước 5: Đang truy vấn bảng articles...");
+  const { data: articlesData, error: errArt } = await supabase
+    .from("articles")
+    .select("*")
+    .order("created_at", { ascending: false });
+  articles = articlesData;
+  if (errArt) {
+    console.error("[ADMIN] Bước 5: ⚠️ Articles query error:", errArt.message);
+  } else {
+    console.log("[ADMIN] Bước 5: ✅ Articles:", articles?.length || 0, "bài");
+  }
+
+  console.log("[ADMIN] Bước 5b: Đang truy vấn bảng comments...");
+  const { count: cc } = await supabase
+    .from("comments")
+    .select("*", { count: "exact", head: true });
+  commentsCount = cc;
+  console.log("[ADMIN] Bước 5b: ✅ Comments count:", commentsCount);
+
+  console.log("[ADMIN] Bước 5c: Đang truy vấn submissions pending...");
+  const { count: psc } = await supabase
+    .from("submissions")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending");
+  pendingSubmissionsCount = psc;
+  console.log("[ADMIN] Bước 5c: ✅ Pending submissions:", pendingSubmissionsCount);
+
+  console.log("[ADMIN] Bước 5d: Đang truy vấn submissions total...");
+  const { count: tsc } = await supabase
+    .from("submissions")
+    .select("*", { count: "exact", head: true });
+  totalSubmissionsCount = tsc;
+  console.log("[ADMIN] Bước 5d: ✅ Total submissions:", totalSubmissionsCount);
+
+  // Tính toán các nhóm bài viết
+  totalArticles = articles?.length || 0;
+  publishedArticles = articles?.filter(a => a.status === "published").length || 0;
+  draftArticles = articles?.filter(a => a.status === "draft").length || 0;
+
+  console.log("[ADMIN] ====== RENDER /admin HOÀN TẤT THÀNH CÔNG ======");
+
+} catch (err: any) {
+  console.error("[ADMIN] ❌❌❌ CRASH NGHIÊM TRỌNG:", err.message);
+  console.error("[ADMIN] Stack trace:", err.stack);
+  debugError = `${err.message}\n\nStack:\n${err.stack}`;
 }
-
-// Lấy danh sách thống kê
-const { data: articles, error: errArt } = await supabase
-  .from("articles")
-  .select("*")
-  .order("created_at", { ascending: false });
-
-const { count: commentsCount } = await supabase
-  .from("comments")
-  .select("*", { count: "exact", head: true });
-
-const { count: pendingSubmissionsCount } = await supabase
-  .from("submissions")
-  .select("*", { count: "exact", head: true })
-  .eq("status", "pending");
-
-const { count: totalSubmissionsCount } = await supabase
-  .from("submissions")
-  .select("*", { count: "exact", head: true });
-
-// Tính toán các nhóm bài viết
-const totalArticles = articles?.length || 0;
-const publishedArticles = articles?.filter(a => a.status === "published").length || 0;
-const draftArticles = articles?.filter(a => a.status === "draft").length || 0;
 ---
 
 <BaseLayout title="VAPORWAVE MAGAZINE // ADMIN DASHBOARD" userProfile={userProfile}>
+  {/* 🔴 DEBUG: Hiển thị lỗi server nếu có */}
+  {debugError && (
+    <div class="win95-container mb-6 font-retro text-xs border-red-600">
+      <div class="win95-header bg-gradient-to-r from-red-800 to-red-600">
+        <span>❌ SERVER CRASH DETECTED - DEBUG INFO</span>
+      </div>
+      <div class="p-4 bg-red-50 text-black">
+        <p class="font-bold mb-2">Trang admin gặp lỗi khi render phía server:</p>
+        <pre class="bg-black text-green-400 p-3 overflow-x-auto text-[11px] whitespace-pre-wrap break-all">{debugError}</pre>
+        <p class="mt-2 text-[10px] text-red-700">Thông tin này cũng được ghi vào Cloudflare Workers Logs. Hãy kiểm tra tab Logs trên Dashboard.</p>
+      </div>
+    </div>
+  )}
+
   <!-- Menu Bar Quản Trị Viên -->
   <div class="win95-container w-full mb-6 font-retro">
     <div class="win95-header">
