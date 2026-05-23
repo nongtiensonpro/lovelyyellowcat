@@ -6,26 +6,40 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Bảo vệ các tuyến đường thuộc trang quản trị /admin
   if (url.pathname.startsWith("/admin")) {
-    const supabase = createSupabaseServerClient(context);
-    
-    // Lấy thông tin người dùng từ token phiên đăng nhập
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const supabase = createSupabaseServerClient(context);
 
-    if (!user) {
-      // Chuyển hướng nếu chưa đăng nhập
-      return context.redirect("/?error=unauthorized");
-    }
+      // Lấy thông tin người dùng từ token phiên đăng nhập
+      const { data: { user } } = await supabase.auth.getUser();
 
-    // Truy vấn thông tin vai trò trong bảng profiles
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+      if (!user) {
+        // Chuyển hướng nếu chưa đăng nhập
+        return new Response(null, {
+          status: 302,
+          headers: { Location: `${url.origin}/?error=unauthorized` },
+        });
+      }
 
-    if (error || !profile || (profile.role !== "admin" && profile.role !== "editor")) {
-      // Chuyển hướng nếu không có quyền quản trị/biên tập viên
-      return context.redirect("/?error=unauthorized");
+      // Truy vấn thông tin vai trò trong bảng profiles
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (error || !profile || (profile.role !== "admin" && profile.role !== "editor")) {
+        // Chuyển hướng nếu không có quyền quản trị/biên tập viên
+        return new Response(null, {
+          status: 302,
+          headers: { Location: `${url.origin}/?error=unauthorized` },
+        });
+      }
+    } catch (err) {
+      console.error("Middleware /admin error:", err);
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `${url.origin}/?error=server-error` },
+      });
     }
   }
 
