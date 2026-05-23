@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import { FavoriteButton } from "./FavoriteButton";
 import { GalleryLightbox } from "./GalleryLightbox";
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseClient = getSupabaseBrowserClient();
 
 interface Submission {
   id: string;

@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseClient = getSupabaseBrowserClient();
 
 interface FavoriteButtonProps {
   submissionId: string;
