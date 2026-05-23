@@ -4,5 +4,8 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "pages_build_output_dir": "dist"
+  "main": "dist/server/entry.mjs",
+  "assets": {
+    "directory": "dist/client"
+  }
 }
