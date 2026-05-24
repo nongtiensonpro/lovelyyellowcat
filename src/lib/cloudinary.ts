@@ -18,10 +18,21 @@ const CLOUDINARY_UPLOAD_MARKER = "/image/upload/";
 function getCloudinaryConfig(runtimeEnv?: CloudinaryRuntimeEnv) {
   const cloudName = runtimeEnv?.PUBLIC_CLOUDINARY_CLOUD_NAME
     || runtimeEnv?.CLOUDINARY_CLOUD_NAME
-    || import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const directApiKey = runtimeEnv?.CLOUDINARY_API_KEY;
-  const directApiSecret = runtimeEnv?.CLOUDINARY_API_SECRET;
-  const cloudinaryUrl = runtimeEnv?.CLOUDINARY_URL;
+    || import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME
+    || import.meta.env.CLOUDINARY_CLOUD_NAME
+    || (typeof process !== "undefined" ? process.env?.PUBLIC_CLOUDINARY_CLOUD_NAME || process.env?.CLOUDINARY_CLOUD_NAME : undefined);
+
+  const directApiKey = runtimeEnv?.CLOUDINARY_API_KEY
+    || import.meta.env.CLOUDINARY_API_KEY
+    || (typeof process !== "undefined" ? process.env?.CLOUDINARY_API_KEY : undefined);
+
+  const directApiSecret = runtimeEnv?.CLOUDINARY_API_SECRET
+    || import.meta.env.CLOUDINARY_API_SECRET
+    || (typeof process !== "undefined" ? process.env?.CLOUDINARY_API_SECRET : undefined);
+
+  const cloudinaryUrl = runtimeEnv?.CLOUDINARY_URL
+    || import.meta.env.CLOUDINARY_URL
+    || (typeof process !== "undefined" ? process.env?.CLOUDINARY_URL : undefined);
 
   if (cloudinaryUrl && (!directApiKey || !directApiSecret || !cloudName)) {
     try {
