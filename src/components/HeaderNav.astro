@@ -60,6 +60,13 @@ const currentPath = Astro.url.pathname;
         </a>
       )}
 
+      <!-- Nút Quản lý Người dùng (chỉ Admin) -->
+      {userProfile && userProfile.role === 'admin' && (
+        <a href="/admin/users" class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#ff71ce]/20 border-[#ff71ce]" style="min-height: 32px;">
+          👥 Người Dùng
+        </a>
+      )}
+
       <div class="border-l border-white h-6 my-auto mx-1"></div>
 
       {userProfile ? (
@@ -142,16 +149,23 @@ const currentPath = Astro.url.pathname;
         </div>
 
         {userProfile && (
-          <div class="flex gap-2">
-            <a href="/submit" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#05ffa1]/20 border-[#05ffa1] no-underline">
-              🎨 Gửi Tranh Mới
-            </a>
-            {userProfile && (userProfile.role === 'admin' || userProfile.role === 'editor') && (
-              <a href="/admin" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#fffb96]/30 border-[#fffb96] no-underline">
-                ⚙️ Admin Panel
+          <>
+            <div class="flex gap-2">
+              <a href="/submit" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#05ffa1]/20 border-[#05ffa1] no-underline">
+                🎨 Gửi Tranh Mới
+              </a>
+              {(userProfile.role === 'admin' || userProfile.role === 'editor') && (
+                <a href="/admin" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#fffb96]/30 border-[#fffb96] no-underline">
+                  ⚙️ Admin Panel
+                </a>
+              )}
+            </div>
+            {userProfile.role === 'admin' && (
+              <a href="/admin/users" class="block win95-btn text-center py-2.5 text-black font-bold bg-[#ff71ce]/20 border-[#ff71ce] no-underline">
+                👥 Quản Lý Người Dùng
               </a>
             )}
-          </div>
+          </>
         )}
       </div>
 

@@ -26,14 +26,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
         });
       }
 
-      // Truy vấn thông tin vai trò trong bảng profiles
+      // Truy vấn thông tin vai trò và trạng thái cấm trong bảng profiles
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, is_banned")
         .eq("id", user.id)
         .single();
 
-      console.log("[MIDDLEWARE] Profile query - Role:", profile?.role || "KHÔNG CÓ", "| Error:", error?.message || "không");
+      console.log("[MIDDLEWARE] Profile query - Role:", profile?.role || "KHÔNG CÓ", "| Banned:", profile?.is_banned, "| Error:", error?.message || "không");
+
+      // Kiểm tra người dùng bị cấm
+      if (profile?.is_banned) {
+        console.log("[MIDDLEWARE] → Redirect: tài khoản bị cấm. User:", user.id);
+        await supabase.auth.signOut();
+        return new Response(null, {
+          status: 302,
+          headers: { Location: `${url.origin}/?error=banned` },
+        });
+      }
 
       if (error || !profile || (profile.role !== "admin" && profile.role !== "editor")) {
         console.log("[MIDDLEWARE] → Redirect: không đủ quyền. Role =", profile?.role);
@@ -44,6 +54,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
         });
       }
 
+      // Chỉ admin mới truy cập được /admin/users
+      if (url.pathname.startsWith("/admin/users") && profile.role !== "admin") {
+        console.log("[MIDDLEWARE] → Redirect: editor cố truy cập /admin/users");
+        return new Response(null, {
+          status: 302,
+          headers: { Location: `${url.origin}/admin?error=admin-only` },
+        });
+      }
+
       console.log("[MIDDLEWARE] ✅ Cho phép truy cập /admin. User:", user.id, "Role:", profile.role);
     } catch (err) {
       console.error("[MIDDLEWARE] ❌ CRASH:", err);
@@ -51,6 +70,33 @@ export const onRequest = defineMiddleware(async (context, next) => {
         status: 302,
         headers: { Location: `${url.origin}/?error=server-error` },
       });
+    }
+  }
+
+  // Kiểm tra trạng thái cấm cho các route cần xác thực (submit, API)
+  if (url.pathname.startsWith("/submit") || url.pathname.startsWith("/api/submissions") || url.pathname.startsWith("/api/comments") || url.pathname.startsWith("/api/reactions")) {
+    try {
+      const supabase = createSupabaseServerClient(context);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_banned")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.is_banned) {
+          console.log("[MIDDLEWARE] → Chặn user bị cấm truy cập:", url.pathname);
+          await supabase.auth.signOut();
+          return new Response(null, {
+            status: 302,
+            headers: { Location: `${url.origin}/?error=banned` },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[MIDDLEWARE] ❌ Ban check error:", err);
     }
   }
 

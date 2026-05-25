@@ -1,0 +1,501 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { UserManagementActions } from "../../components/UserManagementActions";
+
+// ============================================================
+// 🔍 SERVER-SIDE: Trang Quản Lý Người Dùng (chỉ Admin)
+// ============================================================
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+// Lấy thông tin admin hiện tại
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile: any = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+// Double-check: chỉ admin mới truy cập (middleware đã check, nhưng an toàn hơn)
+if (!userProfile || userProfile.role !== "admin") {
+  return Astro.redirect("/admin?error=admin-only");
+}
+
+// ── Đọc query params ──
+const url = new URL(Astro.request.url);
+const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+const search = url.searchParams.get("search")?.trim() || "";
+const roleFilter = url.searchParams.get("role") || "";
+const statusFilter = url.searchParams.get("status") || "";
+
+const USERS_PER_PAGE = 10;
+
+// ── Query profiles ──
+let query = supabase
+  .from("profiles")
+  .select("id, email, full_name, avatar_url, role, created_at, is_banned, banned_at, ban_reason, banned_by", { count: "exact" });
+
+if (search) {
+  query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+}
+
+if (roleFilter && ["reader", "editor", "admin"].includes(roleFilter)) {
+  query = query.eq("role", roleFilter);
+}
+
+if (statusFilter === "active") {
+  query = query.or("is_banned.is.null,is_banned.eq.false");
+} else if (statusFilter === "banned") {
+  query = query.eq("is_banned", true);
+}
+
+const from = (page - 1) * USERS_PER_PAGE;
+const to = from + USERS_PER_PAGE - 1;
+
+query = query.order("created_at", { ascending: false }).range(from, to);
+
+const { data: users, count: totalUsers } = await query;
+const totalPages = Math.ceil((totalUsers || 0) / USERS_PER_PAGE);
+
+// ── Thống kê nhanh ──
+const { count: adminCount } = await supabase
+  .from("profiles")
+  .select("*", { count: "exact", head: true })
+  .eq("role", "admin");
+
+const { count: editorCount } = await supabase
+  .from("profiles")
+  .select("*", { count: "exact", head: true })
+  .eq("role", "editor");
+
+const { count: bannedCount } = await supabase
+  .from("profiles")
+  .select("*", { count: "exact", head: true })
+  .eq("is_banned", true);
+
+// ── Lấy audit log gần đây (5 mục) ──
+const { data: recentLogs } = await supabase
+  .from("admin_audit_log")
+  .select(`
+    id,
+    action,
+    details,
+    created_at,
+    admin:profiles!admin_id ( full_name ),
+    target:profiles!target_id ( full_name )
+  `)
+  .order("created_at", { ascending: false })
+  .limit(5);
+
+// ── Đếm comments & submissions cho admin bar ──
+const { count: commentsCount } = await supabase
+  .from("comments")
+  .select("*", { count: "exact", head: true });
+
+const { count: pendingSubmissionsCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "pending");
+
+// Hàm build URL giữ params
+function buildUrl(params: Record<string, string>) {
+  const u = new URL(url.href);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) u.searchParams.set(k, v);
+    else u.searchParams.delete(k);
+  });
+  return u.pathname + u.search;
+}
+
+// Hàm format ngày
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+}
+
+// Hàm format action name
+function formatAction(action: string) {
+  switch (action) {
+    case "role_change": return "🔄 Đổi vai trò";
+    case "ban": return "🚫 Cấm tài khoản";
+    case "unban": return "🔓 Gỡ cấm";
+    default: return action;
+  }
+}
+---
+
+<BaseLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ NGƯỜI DÙNG" userProfile={userProfile}>
+  <!-- Menu Bar Quản Trị Viên -->
+  <div class="win95-container w-full mb-6 font-retro">
+    <div class="win95-header">
+      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
+    </div>
+    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
+      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
+      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
+      <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
+      <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
+      <a href="/admin/users" class="hover:underline no-underline text-black font-bold">👥 Quản Lý Người Dùng ({totalUsers || 0})</a>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1 class="text-3xl font-extrabold uppercase tracking-widest text-vapor-blue font-retro">
+      👥 USER MANAGEMENT
+    </h1>
+    <p class="text-xs tracking-wider text-vapor-pink mt-2 font-retro uppercase">
+      -- QUẢN LÝ TÀI KHOẢN & PHÂN QUYỀN THÀNH VIÊN --
+    </p>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 font-retro">
+    <div class="win95-container text-black">
+      <div class="win95-header"><span>TOTAL.DLL</span></div>
+      <div class="p-3 bg-[#c0c0c0] text-center">
+        <p class="text-2xl font-black text-vapor-purple">{totalUsers || 0}</p>
+        <p class="text-[9px] font-bold uppercase">Tổng người dùng</p>
+      </div>
+    </div>
+    <div class="win95-container text-black">
+      <div class="win95-header"><span>ADMIN.DLL</span></div>
+      <div class="p-3 bg-[#c0c0c0] text-center">
+        <p class="text-2xl font-black text-vapor-pink">{adminCount || 0}</p>
+        <p class="text-[9px] font-bold uppercase">👑 Admin</p>
+      </div>
+    </div>
+    <div class="win95-container text-black">
+      <div class="win95-header"><span>EDITOR.DLL</span></div>
+      <div class="p-3 bg-[#c0c0c0] text-center">
+        <p class="text-2xl font-black text-vapor-blue">{editorCount || 0}</p>
+        <p class="text-[9px] font-bold uppercase">✏️ Editor</p>
+      </div>
+    </div>
+    <div class="win95-container text-black">
+      <div class="win95-header"><span>BANNED.DLL</span></div>
+      <div class="p-3 bg-[#c0c0c0] text-center">
+        <p class="text-2xl font-black text-red-600">{bannedCount || 0}</p>
+        <p class="text-[9px] font-bold uppercase">🚫 Bị cấm</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="win95-container font-retro text-black mb-6">
+    <div class="win95-header">
+      <span>🔍 SEARCH_FILTER.EXE</span>
+    </div>
+    <form method="GET" action="/admin/users" class="p-3 bg-[#c0c0c0] flex flex-wrap gap-3 items-end">
+      <!-- Tìm kiếm -->
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-[10px] font-bold uppercase mb-1">Tìm kiếm (tên / email)</label>
+        <input
+          type="text"
+          name="search"
+          value={search}
+          placeholder="Nhập tên hoặc email..."
+          class="w-full px-2 py-1.5 border-2 border-win-dark bg-white text-xs font-retro"
+          style="border-color: #808080 #fff #fff #808080;"
+        />
+      </div>
+
+      <!-- Lọc vai trò -->
+      <div class="w-36">
+        <label class="block text-[10px] font-bold uppercase mb-1">Vai trò</label>
+        <select
+          name="role"
+          class="w-full px-2 py-1.5 border-2 border-win-dark bg-white text-xs font-retro"
+          style="border-color: #808080 #fff #fff #808080;"
+        >
+          <option value="" selected={!roleFilter}>Tất cả</option>
+          <option value="admin" selected={roleFilter === "admin"}>👑 Admin</option>
+          <option value="editor" selected={roleFilter === "editor"}>✏️ Editor</option>
+          <option value="reader" selected={roleFilter === "reader"}>👤 Reader</option>
+        </select>
+      </div>
+
+      <!-- Lọc trạng thái -->
+      <div class="w-36">
+        <label class="block text-[10px] font-bold uppercase mb-1">Trạng thái</label>
+        <select
+          name="status"
+          class="w-full px-2 py-1.5 border-2 border-win-dark bg-white text-xs font-retro"
+          style="border-color: #808080 #fff #fff #808080;"
+        >
+          <option value="" selected={!statusFilter}>Tất cả</option>
+          <option value="active" selected={statusFilter === "active"}>✅ Hoạt động</option>
+          <option value="banned" selected={statusFilter === "banned"}>🚫 Bị cấm</option>
+        </select>
+      </div>
+
+      <!-- Nút -->
+      <div class="flex gap-2">
+        <button type="submit" class="win95-btn font-bold text-xs px-4 py-1.5 bg-vapor-blue/20 border-vapor-blue text-black">
+          🔍 Tìm
+        </button>
+        <a href="/admin/users" class="win95-btn font-bold text-xs px-4 py-1.5 text-black no-underline inline-flex items-center">
+          🔄 Reset
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Users Table -->
+  <div class="win95-container font-retro text-black mb-6">
+    <div class="win95-header">
+      <span>USER_DATABASE.EXE</span>
+      <span class="text-[10px] text-vapor-yellow font-bold">
+        Trang {page}/{totalPages || 1} · {totalUsers || 0} người dùng
+      </span>
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="bg-white overflow-x-auto border-2 border-win-dark p-1 hidden md:block">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-[#c0c0c0] border-b border-win-dark">
+            <th class="p-2 border-r border-win-dark font-bold">NGƯỜI DÙNG</th>
+            <th class="p-2 border-r border-win-dark font-bold w-24">VAI TRÒ</th>
+            <th class="p-2 border-r border-win-dark font-bold w-24">TRẠNG THÁI</th>
+            <th class="p-2 border-r border-win-dark font-bold w-24">NGÀY ĐĂNG KÝ</th>
+            <th class="p-2 font-bold w-52 text-center">HÀNH ĐỘNG</th>
+          </tr>
+        </thead>
+        <tbody>
+          {!users || users.length === 0 ? (
+            <tr>
+              <td colspan="5" class="p-8 text-center text-win-dark font-bold">
+                {search || roleFilter || statusFilter
+                  ? "KHÔNG TÌM THẤY NGƯỜI DÙNG PHÙ HỢP VỚI BỘ LỌC."
+                  : "CHƯA CÓ NGƯỜI DÙNG NÀO TRONG HỆ THỐNG."}
+              </td>
+            </tr>
+          ) : (
+            users.map((u: any) => (
+              <tr class={`border-b border-[#e0e0e0] hover:bg-[#f0f0f0] ${u.is_banned ? "bg-red-50" : ""}`}>
+                {/* Người dùng */}
+                <td class="p-2 border-r border-[#e0e0e0]">
+                  <div class="flex items-center gap-2">
+                    <img
+                      src={u.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
+                      alt={u.full_name}
+                      class="w-8 h-8 border border-win-dark object-cover shrink-0"
+                      style="filter: saturate(1.5);"
+                    />
+                    <div class="min-w-0">
+                      <p class="font-bold text-xs truncate">{u.full_name || "Chưa đặt tên"}</p>
+                      <p class="text-[9px] text-win-dark truncate">{u.email}</p>
+                      {u.id === userProfile.id && (
+                        <span class="text-[8px] text-vapor-pink font-bold">(Bạn)</span>
+                      )}
+                    </div>
+                  </div>
+                </td>
+
+                {/* Vai trò */}
+                <td class="p-2 border-r border-[#e0e0e0]">
+                  <span class={`px-2 py-0.5 border text-[10px] font-bold uppercase inline-block ${
+                    u.role === "admin"
+                      ? "bg-pink-100 text-pink-800 border-pink-300"
+                      : u.role === "editor"
+                      ? "bg-purple-100 text-purple-800 border-purple-300"
+                      : "bg-blue-100 text-blue-800 border-blue-300"
+                  }`}>
+                    {u.role === "admin" ? "👑" : u.role === "editor" ? "✏️" : "👤"} {u.role}
+                  </span>
+                </td>
+
+                {/* Trạng thái */}
+                <td class="p-2 border-r border-[#e0e0e0]">
+                  {u.is_banned ? (
+                    <span class="px-2 py-0.5 border text-[10px] font-bold uppercase bg-red-100 text-red-800 border-red-300" title={`Lý do: ${u.ban_reason || "Không rõ"}`}>
+                      🚫 BỊ CẤM
+                    </span>
+                  ) : (
+                    <span class="px-2 py-0.5 border text-[10px] font-bold uppercase bg-green-100 text-green-800 border-green-300">
+                      ✅ ACTIVE
+                    </span>
+                  )}
+                </td>
+
+                {/* Ngày đăng ký */}
+                <td class="p-2 border-r border-[#e0e0e0] text-[10px] text-win-dark">
+                  {formatDate(u.created_at)}
+                </td>
+
+                {/* Hành động */}
+                <td class="p-2 text-center">
+                  <UserManagementActions
+                    client:load
+                    userId={u.id}
+                    currentRole={u.role}
+                    isBanned={!!u.is_banned}
+                    userName={u.full_name || u.email}
+                    currentAdminId={userProfile.id}
+                  />
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="md:hidden bg-[#c0c0c0] p-2 space-y-2">
+      {!users || users.length === 0 ? (
+        <div class="p-6 text-center text-win-dark font-bold bg-white border border-win-dark">
+          {search || roleFilter || statusFilter
+            ? "KHÔNG TÌM THẤY KẾT QUẢ."
+            : "CHƯA CÓ NGƯỜI DÙNG."}
+        </div>
+      ) : (
+        users.map((u: any) => (
+          <div class={`win95-container bg-white p-2 ${u.is_banned ? "border-red-400" : ""}`}>
+            <div class="flex items-center gap-2 mb-2">
+              <img
+                src={u.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
+                alt={u.full_name}
+                class="w-10 h-10 border border-win-dark object-cover"
+                style="filter: saturate(1.5);"
+              />
+              <div class="min-w-0 flex-1">
+                <p class="font-bold text-xs truncate">
+                  {u.full_name || "Chưa đặt tên"}
+                  {u.id === userProfile.id && <span class="text-vapor-pink ml-1">(Bạn)</span>}
+                </p>
+                <p class="text-[9px] text-win-dark truncate">{u.email}</p>
+              </div>
+              <div class="flex flex-col items-end gap-1 shrink-0">
+                <span class={`px-1.5 py-0.5 border text-[8px] font-bold uppercase ${
+                  u.role === "admin"
+                    ? "bg-pink-100 text-pink-800 border-pink-300"
+                    : u.role === "editor"
+                    ? "bg-purple-100 text-purple-800 border-purple-300"
+                    : "bg-blue-100 text-blue-800 border-blue-300"
+                }`}>
+                  {u.role === "admin" ? "👑" : u.role === "editor" ? "✏️" : "👤"} {u.role}
+                </span>
+                {u.is_banned ? (
+                  <span class="px-1.5 py-0.5 border text-[8px] font-bold bg-red-100 text-red-800 border-red-300">🚫 BỊ CẤM</span>
+                ) : (
+                  <span class="px-1.5 py-0.5 border text-[8px] font-bold bg-green-100 text-green-800 border-green-300">✅ ACTIVE</span>
+                )}
+              </div>
+            </div>
+            <div class="flex items-center justify-between border-t border-win-dark/30 pt-2">
+              <span class="text-[9px] text-win-dark">📅 {formatDate(u.created_at)}</span>
+              <UserManagementActions
+                client:load
+                userId={u.id}
+                currentRole={u.role}
+                isBanned={!!u.is_banned}
+                userName={u.full_name || u.email}
+                currentAdminId={userProfile.id}
+              />
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {totalPages > 1 && (
+    <div class="flex justify-center items-center gap-3 mb-6 font-retro">
+      {page > 1 ? (
+        <a
+          href={buildUrl({ page: String(page - 1), search, role: roleFilter, status: statusFilter })}
+          class="win95-btn font-bold text-xs px-4 py-1.5 text-black no-underline"
+        >
+          ◀ Trang trước
+        </a>
+      ) : (
+        <span class="win95-btn font-bold text-xs px-4 py-1.5 text-win-dark" style="border-style: inset;">◀ Trang trước</span>
+      )}
+
+      <span class="text-xs font-bold text-vapor-blue">
+        Trang {page} / {totalPages}
+      </span>
+
+      {page < totalPages ? (
+        <a
+          href={buildUrl({ page: String(page + 1), search, role: roleFilter, status: statusFilter })}
+          class="win95-btn font-bold text-xs px-4 py-1.5 text-black no-underline"
+        >
+          Trang sau ▶
+        </a>
+      ) : (
+        <span class="win95-btn font-bold text-xs px-4 py-1.5 text-win-dark" style="border-style: inset;">Trang sau ▶</span>
+      )}
+    </div>
+  )}
+
+  <!-- Audit Log Section -->
+  <div class="win95-container font-retro text-black mb-10">
+    <div class="win95-header">
+      <span>📋 AUDIT_LOG.EXE — Nhật Ký Hành Động Gần Đây</span>
+    </div>
+    <div class="bg-white border-2 border-win-dark p-1">
+      {!recentLogs || recentLogs.length === 0 ? (
+        <div class="p-6 text-center text-win-dark text-xs font-bold">
+          CHƯA CÓ NHẬT KÝ HÀNH ĐỘNG NÀO.
+        </div>
+      ) : (
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-[#c0c0c0] border-b border-win-dark">
+              <th class="p-2 border-r border-win-dark font-bold">THỜI GIAN</th>
+              <th class="p-2 border-r border-win-dark font-bold">ADMIN</th>
+              <th class="p-2 border-r border-win-dark font-bold">HÀNH ĐỘNG</th>
+              <th class="p-2 border-r border-win-dark font-bold">ĐỐI TƯỢNG</th>
+              <th class="p-2 font-bold">CHI TIẾT</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentLogs.map((log: any) => (
+              <tr class="border-b border-[#e0e0e0] hover:bg-[#f0f0f0]">
+                <td class="p-2 border-r border-[#e0e0e0] text-[10px] text-win-dark whitespace-nowrap">
+                  {new Date(log.created_at).toLocaleString("vi-VN")}
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] font-bold text-[10px]">
+                  {log.admin?.full_name || "N/A"}
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] text-[10px]">
+                  {formatAction(log.action)}
+                </td>
+                <td class="p-2 border-r border-[#e0e0e0] font-bold text-[10px]">
+                  {log.target?.full_name || "N/A"}
+                </td>
+                <td class="p-2 text-[9px] text-win-dark">
+                  {log.action === "role_change" && log.details && (
+                    <span>{log.details.old_role} → <strong>{log.details.new_role}</strong></span>
+                  )}
+                  {log.action === "ban" && log.details && (
+                    <span class="text-red-700">Lý do: {log.details.reason || "—"}</span>
+                  )}
+                  {log.action === "unban" && (
+                    <span class="text-green-700">Đã gỡ cấm</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  </div>
+</BaseLayout>

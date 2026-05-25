@@ -163,6 +163,9 @@ const { count: pendingSubmissionsCount } = await supabase
       <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
       <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
       <a href="/admin/submissions" class="hover:underline no-underline text-black font-bold">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
+      {userProfile?.role === 'admin' && (
+        <a href="/admin/users" class="hover:underline no-underline text-black">👥 Quản Lý Người Dùng</a>
+      )}
     </div>
   </div>
 

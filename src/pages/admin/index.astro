@@ -126,6 +126,19 @@ try {
   publishedArticles = articles?.filter(a => a.status === "published").length || 0;
   draftArticles = articles?.filter(a => a.status === "draft").length || 0;
 
+  // Bước 6: Thống kê người dùng
+  console.log("[ADMIN] Bước 6: Đang truy vấn thống kê người dùng...");
+  const { count: totalUsersCount } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true });
+
+  const { count: bannedUsersCount } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("is_banned", true);
+
+  console.log("[ADMIN] Bước 6: ✅ Users:", totalUsersCount, "| Banned:", bannedUsersCount);
+
   console.log("[ADMIN] ====== RENDER /admin HOÀN TẤT THÀNH CÔNG ======");
 
 } catch (err: any) {
@@ -160,6 +173,9 @@ try {
       <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
       <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
       <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
+      {userProfile?.role === 'admin' && (
+        <a href="/admin/users" class="hover:underline no-underline text-black">👥 Quản Lý Người Dùng</a>
+      )}
     </div>
   </div>
 
@@ -241,6 +257,29 @@ try {
         <span class="text-4xl">🖼️</span>
       </div>
     </div>
+
+    <!-- Stat Item 4: Users (chỉ hiển thị cho admin) -->
+    {userProfile?.role === 'admin' && (
+      <div class="win95-container text-black">
+        <div class="win95-header">
+          <span>USER_STATS.DLL</span>
+          <button class="win95-btn py-0 px-1">?</button>
+        </div>
+        <div class="p-4 bg-[#c0c0c0] flex items-center justify-between">
+          <div>
+            <h3 class="text-xs font-bold uppercase mb-1">Người Dùng</h3>
+            <p class="text-3xl font-black text-vapor-green">{totalUsersCount || 0}</p>
+            <p class="text-[10px] text-black/70 mt-1">
+              Bị cấm: <span class={`font-bold ${(bannedUsersCount || 0) > 0 ? 'text-red-600' : 'text-green-700'}`}>{bannedUsersCount || 0}</span>
+            </p>
+            <a href="/admin/users" class="text-[10px] text-blue-800 underline mt-1 block">
+              Quản lý người dùng &gt;&gt;
+            </a>
+          </div>
+          <span class="text-4xl">👥</span>
+        </div>
+      </div>
+    )}
   </div>
 
   <!-- Articles Table Area -->
