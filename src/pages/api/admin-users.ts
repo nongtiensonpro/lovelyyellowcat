@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { sendBanNotificationEmail, sendUnbanNotificationEmail } from "../../lib/emailNotification";
+import { env } from "cloudflare:workers";
 
 const USERS_PER_PAGE = 10;
 
@@ -208,7 +210,7 @@ export const POST: APIRoute = async (context) => {
   // Lấy thông tin target user
   const { data: targetProfile } = await supabase
     .from("profiles")
-    .select("id, full_name, role, is_banned")
+    .select("id, full_name, email, role, is_banned")
     .eq("id", userId)
     .single();
 
@@ -249,9 +251,24 @@ export const POST: APIRoute = async (context) => {
       },
     });
 
+    // Gửi email thông báo cấm tài khoản
+    const emailResult = await sendBanNotificationEmail(
+      {
+        recipientEmail: targetProfile.email,
+        recipientName: targetProfile.full_name || targetProfile.email,
+        reason: reason || "Vi phạm quy tắc cộng đồng.",
+        contactEmail: "nongtiensonpro@gmail.com",
+      },
+      env
+    );
+
+    const emailNote = emailResult.success
+      ? " Email thông báo đã được gửi."
+      : ` (${emailResult.message})`;
+
     return new Response(JSON.stringify({
       success: true,
-      message: `Đã cấm tài khoản ${targetProfile.full_name}. Người dùng sẽ không thể đăng nhập vào website.`
+      message: `Đã cấm tài khoản ${targetProfile.full_name}. Người dùng sẽ không thể đăng nhập vào website.${emailNote}`
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -282,9 +299,23 @@ export const POST: APIRoute = async (context) => {
       },
     });
 
+    // Gửi email thông báo gỡ cấm tài khoản
+    const emailResult = await sendUnbanNotificationEmail(
+      {
+        recipientEmail: targetProfile.email,
+        recipientName: targetProfile.full_name || targetProfile.email,
+        contactEmail: "nongtiensonpro@gmail.com",
+      },
+      env
+    );
+
+    const emailNote = emailResult.success
+      ? " Email thông báo đã được gửi."
+      : ` (${emailResult.message})`;
+
     return new Response(JSON.stringify({
       success: true,
-      message: `Đã gỡ cấm tài khoản ${targetProfile.full_name}. Người dùng có thể đăng nhập lại.`
+      message: `Đã gỡ cấm tài khoản ${targetProfile.full_name}. Người dùng có thể đăng nhập lại.${emailNote}`
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
