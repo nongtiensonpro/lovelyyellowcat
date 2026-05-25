@@ -18,6 +18,8 @@ let totalArticles = 0;
 let publishedArticles = 0;
 let draftArticles = 0;
 let runtimeEnv: any = undefined;
+let totalUsersCount: number | null = 0;
+let bannedUsersCount: number | null = 0;
 
 try {
   console.log("[ADMIN] ====== BẮT ĐẦU RENDER /admin ======");
@@ -128,14 +130,22 @@ try {
 
   // Bước 6: Thống kê người dùng
   console.log("[ADMIN] Bước 6: Đang truy vấn thống kê người dùng...");
-  const { count: totalUsersCount } = await supabase
+  const { count: _totalUsers } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true });
+  totalUsersCount = _totalUsers;
 
-  const { count: bannedUsersCount } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .eq("is_banned", true);
+  // Query banned count riêng (cột is_banned có thể chưa tồn tại nếu chưa chạy SQL migration)
+  try {
+    const { count: _bannedUsers } = await supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("is_banned", true);
+    bannedUsersCount = _bannedUsers;
+  } catch (banErr: any) {
+    console.warn("[ADMIN] Bước 6: ⚠️ Cột is_banned chưa tồn tại (chưa chạy migration?):", banErr.message);
+    bannedUsersCount = 0;
+  }
 
   console.log("[ADMIN] Bước 6: ✅ Users:", totalUsersCount, "| Banned:", bannedUsersCount);
 
