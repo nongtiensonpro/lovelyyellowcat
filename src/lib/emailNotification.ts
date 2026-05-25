@@ -1,11 +1,14 @@
 /**
- * Email Notification Helper — Gửi thông báo email cho hành động ban/unban
+ * Email Notification Helper — Gửi thông báo email qua Gmail API (REST)
  * 
- * Sử dụng Resend API (https://resend.com) — dịch vụ email được Supabase khuyên dùng.
- * Cấu hình: thêm RESEND_API_KEY vào .dev.vars (local) và Cloudflare Secrets (production).
+ * Sử dụng Gmail API thay vì SMTP trực tiếp vì Cloudflare Workers
+ * không hỗ trợ kết nối SMTP. Gmail API dùng fetch() hoạt động hoàn hảo.
  * 
- * Nếu bạn đã cấu hình SMTP trên Supabase và muốn dùng dịch vụ email khác,
- * chỉ cần thay đổi hàm sendEmail() bên dưới để gọi API phù hợp.
+ * Cấu hình cần thiết (xem hướng dẫn chi tiết ở cuối file):
+ *   - GMAIL_CLIENT_ID
+ *   - GMAIL_CLIENT_SECRET
+ *   - GMAIL_REFRESH_TOKEN
+ *   - GMAIL_SENDER_EMAIL (mặc định: nongtiensonpro@gmail.com)
  */
 
 // ── Kiểu dữ liệu ──
@@ -32,74 +35,164 @@ export interface EmailResult {
 
 const SITE_NAME = "Vaporwave Magazine";
 const CONTACT_EMAIL = "nongtiensonpro@gmail.com";
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 
-// ── Hàm gửi email chính ──
+// ── Helper: Encode UTF-8 string thành Base64URL (tương thích Gmail API) ──
 
-/**
- * Gửi email qua Resend API.
- * Nếu RESEND_API_KEY không được cấu hình, trả về warning thay vì lỗi.
- */
+function utf8ToBase64Url(str: string): string {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  let binary = "";
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+// ── Helper: Encode chuỗi UTF-8 cho MIME header (RFC 2047) ──
+
+function encodeRfc2047(str: string): string {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  let binary = "";
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return `=?UTF-8?B?${btoa(binary)}?=`;
+}
+
+// ── Helper: Lấy Access Token từ Refresh Token ──
+
+async function getGmailAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<string | null> {
+  try {
+    const response = await fetch(GOOGLE_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    const data: any = await response.json();
+
+    if (!response.ok || !data.access_token) {
+      console.error("[EMAIL] ❌ Lỗi lấy access token:", data.error || data.error_description || response.status);
+      return null;
+    }
+
+    return data.access_token;
+  } catch (error: any) {
+    console.error("[EMAIL] ❌ Lỗi kết nối Google OAuth:", error.message);
+    return null;
+  }
+}
+
+// ── Hàm gửi email chính qua Gmail API ──
+
 async function sendEmail(params: {
   to: string;
   subject: string;
   html: string;
   runtimeEnv?: any;
 }): Promise<EmailResult> {
-  // Lấy API key từ runtime env (Cloudflare Workers) hoặc import.meta.env
-  const apiKey = params.runtimeEnv?.RESEND_API_KEY
-    || import.meta.env.RESEND_API_KEY
-    || (typeof process !== "undefined" ? process.env?.RESEND_API_KEY : undefined);
+  // Lấy credentials từ runtime env (Cloudflare Workers) hoặc import.meta.env
+  const clientId = params.runtimeEnv?.GMAIL_CLIENT_ID
+    || import.meta.env.GMAIL_CLIENT_ID;
 
-  // Lấy from email (tùy chỉnh hoặc mặc định)
-  const fromEmail = params.runtimeEnv?.RESEND_FROM_EMAIL
-    || import.meta.env.RESEND_FROM_EMAIL
-    || "Vaporwave Magazine <onboarding@resend.dev>";
+  const clientSecret = params.runtimeEnv?.GMAIL_CLIENT_SECRET
+    || import.meta.env.GMAIL_CLIENT_SECRET;
 
-  if (!apiKey) {
-    console.warn("[EMAIL] ⚠️ RESEND_API_KEY chưa được cấu hình. Bỏ qua gửi email.");
+  const refreshToken = params.runtimeEnv?.GMAIL_REFRESH_TOKEN
+    || import.meta.env.GMAIL_REFRESH_TOKEN;
+
+  const senderEmail = params.runtimeEnv?.GMAIL_SENDER_EMAIL
+    || import.meta.env.GMAIL_SENDER_EMAIL
+    || CONTACT_EMAIL;
+
+  // Kiểm tra cấu hình
+  if (!clientId || !clientSecret || !refreshToken) {
+    console.warn("[EMAIL] ⚠️ Gmail API chưa được cấu hình (thiếu GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET / GMAIL_REFRESH_TOKEN). Bỏ qua gửi email.");
     return {
       success: false,
-      message: "Email chưa được gửi (RESEND_API_KEY chưa cấu hình). Hành động vẫn thực hiện thành công.",
+      message: "Email chưa được gửi (Gmail API chưa cấu hình). Hành động vẫn thực hiện thành công.",
     };
   }
 
+  // Bước 1: Lấy access token
+  const accessToken = await getGmailAccessToken(clientId, clientSecret, refreshToken);
+  if (!accessToken) {
+    return {
+      success: false,
+      message: "Không thể lấy access token từ Google. Kiểm tra lại GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET / GMAIL_REFRESH_TOKEN.",
+    };
+  }
+
+  // Bước 2: Xây dựng MIME message
+  const mimeMessage = [
+    `From: ${SITE_NAME} <${senderEmail}>`,
+    `To: ${params.to}`,
+    `Subject: ${encodeRfc2047(params.subject)}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: text/html; charset=UTF-8`,
+    `Content-Transfer-Encoding: base64`,
+    ``,
+    btoa(unescape(encodeURIComponent(params.html))),
+  ].join("\r\n");
+
+  // Bước 3: Encode thành base64url cho Gmail API
+  const rawMessage = utf8ToBase64Url(mimeMessage);
+
+  // Bước 4: Gửi qua Gmail API
   try {
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetch(GMAIL_SEND_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [params.to],
-        subject: params.subject,
-        html: params.html,
-      }),
+      body: JSON.stringify({ raw: rawMessage }),
     });
 
-    const result = await response.json().catch(() => ({}));
+    const result: any = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      console.error("[EMAIL] ❌ Resend API error:", response.status, result);
+      console.error("[EMAIL] ❌ Gmail API error:", response.status, result);
       return {
         success: false,
-        message: `Lỗi gửi email: ${(result as any)?.message || `HTTP ${response.status}`}`,
+        message: `Lỗi gửi email: ${result?.error?.message || `HTTP ${response.status}`}`,
       };
     }
 
-    console.log("[EMAIL] ✅ Email đã gửi thành công đến:", params.to, "| ID:", (result as any)?.id);
+    console.log("[EMAIL] ✅ Email đã gửi thành công đến:", params.to, "| Message ID:", result?.id);
     return {
       success: true,
       message: `Email thông báo đã được gửi đến ${params.to}.`,
     };
   } catch (error: any) {
-    console.error("[EMAIL] ❌ Lỗi kết nối:", error.message);
+    console.error("[EMAIL] ❌ Lỗi kết nối Gmail API:", error.message);
     return {
       success: false,
       message: `Không thể gửi email: ${error.message}`,
     };
   }
+}
+
+// ── Helper escape HTML ──
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // ── Template Email Cấm Tài Khoản ──
@@ -116,7 +209,7 @@ function buildBanEmailHtml(payload: BanEmailPayload): string {
   <div style="max-width:600px;margin:0 auto;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border:2px solid #ff71ce;border-radius:0;">
     
     <!-- Header -->
-    <div style="background:linear-gradient(90deg,#ff71ce,#b967ff,#01cdfe);padding:4px 16px;display:flex;align-items:center;">
+    <div style="background:linear-gradient(90deg,#ff71ce,#b967ff,#01cdfe);padding:4px 16px;">
       <span style="color:#fff;font-weight:bold;font-size:12px;font-family:'Courier New',monospace;">⚠️ SYSTEM_NOTIFICATION.EXE</span>
     </div>
     
@@ -157,7 +250,7 @@ function buildBanEmailHtml(payload: BanEmailPayload): string {
       <!-- Contact Box -->
       <div style="background:rgba(1,205,254,0.1);border:1px solid rgba(1,205,254,0.3);border-left:4px solid #01cdfe;padding:16px;margin:20px 0;">
         <p style="color:#01cdfe;font-size:12px;text-transform:uppercase;font-weight:bold;margin:0 0 6px;font-family:'Courier New',monospace;">
-          📧 Khiếu nại & Liên hệ:
+          📧 Khiếu nại &amp; Liên hệ:
         </p>
         <p style="color:#e0e0e0;font-size:14px;line-height:1.5;margin:0;">
           Nếu bạn cho rằng đây là một nhầm lẫn hoặc muốn trao đổi thêm thông tin, vui lòng liên hệ qua email:
@@ -203,7 +296,7 @@ function buildUnbanEmailHtml(payload: UnbanEmailPayload): string {
   <div style="max-width:600px;margin:0 auto;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border:2px solid #05ffa1;border-radius:0;">
     
     <!-- Header -->
-    <div style="background:linear-gradient(90deg,#05ffa1,#01cdfe,#b967ff);padding:4px 16px;display:flex;align-items:center;">
+    <div style="background:linear-gradient(90deg,#05ffa1,#01cdfe,#b967ff);padding:4px 16px;">
       <span style="color:#fff;font-weight:bold;font-size:12px;font-family:'Courier New',monospace;">✅ SYSTEM_NOTIFICATION.EXE</span>
     </div>
     
@@ -274,17 +367,6 @@ function buildUnbanEmailHtml(payload: UnbanEmailPayload): string {
 </html>`;
 }
 
-// ── Helper escape HTML ──
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 // ── Hàm public: Gửi email thông báo cấm tài khoản ──
 
 export async function sendBanNotificationEmail(
@@ -312,3 +394,47 @@ export async function sendUnbanNotificationEmail(
     runtimeEnv,
   });
 }
+
+// ══════════════════════════════════════════════════════════════
+// 📖 HƯỚNG DẪN CẤU HÌNH GMAIL API
+// ══════════════════════════════════════════════════════════════
+//
+// Cloudflare Workers không hỗ trợ SMTP trực tiếp, nên ta dùng
+// Gmail REST API (qua fetch) — kết quả giống hệt smtp.gmail.com.
+//
+// === BƯỚC 1: Tạo Project trên Google Cloud Console ===
+//   1. Truy cập: https://console.cloud.google.com
+//   2. Tạo project mới (hoặc dùng project hiện có)
+//   3. Vào "APIs & Services" → "Enable APIs" → Bật "Gmail API"
+//
+// === BƯỚC 2: Tạo OAuth 2.0 Credentials ===
+//   1. Vào "APIs & Services" → "Credentials"
+//   2. "Create Credentials" → "OAuth client ID"
+//   3. Application type: "Web application"
+//   4. Authorized redirect URIs: thêm https://developers.google.com/oauthplayground
+//   5. Lưu lại: Client ID và Client Secret
+//
+// === BƯỚC 3: Lấy Refresh Token ===
+//   1. Truy cập: https://developers.google.com/oauthplayground
+//   2. Click ⚙️ (Settings) → Check "Use your own OAuth credentials"
+//   3. Nhập Client ID và Client Secret từ Bước 2
+//   4. Ở "Step 1": nhập scope: https://www.googleapis.com/auth/gmail.send
+//   5. Click "Authorize APIs" → Đăng nhập bằng nongtiensonpro@gmail.com
+//   6. Ở "Step 2": Click "Exchange authorization code for tokens"
+//   7. Lưu lại: Refresh Token
+//
+// === BƯỚC 4: Thêm vào môi trường ===
+//
+//   Cho local (.dev.vars):
+//     GMAIL_CLIENT_ID=xxxx.apps.googleusercontent.com
+//     GMAIL_CLIENT_SECRET=GOCSPX-xxxxx
+//     GMAIL_REFRESH_TOKEN=1//xxxxx
+//     GMAIL_SENDER_EMAIL=nongtiensonpro@gmail.com
+//
+//   Cho production (Cloudflare):
+//     npx wrangler secret put GMAIL_CLIENT_ID
+//     npx wrangler secret put GMAIL_CLIENT_SECRET
+//     npx wrangler secret put GMAIL_REFRESH_TOKEN
+//     npx wrangler secret put GMAIL_SENDER_EMAIL
+//
+// ══════════════════════════════════════════════════════════════
