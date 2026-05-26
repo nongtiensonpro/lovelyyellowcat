@@ -1,6 +1,8 @@
 ---  
 // src/pages/auth/callback.astro  
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { sendWelcomeEmail } from "../../lib/emailNotification";
+import { env } from "cloudflare:workers";
 
 const requestUrl = new URL(Astro.request.url);  
 const code = requestUrl.searchParams.get("code");  
@@ -16,6 +18,39 @@ if (code) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);  
     
   if (!error) {  
+    // Kiểm tra xem đây có phải lần đăng nhập đầu tiên không
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("created_at, full_name, email")
+          .eq("id", user.id)
+          .single();
+
+        // Nếu profile mới tạo trong 60 giây → là người dùng mới → gửi welcome email
+        if (profile?.created_at) {
+          const createdAt = new Date(profile.created_at).getTime();
+          const now = Date.now();
+          const isNewUser = (now - createdAt) < 60_000; // 60 giây
+
+          if (isNewUser && (profile.email || user.email)) {
+            // Fire-and-forget: không chờ kết quả, không chặn redirect
+            sendWelcomeEmail({
+              recipientEmail: profile.email || user.email!,
+              recipientName: profile.full_name || user.user_metadata?.full_name || "Thành viên mới",
+              contactEmail: "nongtiensonpro@gmail.com",
+            }, env).catch((err: any) => {
+              console.error("[AUTH] Lỗi gửi welcome email:", err.message);
+            });
+          }
+        }
+      }
+    } catch (welcomeErr: any) {
+      // Welcome email lỗi không ảnh hưởng đăng nhập
+      console.error("[AUTH] Welcome email check error:", welcomeErr.message);
+    }
+
     return new Response(null, {  
       status: 307,  
       headers: {  

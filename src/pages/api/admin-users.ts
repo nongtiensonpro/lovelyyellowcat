@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
-import { sendBanNotificationEmail, sendUnbanNotificationEmail } from "../../lib/emailNotification";
+import { sendBanNotificationEmail, sendUnbanNotificationEmail, sendRoleChangeEmail } from "../../lib/emailNotification";
 import { env } from "cloudflare:workers";
 
 const USERS_PER_PAGE = 10;
@@ -127,7 +127,7 @@ export const PUT: APIRoute = async (context) => {
   // Lấy role hiện tại của target user
   const { data: targetProfile } = await supabase
     .from("profiles")
-    .select("id, role, full_name")
+    .select("id, role, full_name, email")
     .eq("id", userId)
     .single();
 
@@ -167,9 +167,27 @@ export const PUT: APIRoute = async (context) => {
     },
   });
 
+  // Gửi email thông báo thay đổi vai trò
+  let emailNote = "";
+  if (targetProfile.email) {
+    try {
+      const emailResult = await sendRoleChangeEmail({
+        recipientEmail: targetProfile.email,
+        recipientName: targetProfile.full_name || targetProfile.email,
+        oldRole: targetProfile.role,
+        newRole: newRole,
+        contactEmail: "nongtiensonpro@gmail.com",
+      }, env);
+      emailNote = emailResult.success ? " Email thông báo đã được gửi." : ` (${emailResult.message})`;
+    } catch (emailErr: any) {
+      emailNote = " (Không gửi được email thông báo)";
+      console.error("[ADMIN] Email role change error:", emailErr.message);
+    }
+  }
+
   return new Response(JSON.stringify({
     success: true,
-    message: `Đã thay đổi vai trò của ${targetProfile.full_name} từ ${targetProfile.role} sang ${newRole}.`
+    message: `Đã thay đổi vai trò của ${targetProfile.full_name} từ ${targetProfile.role} sang ${newRole}.${emailNote}`
   }), {
     status: 200,
     headers: { "Content-Type": "application/json" },

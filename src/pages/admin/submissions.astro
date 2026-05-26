@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { deleteSubmissionWithRelations } from "../../lib/adminModeration";
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { sendSubmissionApprovedEmail, sendSubmissionRejectedEmail } from "../../lib/emailNotification";
 import { env } from "cloudflare:workers";
 
 const supabase = createSupabaseServerClient({
@@ -29,6 +30,7 @@ if (Astro.request.method === "POST" && user) {
   const formData = await Astro.request.formData();
   const action = formData.get("action");
   const submissionId = formData.get("submissionId") as string;
+  const rejectReason = formData.get("rejectReason") as string || "";
 
   if (submissionId && (action === "approve" || action === "reject")) {
     const status = action === "approve" ? "approved" : "rejected";
@@ -42,8 +44,8 @@ if (Astro.request.method === "POST" && user) {
         reviewed_at: new Date().toISOString()
       })
       .eq("id", submissionId)
-      .select("id, author_id")
-      .maybeSingle<{ id: string; author_id: string | null }>();
+      .select("id, author_id, title")
+      .maybeSingle<{ id: string; author_id: string | null; title: string }>();
 
     if (errUpdate) {
       actionResult = { success: false, message: `Lỗi khi ${action === "approve" ? "duyệt" : "từ chối"} tranh: ${errUpdate.message}` };
@@ -80,13 +82,36 @@ if (Astro.request.method === "POST" && user) {
         if (notificationError) {
           warnings.push(`không gửi được thông báo: ${notificationError.message}`);
         }
+
+        // Gửi email thông báo duyệt tranh
+        try {
+          const { data: authorProfile } = await supabase
+            .from("profiles")
+            .select("email, full_name")
+            .eq("id", updatedSubmission.author_id)
+            .single();
+
+          if (authorProfile?.email) {
+            const emailResult = await sendSubmissionApprovedEmail({
+              recipientEmail: authorProfile.email,
+              recipientName: authorProfile.full_name || authorProfile.email,
+              submissionTitle: updatedSubmission.title || "Tác phẩm nghệ thuật",
+              contactEmail: "nongtiensonpro@gmail.com",
+            }, runtimeEnv);
+            if (!emailResult.success) {
+              warnings.push(`email: ${emailResult.message}`);
+            }
+          }
+        } catch (emailErr: any) {
+          warnings.push(`không gửi được email: ${emailErr.message}`);
+        }
       }
 
       actionResult = {
         success: true,
         message: warnings.length > 0
           ? `Đã duyệt tác phẩm, nhưng ${warnings.join("; ")}.`
-          : "Đã duyệt tác phẩm thành công! Tác giả được thưởng +50 XP và đã nhận thông báo."
+          : "Đã duyệt tác phẩm thành công! Tác giả được thưởng +50 XP, đã nhận thông báo và email."
       };
     } else {
       const warnings: string[] = [];
@@ -100,12 +125,36 @@ if (Astro.request.method === "POST" && user) {
             type: "submission_rejected",
             payload: {
               submission_id: submissionId,
-              message: "Rất tiếc, tác phẩm nghệ thuật của bạn chưa phù hợp tiêu chí chất lượng của tạp chí lần này."
+              message: rejectReason || "Rất tiếc, tác phẩm nghệ thuật của bạn chưa phù hợp tiêu chí chất lượng của tạp chí lần này."
             }
           });
 
         if (notificationError) {
           warnings.push(`không gửi được thông báo: ${notificationError.message}`);
+        }
+
+        // Gửi email thông báo từ chối tranh
+        try {
+          const { data: authorProfile } = await supabase
+            .from("profiles")
+            .select("email, full_name")
+            .eq("id", updatedSubmission.author_id)
+            .single();
+
+          if (authorProfile?.email) {
+            const emailResult = await sendSubmissionRejectedEmail({
+              recipientEmail: authorProfile.email,
+              recipientName: authorProfile.full_name || authorProfile.email,
+              submissionTitle: updatedSubmission.title || "Tác phẩm nghệ thuật",
+              reason: rejectReason || "Tác phẩm chưa phù hợp tiêu chí chất lượng của tạp chí.",
+              contactEmail: "nongtiensonpro@gmail.com",
+            }, runtimeEnv);
+            if (!emailResult.success) {
+              warnings.push(`email: ${emailResult.message}`);
+            }
+          }
+        } catch (emailErr: any) {
+          warnings.push(`không gửi được email: ${emailErr.message}`);
         }
       }
 
@@ -113,7 +162,7 @@ if (Astro.request.method === "POST" && user) {
         success: true,
         message: warnings.length > 0
           ? `Đã từ chối tác phẩm, nhưng ${warnings.join("; ")}.`
-          : "Đã từ chối tác phẩm. Tác giả đã được thông báo."
+          : "Đã từ chối tác phẩm. Tác giả đã được thông báo qua hệ thống và email."
       };
     }
   } else if (submissionId && action === "delete") {
@@ -241,28 +290,42 @@ const { count: pendingSubmissionsCount } = await supabase
             </div>
             
             {sub.status === 'pending' && (
-              <div class="p-2 bg-[#f0f0f0] border-t border-win-dark flex gap-2 justify-between">
-                <form method="POST" class="w-1/3 m-0">
+              <div class="p-2 bg-[#f0f0f0] border-t border-win-dark space-y-2">
+                <!-- Form từ chối với lý do soạn sẵn -->
+                <form method="POST" class="m-0">
                   <input type="hidden" name="submissionId" value={sub.id} />
                   <input type="hidden" name="action" value="reject" />
+                  <select name="rejectReasonPreset" class="w-full text-[10px] p-1 border border-win-dark bg-white font-retro mb-1"
+                    onchange={`this.form.rejectReason.value = this.value`}>
+                    <option value="">-- Chọn lý do từ chối --</option>
+                    <option value="Hình ảnh không đạt chất lượng yêu cầu (độ phân giải thấp, mờ, hoặc bị hỏng).">Chất lượng hình ảnh</option>
+                    <option value="Nội dung không phù hợp với chủ đề Vaporwave / Aesthetic của tạp chí.">Không phù hợp chủ đề</option>
+                    <option value="Vi phạm bản quyền hoặc sử dụng hình ảnh không được phép.">Vi phạm bản quyền</option>
+                    <option value="Nội dung không phù hợp hoặc vi phạm quy tắc cộng đồng.">Vi phạm quy tắc</option>
+                    <option value="Trùng lặp với bài đã đăng trước đó.">Trùng lặp</option>
+                  </select>
+                  <textarea name="rejectReason" placeholder="Nhập lý do từ chối hoặc chọn mẫu câu ở trên..." rows="2" class="w-full text-[10px] p-1 border border-win-dark bg-white font-retro mb-1" style="resize:vertical;"></textarea>
                   <button type="submit" class="win95-btn w-full font-bold text-red-800 text-[10px] py-1 border-red-400">
                     🔴 TỪ CHỐI
                   </button>
                 </form>
-                <form method="POST" class="w-1/3 m-0">
-                  <input type="hidden" name="submissionId" value={sub.id} />
-                  <input type="hidden" name="action" value="approve" />
-                  <button type="submit" class="win95-btn w-full font-bold text-green-800 text-[10px] py-1 border-green-400">
-                    🟢 DUYỆT
-                  </button>
-                </form>
-                <form method="POST" class="w-1/3 m-0" onsubmit="return confirm('⚠️ Xóa vĩnh viễn tranh này cùng toàn bộ dữ liệu liên quan?');">
-                  <input type="hidden" name="submissionId" value={sub.id} />
-                  <input type="hidden" name="action" value="delete" />
-                  <button type="submit" class="win95-btn w-full font-bold text-red-900 text-[10px] py-1 bg-red-200 border-red-500">
-                    ❌ XÓA
-                  </button>
-                </form>
+                <!-- Duyệt + Xóa -->
+                <div class="flex gap-2">
+                  <form method="POST" class="flex-1 m-0">
+                    <input type="hidden" name="submissionId" value={sub.id} />
+                    <input type="hidden" name="action" value="approve" />
+                    <button type="submit" class="win95-btn w-full font-bold text-green-800 text-[10px] py-1 border-green-400">
+                      🟢 DUYỆT
+                    </button>
+                  </form>
+                  <form method="POST" class="flex-1 m-0" onsubmit="return confirm('⚠️ Xóa vĩnh viễn tranh này cùng toàn bộ dữ liệu liên quan?');">
+                    <input type="hidden" name="submissionId" value={sub.id} />
+                    <input type="hidden" name="action" value="delete" />
+                    <button type="submit" class="win95-btn w-full font-bold text-red-900 text-[10px] py-1 bg-red-200 border-red-500">
+                      ❌ XÓA
+                    </button>
+                  </form>
+                </div>
               </div>
             )}
 

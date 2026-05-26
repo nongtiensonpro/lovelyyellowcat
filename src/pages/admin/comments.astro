@@ -1,7 +1,9 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { deleteCommentThread } from "../../lib/adminModeration";
+import { sendCommentDeletedEmail } from "../../lib/emailNotification";
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { env } from "cloudflare:workers";
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -27,12 +29,42 @@ if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const action = formData.get("action");
   const commentId = formData.get("commentId") as string;
+  const deleteReason = formData.get("deleteReason") as string || "";
 
   if (action === "delete" && commentId) {
+    // Lấy thông tin bình luận + tác giả TRƯỚC khi xóa (để gửi email)
+    let commentData: any = null;
+    try {
+      const { data } = await supabase
+        .from("comments")
+        .select("content, profile_id, profiles(email, full_name)")
+        .eq("id", commentId)
+        .single();
+      commentData = data;
+    } catch {}
+
     try {
       actionResult = await deleteCommentThread(supabase, commentId);
     } catch (err: any) {
       actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
+    }
+
+    // Gửi email thông báo nếu xóa thành công
+    if (actionResult?.success && commentData?.profiles) {
+      const profile = commentData.profiles as any;
+      if (profile?.email) {
+        try {
+          await sendCommentDeletedEmail({
+            recipientEmail: profile.email,
+            recipientName: profile.full_name || profile.email,
+            commentContent: commentData.content || "",
+            reason: deleteReason || "Vi phạm quy tắc cộng đồng.",
+            contactEmail: "nongtiensonpro@gmail.com",
+          }, env);
+        } catch (emailErr: any) {
+          console.error("[COMMENTS] Email error:", emailErr.message);
+        }
+      }
     }
   } else {
     actionResult = { success: false, message: "Hành động không hợp lệ hoặc thiếu thông tin bình luận." };
@@ -47,6 +79,7 @@ const { data: comments, error: fetchError } = await supabase
     content,
     created_at,
     article_id,
+    profile_id,
     profiles (
       full_name,
       avatar_url
@@ -132,7 +165,7 @@ const { count: pendingSubmissionsCount } = await supabase
             <th class="p-2 border-r border-win-dark font-bold w-44">BÀI VIẾT (ID)</th>
             <th class="p-2 border-r border-win-dark font-bold">NỘI DUNG BÌNH LUẬN</th>
             <th class="p-2 border-r border-win-dark font-bold w-36">NGÀY GỬI</th>
-            <th class="p-2 font-bold w-24 text-center">HÀNH ĐỘNG</th>
+            <th class="p-2 font-bold w-32 text-center">HÀNH ĐỘNG</th>
           </tr>
         </thead>
         <tbody>
@@ -164,13 +197,31 @@ const { count: pendingSubmissionsCount } = await supabase
                   {new Date(comment.created_at).toLocaleString("vi-VN")}
                 </td>
                 <td class="p-2 text-center">
-                  <form method="POST" class="inline m-0" onsubmit="return confirm('⚠️ Bạn có chắc chắn muốn xóa bình luận này không? Hành động này không thể hoàn tác.');">
-                    <input type="hidden" name="action" value="delete" />
-                    <input type="hidden" name="commentId" value={comment.id} />
-                    <button type="submit" class="win95-btn font-bold text-red-700 text-[10px] px-3 py-1 hover:bg-red-100">
+                  <details class="relative">
+                    <summary class="win95-btn font-bold text-red-700 text-[10px] px-3 py-1 hover:bg-red-100 cursor-pointer list-none">
                       ❌ XÓA
-                    </button>
-                  </form>
+                    </summary>
+                    <div class="absolute right-0 top-full z-50 mt-1 w-64 bg-[#c0c0c0] border-2 shadow-lg p-2 font-retro" style="border-color: #fff #808080 #808080 #fff;">
+                      <form method="POST" class="m-0">
+                        <input type="hidden" name="action" value="delete" />
+                        <input type="hidden" name="commentId" value={comment.id} />
+                        <label class="block text-[9px] font-bold mb-1 text-black">📋 Lý do xóa:</label>
+                        <select name="deleteReasonPreset" class="w-full text-[10px] p-1 border border-win-dark bg-white mb-1 font-retro"
+                          onchange={`this.form.deleteReason.value = this.value`}>
+                          <option value="">-- Chọn lý do --</option>
+                          <option value="Vi phạm quy tắc cộng đồng (ngôn từ không phù hợp).">Ngôn từ không phù hợp</option>
+                          <option value="Spam hoặc nội dung quảng cáo.">Spam / Quảng cáo</option>
+                          <option value="Nội dung gây hiểu lầm hoặc thông tin sai lệch.">Thông tin sai lệch</option>
+                          <option value="Quấy rối hoặc bắt nạt người dùng khác.">Quấy rối</option>
+                          <option value="Nội dung không liên quan đến chủ đề.">Không liên quan</option>
+                        </select>
+                        <textarea name="deleteReason" placeholder="Hoặc nhập lý do khác..." rows="2" class="w-full text-[10px] p-1 border border-win-dark bg-white mb-2 font-retro" style="resize:vertical;"></textarea>
+                        <button type="submit" class="win95-btn w-full font-bold text-red-700 text-[10px] py-1 hover:bg-red-100" onclick="return confirm('⚠️ Xác nhận xóa bình luận này?');">
+                          ❌ Xác nhận xóa
+                        </button>
+                      </form>
+                    </div>
+                  </details>
                 </td>
               </tr>
             ))
