@@ -7,7 +7,6 @@
   "vars": {
     "PUBLIC_RECAPTCHA_SITEKEY": "6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5",
     "CLOUDINARY_API_KEY": "799421593236332",
-    "GMAIL_CLIENT_ID": "YOUR_CLIENT_ID.apps.googleusercontent.com",
     "GMAIL_SENDER_EMAIL": "nongtiensonpro@gmail.com"
   },
   "observability": {
