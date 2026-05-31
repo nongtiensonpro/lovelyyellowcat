@@ -79,6 +79,8 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
       const idx = submissions.findIndex((s) => s.id === activeId);
       if (idx !== -1) {
         setCurrentIndex(idx);
+      } else {
+        setCurrentIndex(-1);
       }
     } else {
       setCurrentIndex(-1);
@@ -246,13 +248,13 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     window.open(`https://twitter.com/intent/tweet?url=${shareUrl}&text=${text}`, "_blank");
   };
 
+  if (!activeSubmission) return null;
+
   const formattedDate = new Date(activeSubmission.created_at).toLocaleDateString("vi-VN", {
     year: "numeric",
     month: "long",
     day: "numeric"
   });
-
-  if (!activeSubmission) return null;
 
   return ReactDOM.createPortal(
     <div
