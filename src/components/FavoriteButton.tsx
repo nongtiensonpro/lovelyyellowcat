@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 
 const supabaseClient = getSupabaseBrowserClient();
@@ -9,6 +9,7 @@ interface FavoriteButtonProps {
     id: string;
   } | null;
   variant?: "win95" | "icon";
+  id?: string;
   onToggle?: (isFavorited: boolean) => void;
 }
 
@@ -21,6 +22,11 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Tạo ID duy nhất cho mỗi instance component để tránh xung đột tên channel Realtime
+  const instanceIdRef = useRef<string>(
+    Math.random().toString(36).substring(2, 8)
+  );
 
   // Kiểm tra trạng thái yêu thích ban đầu từ database (đọc công khai)
   useEffect(() => {
@@ -36,14 +42,19 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
 
       if (!error && data) {
         setIsFavorited(true);
+      } else if (!error && !data) {
+        setIsFavorited(false);
       }
     };
 
     checkFavoriteStatus();
 
     // Lắng nghe realtime để đồng bộ nếu được bấm ở nơi khác (đọc công khai)
+    // Sử dụng instanceId duy nhất để tránh lỗi "cannot add callbacks after subscribe()"
+    // khi nhiều FavoriteButton cùng submissionId tồn tại đồng thời (Grid + Lightbox)
+    const channelName = `favorite-sync-${submissionId}-${instanceIdRef.current}`;
     const channel = supabaseClient
-      .channel(`favorite-sync-${submissionId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
