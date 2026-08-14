@@ -7,6 +7,11 @@ import { env } from "cloudflare:workers";
 const requestUrl = new URL(Astro.request.url);  
 const code = requestUrl.searchParams.get("code");  
 const next = requestUrl.searchParams.get("next") || "/";
+const noStoreHeaders = {
+  "Cache-Control": "no-store, private, max-age=0",
+  "CDN-Cache-Control": "no-store",
+  Pragma: "no-cache",
+};
 
 if (code) {  
   const supabase = createSupabaseServerClient({  
@@ -17,7 +22,7 @@ if (code) {
   // Tiến hành trao đổi mã code lấy token phiên đăng nhập (session token) từ Supabase Auth  
   const { error } = await supabase.auth.exchangeCodeForSession(code);  
     
-  if (!error) {  
+  if (!error) {
     // Kiểm tra xem đây có phải lần đăng nhập đầu tiên không
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -51,21 +56,46 @@ if (code) {
       console.error("[AUTH] Welcome email check error:", welcomeErr.message);
     }
 
-    return new Response(null, {  
-      status: 307,  
-      headers: {  
-        Location: next,  
-      },  
-    });  
-  }  
-    
-  console.error("Lỗi trao đổi mã code xác thực:", error.message);  
+    return new Response(null, {
+      status: 307,
+      headers: {
+        ...noStoreHeaders,
+        Location: next,
+      },
+    });
+  }
+
+  // A browser retry, back/forward navigation, or a duplicate edge request
+  // can submit the same one-time PKCE code twice. If the first request
+  // already created a session, treat the duplicate as a successful login.
+  const errorCode = (error as any)?.code || "";
+  const errorMessage = (error as any)?.message || "";
+  const isReplayedFlow =
+    errorCode === "flow_state_already_used" ||
+    errorMessage.includes("flow_state_already_used") ||
+    errorMessage.includes("State has already been used");
+
+  if (isReplayedFlow) {
+    const { data: { user: existingUser } } = await supabase.auth.getUser();
+    if (existingUser) {
+      return new Response(null, {
+        status: 307,
+        headers: {
+          ...noStoreHeaders,
+          Location: next,
+        },
+      });
+    }
+  }
+
+  console.error("Lỗi trao đổi mã code xác thực:", error.message);
 }
 
 // Chuyển hướng về trang chủ kèm cờ thông báo lỗi xác thực  
 return new Response(null, {  
   status: 307,  
   headers: {  
+    ...noStoreHeaders,
     Location: "/?error=auth-failed",  
   },  
 });  

@@ -1,9 +1,17 @@
 import type { APIRoute } from "astro";  
 import { createSupabaseServerClient } from "../../../lib/supabase";
+import { env } from "cloudflare:workers";
 
 export const GET: APIRoute = async ({ request, cookies, url }) => {  
   const supabase = createSupabaseServerClient({ request, cookies });  
-  const redirectUrl = `${url.origin}/auth/callback`;
+  // In production, prefer a fixed canonical origin so an old preview/local
+  // host cannot become the OAuth callback. Keep the request origin for local
+  // development when PUBLIC_SITE_URL is not configured.
+  const configuredSiteUrl = (
+    (env as any)?.PUBLIC_SITE_URL || import.meta.env.PUBLIC_SITE_URL
+  )?.trim().replace(/\/+$/, "");
+  const redirectOrigin = configuredSiteUrl || url.origin;
+  const redirectUrl = `${redirectOrigin}/auth/callback`;
 
   // Thực hiện yêu cầu sinh URL đăng nhập OAuth từ Supabase  
   const { data, error } = await supabase.auth.signInWithOAuth({  
@@ -22,6 +30,9 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
     status: 307,  
     headers: {  
       Location: data.url,  
+      "Cache-Control": "no-store, private, max-age=0",
+      "CDN-Cache-Control": "no-store",
+      Pragma: "no-cache",
     },  
   });  
 };
