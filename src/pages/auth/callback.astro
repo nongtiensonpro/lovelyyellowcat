@@ -20,7 +20,13 @@ if (code) {
   });
 
   // Tiến hành trao đổi mã code lấy token phiên đăng nhập (session token) từ Supabase Auth  
-  const { error } = await supabase.auth.exchangeCodeForSession(code);  
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  // In SSR/serverless runtimes, let the async auth-state cookie writer finish
+  // before the response is returned to Cloudflare. Without this flush, a
+  // successful exchange can be followed by a second request with stale PKCE
+  // state, which Supabase reports as flow_state_already_used.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
     
   if (!error) {
     // Kiểm tra xem đây có phải lần đăng nhập đầu tiên không
