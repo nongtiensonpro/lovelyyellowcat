@@ -1,6 +1,8 @@
 ---
 import "../styles/global.css";
 import HeaderNav from "../components/HeaderNav.astro";
+import MarqueeTicker from "../components/MarqueeTicker.astro";
+import CassettePlayer from "../components/CassettePlayer.astro";
 
 interface Props {
   title: string;
@@ -9,6 +11,7 @@ interface Props {
   canonicalUrl?: string;
   articleJsonLd?: any;
   userProfile?: any;
+  showMarquee?: boolean;
 }
 
 const { 
@@ -17,7 +20,8 @@ const {
   ogImage = "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1200&h=630&fit=crop",
   canonicalUrl,
   articleJsonLd,
-  userProfile = null
+  userProfile = null,
+  showMarquee = true
 } = Astro.props;
 
 const currentUrl = canonicalUrl || Astro.url.href;
@@ -49,7 +53,7 @@ const currentUrl = canonicalUrl || Astro.url.href;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
-    <!-- Google Fonts: VT323, Press Start 2P, Share Tech Mono & Orbitron/Outfit fallback -->
+    <!-- Google Fonts: VT323, Press Start 2P, Share Tech Mono & Outfit fallback -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;700&display=swap" rel="stylesheet" />
@@ -64,32 +68,108 @@ const currentUrl = canonicalUrl || Astro.url.href;
   </head>
   <body class="min-h-screen text-white font-body selection:bg-vapor-pink selection:text-black antialiased bg-cosmic-black">
     <!-- Lớp phủ CRT toàn trang -->
-    <div class="crt-overlay" aria-hidden="true">
+    <div id="crt-overlay-layer" class="crt-overlay" aria-hidden="true">
       <div class="crt-scanlines"></div>
       <div class="crt-vignette"></div>
     </div>
-    <div class="crt-scanline-animated" aria-hidden="true"></div>
+    <div id="crt-animated-line" class="crt-scanline-animated" aria-hidden="true"></div>
     
-    <!-- Bộ khung chứa trang web -->
-    <div class="relative z-10 p-3 sm:p-4 max-w-7xl mx-auto flex flex-col min-h-[calc(100dvh-1.5rem)] justify-between">
-      <!-- Thanh điều hướng responsive chuẩn hóa -->
-      <HeaderNav userProfile={userProfile} />
-      
-      <main class="flex-grow w-full">
-        <slot />
-      </main>
-      
-      <!-- Footer hoài cổ Windows 95 -->
-      <footer class="win95-container mt-12 mb-2 font-retro text-black bg-win-gray text-[10px] sm:text-xs">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-2 p-2">
-          <span class="text-center md:text-left">📼 VAPORWAVE ART JOURNAL &copy; 2026 // DỰ ÁN PHI THƯƠNG MẠI HỌC TẬP</span>
-          <div class="flex flex-wrap justify-center gap-3 items-center">
-            <a href="/terms" class="text-black hover:underline font-bold no-underline">📜 Điều Khoản Sử Dụng</a>
-            <span class="text-win-dark hidden sm:inline">|</span>
-            <a href="mailto:nongtiensonpro@gmail.com" class="text-black hover:underline font-bold no-underline">✉️ Trợ Giúp & Khiếu Nại</a>
+    <!-- Outer Black Page Frame (DESIGN-dell-1996 Enterprise Catalog Style) -->
+    <div class="min-h-screen bg-black p-1 sm:p-2.5 md:p-3.5">
+      <div class="max-w-7xl mx-auto flex flex-col min-h-[calc(100vh-2rem)] justify-between border-2 border-win-darkest bg-gradient-to-b from-cosmic-black via-cosmic-deep to-cosmic-black p-2 sm:p-4 shadow-2xl relative z-10">
+        
+        <!-- Top Banner: Marquee Ticker -->
+        {showMarquee && (
+          <div class="mb-3">
+            <MarqueeTicker />
           </div>
-        </div>
-      </footer>
+        )}
+
+        <!-- Thanh điều hướng responsive chuẩn hóa Windows 95 Taskbar -->
+        <HeaderNav userProfile={userProfile} />
+        
+        <!-- Nội dung chính -->
+        <main class="flex-grow w-full py-2">
+          <slot />
+        </main>
+        
+        <!-- Footer hoài cổ Windows 95 kết hợp Catalog 1996 -->
+        <footer class="win95-container mt-12 font-retro text-black bg-win-gray text-[10px] sm:text-xs">
+          <!-- Top Footer Bar: Category & Site Links -->
+          <div class="p-2 border-b border-win-dark flex flex-wrap justify-between items-center gap-2 bg-white/40">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 bg-vapor-green rounded-full inline-block animate-pulse"></span>
+              <span class="font-bold text-win-titlebar">CYBERSERVER: ONLINE // 99.9% UPTIME</span>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+              <button id="toggle-crt-btn" class="win95-btn text-[9px] py-0 px-2 font-bold" style="min-height: 22px;">
+                📺 CRT: BẬT
+              </button>
+              <a href="/" class="text-[#0000ee] hover:underline font-bold">Trang Chủ</a>
+              <span class="text-win-dark">|</span>
+              <a href="/gallery" class="text-[#0000ee] hover:underline font-bold">Triển Lãm</a>
+              <span class="text-win-dark">|</span>
+              <a href="/artists" class="text-[#0000ee] hover:underline font-bold">Nghệ Sĩ</a>
+              <span class="text-win-dark">|</span>
+              <a href="/terms" class="text-[#0000ee] hover:underline font-bold">Điều Khoản (Terms)</a>
+            </div>
+          </div>
+
+          <!-- Bottom Footer Bar: Copyright & Contact -->
+          <div class="flex flex-col md:flex-row justify-between items-center gap-2 p-2">
+            <span class="text-center md:text-left text-black/80 font-mono text-[9px] sm:text-[10px]">
+              📼 VAPORWAVE ART JOURNAL &copy; 1995-2026 // DỰ ÁN NGHỆ THUẬT SỐ PHI THƯƠNG MẠI
+            </span>
+            <div class="flex items-center gap-2">
+              <span class="text-win-dark font-mono text-[9px]">BEST VIEWED AT 1024x768</span>
+              <span class="text-win-dark">|</span>
+              <a href="mailto:nongtiensonpro@gmail.com" class="text-black font-bold no-underline hover:underline text-[9px]">
+                ✉️ nongtiensonpro@gmail.com
+              </a>
+            </div>
+          </div>
+        </footer>
+
+        <!-- Floating Cassette Player Widget on Bottom-Right -->
+        <aside class="fixed bottom-3 right-3 z-40 hidden md:block max-w-[260px]">
+          <CassettePlayer />
+        </aside>
+      </div>
     </div>
+
+    <!-- Script điều khiển CRT Overlay Toggle -->
+    <script>
+      const crtBtn = document.getElementById("toggle-crt-btn");
+      const crtLayer = document.getElementById("crt-overlay-layer");
+      const crtLine = document.getElementById("crt-animated-line");
+
+      let crtEnabled = localStorage.getItem("vapor_crt_mode") !== "disabled";
+
+      function updateCrtDisplay() {
+        if (crtLayer && crtLine && crtBtn) {
+          if (crtEnabled) {
+            crtLayer.classList.remove("crt-disabled");
+            crtLine.classList.remove("hidden");
+            crtBtn.textContent = "📺 CRT: BẬT";
+          } else {
+            crtLayer.classList.add("crt-disabled");
+            crtLine.classList.add("hidden");
+            crtBtn.textContent = "📺 CRT: TẮT";
+          }
+        }
+      }
+
+      if (crtBtn) {
+        crtBtn.addEventListener("click", () => {
+          crtEnabled = !crtEnabled;
+          localStorage.setItem("vapor_crt_mode", crtEnabled ? "enabled" : "disabled");
+          updateCrtDisplay();
+        });
+      }
+
+      // Khởi tạo trạng thái ban đầu
+      updateCrtDisplay();
+    </script>
   </body>
 </html>

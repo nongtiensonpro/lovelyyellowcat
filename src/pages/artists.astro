@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import RetroSticker from "../components/RetroSticker.astro";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
 const supabase = createSupabaseServerClient({
@@ -23,112 +24,126 @@ const activeArtists = artists || [];
   description="Khám phá và kết nối với các nghệ sĩ kỹ thuật số tích cực nhất trong cộng đồng nghệ thuật hoài cổ Vaporwave."
   userProfile={userProfile}
 >
-  <!-- Tiêu đề Glitch lớn hoài cổ chuẩn hóa -->
+  <!-- Hero Section -->
   <div class="text-center py-6">
     <h1 class="hero-title text-glitch-soft">
       Aesthetic Creators
     </h1>
     <p class="text-[9px] sm:text-xs tracking-[0.2em] text-vapor-blue mt-3 font-mono uppercase">
-      // INDEX OF THE MOST VIBRANT DIGITAL SOULS //
+      // NETWORK NEIGHBORHOOD // CYBER ARTIST DIRECTORY //
     </p>
   </div>
 
-  {/* Main Grid Component */}
-  <div class="mt-6 bg-[#0b001a]/40 p-3 sm:p-4 border-2 border-win-dark/50 backdrop-blur-md">
-    <div class="win95-container bg-win-gray mb-8">
-      <div class="win95-header py-1">
-        <span>NETWORK_LOG.LOG</span>
+  <!-- Network Neighborhood Container -->
+  <div class="mt-4 win95-window p-3 sm:p-4">
+    <div class="win95-header py-1 px-2 mb-4 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+      <div class="flex items-center gap-1.5">
+        <span>👥</span>
+        <span class="font-bold text-xs">NETWORK_NEIGHBORHOOD.EXE - [DANH SÁCH THÀNH VIÊN SÁNG TẠO]</span>
       </div>
-      <div class="p-3 bg-white text-xs font-bold text-black font-retro leading-relaxed">
-        <span class="text-vapor-purple">● Khám phá danh sách nghệ sĩ xuất sắc.</span> Tổng cộng có <span class="text-vapor-pink">{activeArtists.length}</span> người dùng đã cống hiến các tác phẩm nghệ thuật kỹ thuật số và được cộng đồng đón nhận nồng nhiệt. Bạn có thể nhấn vào hồ sơ để chiêm ngưỡng toàn bộ tác phẩm của từng nghệ sĩ!
+      <div class="flex items-center gap-1 text-[10px] font-mono">
+        <span class="bg-black text-vapor-green px-1.5 py-0.5">{activeArtists.length} NGHỆ SĨ</span>
       </div>
     </div>
 
+    <!-- Status & Info Callout -->
+    <div class="win95-sunken bg-white p-3 mb-6 font-retro text-xs text-black flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div>
+        <span class="font-bold text-vapor-purple">● Mạng lưới kết nối nghệ thuật trực tuyến:</span> Khám phá hồ sơ cá nhân, bộ sưu tập tranh và tương tác cùng các tác giả tài năng.
+      </div>
+      <a href="/submit" class="win95-btn py-1 px-3 bg-[#05ffa1]/20 border border-black font-bold text-black no-underline shrink-0" style="min-height: 28px;">
+        🎨 Đăng Ký Trở Thành Nghệ Sĩ
+      </a>
+    </div>
+
     {activeArtists.length === 0 ? (
-      <div class="win95-container bg-win-gray p-16 text-center text-win-dark font-bold">
-        <p class="text-3xl block mb-3">👥</p>
-        <p class="text-xs uppercase">MẠNG LƯỚI NGHỆ SĨ CHƯA CÓ THÀNH VIÊN HOẠT ĐỘNG.</p>
-        <p class="text-[9px] font-normal text-win-dark/80 mt-1 max-w-sm mx-auto leading-relaxed">
-          Hiện tại chưa có nghệ sĩ nào đăng tranh được phê duyệt. Hãy đăng tác phẩm đầu tiên của bạn để trở thành người tiên phong trong cộng đồng Vaporwave!
+      <div class="win95-container bg-win-gray p-12 text-center text-win-dark font-bold space-y-3">
+        <p class="text-4xl">👥</p>
+        <p class="text-xs uppercase text-black font-mono">CHƯA CÓ NGHỆ SĨ NÀO TRONG MẠNG LƯỚI</p>
+        <p class="text-[10px] text-win-darkest max-w-sm mx-auto">
+          Hãy là người đầu tiên đăng tải tác phẩm và khởi tạo hồ sơ nghệ sĩ trên Cybernet!
         </p>
-        <a href="/submit" class="win95-btn inline-block mt-4 px-6 py-2.5 no-underline text-black font-bold uppercase" style="min-height: 44px;">
-          🎨 Gửi Tranh Ngay
+        <a href="/submit" class="win95-btn inline-block mt-2 px-6 py-2 no-underline text-black font-bold uppercase" style="min-height: 36px;">
+          🎨 Gửi Tác Phẩm Đầu Tiên
         </a>
       </div>
     ) : (
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-        {activeArtists.map((artist) => {
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {activeArtists.map((artist: any, idx: number) => {
           const formattedLastActive = new Date(artist.last_active).toLocaleDateString("vi-VN", {
             month: "short",
             day: "numeric"
           });
 
           return (
-            <div class="win95-container bg-[#c0c0c0] p-1 flex flex-col justify-between hover:border-[#05ffa1] hover:shadow-[0_0_12px_#05ffa1] transition-all duration-300">
-              <div>
-                {/* Banner ảnh bìa */}
-                <div class="h-24 bg-gradient-to-br from-vapor-purple via-[#0b001a] to-vapor-pink relative overflow-hidden border border-win-dark">
-                  {artist.banner_url && (
-                    <img
-                      src={artist.banner_url}
-                      alt="Banner"
-                      class="w-full h-full object-cover filter saturate-125 brightness-75 contrast-105"
-                      loading="lazy"
-                    />
-                  )}
-                  {/* Quét CRT lines overlay */}
-                  <div class="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none" />
-                </div>
+            <div class="ribbon-card relative overflow-hidden bg-white">
+              <!-- Top Ribbon Header -->
+              <div class="ribbon-card-header bg-white border-b-2 border-black flex justify-between items-center py-1.5 px-3">
+                <span class="font-bold text-xs truncate">ID_CARD: #{String(idx + 1).padStart(3, "0")}</span>
+                <RetroSticker text="VERIFIED" variant="cyber" />
+              </div>
 
-                {/* Avatar + Tên nghệ sĩ */}
-                <div class="px-4 -mt-8 relative z-10 flex items-end gap-3 mb-3">
+              <!-- Banner & Cyber Avatar Block -->
+              <div class="relative h-24 bg-gradient-to-r from-vapor-purple via-[#0b001a] to-vapor-pink border-b-2 border-black overflow-hidden">
+                {artist.banner_url && (
                   <img
-                    src={artist.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
-                    alt={artist.full_name}
-                    class="w-16 h-16 border-2 border-win-gray bg-win-gray object-cover filter saturate-150 shadow-md shrink-0"
+                    src={artist.banner_url}
+                    alt="Banner"
+                    class="w-full h-full object-cover filter saturate-125 brightness-75 contrast-105"
                     loading="lazy"
                   />
-                  <div class="min-w-0 pb-1 font-retro">
-                    <h3 class="text-xs sm:text-sm font-extrabold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] uppercase">
-                      {artist.full_name}
-                    </h3>
-                    <span class="text-[8px] font-bold text-vapor-green drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.9)] uppercase">
-                      ● Active Creator
-                    </span>
-                  </div>
-                </div>
+                )}
+                <div class="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(to_bottom,transparent_0px,transparent_2px,rgba(0,0,0,0.4)_2px,rgba(0,0,0,0.4)_4px)] pointer-events-none" />
+              </div>
 
-                {/* Tiểu sử Bio */}
-                <div class="p-3 pt-1">
-                  <div class="win95-container bg-white p-2 text-[10px] leading-relaxed text-black/85 h-16 overflow-y-auto border-inner">
-                    {artist.bio || "Thành viên tích cực đóng góp cho tạp chí Vaporwave. Thiết kế kỹ thuật số hoài cổ là cội nguồn của mọi nguồn cảm hứng."}
-                  </div>
+              <!-- Avatar & Identity Info -->
+              <div class="px-3 -mt-8 relative z-10 flex items-end gap-3 mb-2">
+                <img
+                  src={artist.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop"}
+                  alt={artist.full_name}
+                  class="w-16 h-16 border-2 border-black bg-win-gray object-cover filter saturate-150 shadow-md shrink-0"
+                  loading="lazy"
+                />
+                <div class="min-w-0 pb-1 font-retro">
+                  <h3 class="text-sm font-black text-black truncate uppercase">
+                    {artist.full_name}
+                  </h3>
+                  <span class="text-[9px] font-mono font-bold text-vapor-purple">
+                    ● CYBER CITIZEN
+                  </span>
                 </div>
               </div>
 
-              {/* Chỉ số Stats & Actions */}
-              <div class="p-3 pt-0 space-y-3">
-                <div class="grid grid-cols-3 gap-2 text-center text-[9px] font-retro text-black font-bold">
-                  <div class="bg-[#e6e6e6] border border-win-dark p-1">
-                    <div class="text-win-dark text-[8px] uppercase">🎨 Tranh</div>
-                    <div class="text-xs text-black mt-0.5">{artist.artwork_count}</div>
+              <!-- Artist Bio in Sunken Container -->
+              <div class="px-3 mb-3">
+                <div class="win95-sunken bg-win-gray p-2 text-[10px] font-body text-black/90 h-16 overflow-y-auto leading-relaxed">
+                  {artist.bio || "Thành viên tích cực đóng góp cho tạp chí Vaporwave. Thiết kế kỹ thuật số hoài cổ là cội nguồn của mọi nguồn cảm hứng sáng tạo."}
+                </div>
+              </div>
+
+              <!-- Statistics Matrix -->
+              <div class="px-3 pb-3 space-y-3">
+                <div class="grid grid-cols-3 gap-1.5 text-center font-mono font-bold text-[9px]">
+                  <div class="border border-black bg-[#e6e6e6] p-1 shadow-inner">
+                    <span class="block text-[8px] text-win-darkest">🎨 TRANH</span>
+                    <span class="text-xs text-black font-extrabold">{artist.artwork_count}</span>
                   </div>
-                  <div class="bg-[#e6e6e6] border border-win-dark p-1">
-                    <div class="text-win-dark text-[8px] uppercase">💜 Cảm xúc</div>
-                    <div class="text-xs text-vapor-purple mt-0.5">{artist.total_reactions}</div>
+                  <div class="border border-black bg-[#e6e6e6] p-1 shadow-inner">
+                    <span class="block text-[8px] text-win-darkest">💜 TIM</span>
+                    <span class="text-xs text-vapor-purple font-extrabold">{artist.total_reactions}</span>
                   </div>
-                  <div class="bg-[#e6e6e6] border border-win-dark p-1">
-                    <div class="text-win-dark text-[8px] uppercase">⚡ Active</div>
-                    <div class="text-[10px] text-vapor-blue mt-0.5">{formattedLastActive}</div>
+                  <div class="border border-black bg-[#e6e6e6] p-1 shadow-inner">
+                    <span class="block text-[8px] text-win-darkest">⚡ ACTIVE</span>
+                    <span class="text-[10px] text-vapor-blue font-bold">{formattedLastActive}</span>
                   </div>
                 </div>
 
                 <a
                   href={`/profile/${artist.id}`}
-                  class="win95-btn block text-center py-2.5 text-[10px] font-bold no-underline text-black uppercase bg-[#05ffa1]/10 border-[#05ffa1] hover:bg-[#05ffa1]/30"
-                  style={{ minHeight: "44px" }}
+                  class="win95-btn block text-center py-2 text-xs font-bold no-underline text-black uppercase bg-[#05ffa1]/25 border border-black hover:bg-[#05ffa1]/40"
+                  style="min-height: 36px;"
                 >
-                  📁 Ghé Thăm Hồ Sơ Nghệ Sĩ
+                  📁 XEM HỒ SƠ & BỘ SƯU TẬP &gt;&gt;
                 </a>
               </div>
             </div>
@@ -136,5 +151,11 @@ const activeArtists = artists || [];
         })}
       </div>
     )}
+
+    <!-- Statusbar -->
+    <div class="win95-statusbar justify-between mt-6 text-[10px]">
+      <span>Danh bạ thành viên mạng lưới Cybernet đã đồng bộ.</span>
+      <span class="win95-statusbar-panel font-mono">STATUS: 200 OK</span>
+    </div>
   </div>
 </BaseLayout>

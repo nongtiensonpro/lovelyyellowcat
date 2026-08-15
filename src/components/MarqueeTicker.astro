@@ -1,0 +1,25 @@
+---
+interface Props {
+  text?: string;
+  speed?: string;
+}
+
+const {
+  text = "★ CHÀO MỪNG ĐẾN VỚI VAPORWAVE ART JOURNAL // A CYBERNETIC OASIS ★ MẠNG LƯỚI NGHỆ THUẬT SỐ HOÀI CỔ 1995-2026 ★ THAM GIA TRIỂN LÃM & ĐĂNG TẢI TÁC PHẨM CỦA BẠN NGAY HÔM NAY ★ REALTIME ARTSTREAM ACTIVATED ★",
+  speed = "25s"
+} = Astro.props;
+---
+
+<div class="win95-sunken bg-cosmic-black text-vapor-green font-mono text-[10px] sm:text-xs py-1 px-2 overflow-hidden flex items-center border border-win-dark select-none">
+  <div class="flex items-center gap-1.5 shrink-0 pr-3 border-r border-vapor-purple/40 mr-2">
+    <span class="w-2 h-2 rounded-full bg-vapor-green animate-pulse"></span>
+    <span class="text-vapor-pink font-bold font-retro tracking-wider">LIVE.SYS:</span>
+  </div>
+  
+  <div class="overflow-hidden relative w-full flex">
+    <div class="animate-marquee whitespace-nowrap flex gap-12 font-mono font-medium tracking-wide">
+      <span>{text}</span>
+      <span>{text}</span>
+    </div>
+  </div>
+</div>

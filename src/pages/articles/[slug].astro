@@ -1,5 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import RibbonCard from "../../components/RibbonCard.astro";
+import RetroSticker from "../../components/RetroSticker.astro";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../../lib/supabase";
 import { RealtimeComments } from "../../components/RealtimeComments";
 import { ReactionBar } from "../../components/ReactionBar";
@@ -18,7 +20,7 @@ const currentUser = await getCurrentUserProfile(supabase);
 // Tải thông tin bài viết từ CSDL Supabase
 const { data: dbArticle } = await supabase
   .from("articles")
-  .select("*, profiles:profiles!author_id(id, full_name)")
+  .select("*, profiles:profiles!author_id(id, full_name, avatar_url)")
   .eq("slug", slug)
   .single();
 
@@ -45,8 +47,7 @@ const initialComments = (commentsRes.data || []).map((c: any) => ({
 }));
 const relatedData = relatedRes.data || [];
 
-let article = null;
-let isStatic = false;
+let article: any = null;
 
 if (dbArticle) {
   article = {
@@ -57,6 +58,7 @@ if (dbArticle) {
     date: new Date(dbArticle.created_at).toLocaleDateString("vi-VN"),
     author: dbArticle.profiles?.full_name || "ADMIN",
     authorId: dbArticle.profiles?.id || null,
+    authorAvatar: dbArticle.profiles?.avatar_url,
     tags: dbArticle.tags || [],
     view_count: dbArticle.view_count || 0
   };
@@ -69,7 +71,6 @@ if (dbArticle) {
 } else {
   // Dự phòng các bài viết tĩnh mẫu ban đầu
   if (slug === "retro-computing-aesthetic" || slug === "neon-dreamscape-art") {
-    isStatic = true;
     article = {
       title: slug === "retro-computing-aesthetic" 
         ? "Hoài Niệm Windows 95: Vẻ Đẹp Của Hệ Điều Hành Cổ Điển"
@@ -81,22 +82,23 @@ if (dbArticle) {
         : "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1000&auto=format&fit=crop",
       date: "20/05/2026",
       author: "AESTHETIC WRITER",
+      authorId: null,
+      authorAvatar: null,
       tags: ["vaporwave", "retro", "95"],
       view_count: 95
     };
   } else {
-    // Không tìm thấy bài viết nào phù hợp -> quay lại trang chủ
     return Astro.redirect("/?error=article-not-found");
   }
 }
 
-// 1. Tạo liên kết Open Graph Image động và tối ưu hóa qua Cloudinary
+// 1. Tạo Open Graph Image
 let ogImageUrl = article.cover;
 if (article.cover.includes("res.cloudinary.com")) {
   ogImageUrl = article.cover.replace("/image/upload/", "/image/upload/w_1200,h_630,c_fill,q_auto,f_auto/");
 }
 
-// 2. Xây dựng Structured Data JSON-LD
+// 2. Structured Data JSON-LD
 const articleJsonLd = {
   "@context": "https://schema.org",
   "@type": "Article",
@@ -123,39 +125,17 @@ const articleJsonLd = {
   }
 };
 
-// 3. Logic đề xuất bài viết liên quan (Related Articles) kèm Fallback
+// 3. Logic bài viết liên quan
 let relatedArticles = [];
-if (dbArticle) {
-  if (relatedData && relatedData.length > 0) {
-    relatedArticles = relatedData.map((art: any) => ({
-      slug: art.slug,
-      title: art.title,
-      excerpt: art.excerpt || "Khám phá nghệ thuật Vaporwave...",
-      cover: art.cover_url || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
-      date: new Date(art.created_at).toLocaleDateString("vi-VN")
-    }));
-  } else {
-    // Fallback: Lấy 3 bài viết khác mới xuất bản gần đây
-    const { data: fallbackArticles } = await supabase
-      .from("articles")
-      .select("*")
-      .eq("status", "published")
-      .neq("slug", slug)
-      .order("created_at", { ascending: false })
-      .limit(3);
-    
-    if (fallbackArticles) {
-      relatedArticles = fallbackArticles.map((art: any) => ({
-        slug: art.slug,
-        title: art.title,
-        excerpt: art.excerpt || "Khám phá nghệ thuật Vaporwave...",
-        cover: art.cover_url || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
-        date: new Date(art.created_at).toLocaleDateString("vi-VN")
-      }));
-    }
-  }
+if (dbArticle && relatedData && relatedData.length > 0) {
+  relatedArticles = relatedData.map((art: any) => ({
+    slug: art.slug,
+    title: art.title,
+    excerpt: art.excerpt || "Khám phá nghệ thuật Vaporwave...",
+    cover: art.cover_url || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
+    date: new Date(art.created_at).toLocaleDateString("vi-VN")
+  }));
 } else {
-  // Fallback tĩnh cho các bài viết ban đầu
   const fallbackSlug = slug === "retro-computing-aesthetic" ? "neon-dreamscape-art" : "retro-computing-aesthetic";
   relatedArticles = [
     {
@@ -163,7 +143,7 @@ if (dbArticle) {
       title: fallbackSlug === "retro-computing-aesthetic" 
         ? "Hoài Niệm Windows 95: Vẻ Đẹp Của Hệ Điều Hành Cổ Điển"
         : "Neon Dreamscape: Sự Trỗi Dậy Của Không Gian Màu Neon 3D",
-      excerpt: "Khám phá phong cách thiết kế đồ họa máy tính thời kỳ đầu, cội nguồn của làn sóng nghệ thuật hoài cổ Vaporwave.",
+      excerpt: "Khám phá phong cách thiết kế đồ họa máy tính thời kỳ đầu.",
       cover: fallbackSlug === "retro-computing-aesthetic"
         ? "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop"
         : "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop",
@@ -181,110 +161,167 @@ if (dbArticle) {
   articleJsonLd={articleJsonLd}
   userProfile={currentUser}
 >
-  <!-- Quay lại Trang chủ -->
-  <div class="mb-6 font-retro">
-    <a href="/" class="win95-btn no-underline inline-block text-black px-4 py-1.5 font-bold">
+  <!-- Thanh tiến trình đọc bài viết (Reading Progress Indicator) -->
+  <div id="reading-progress-bar" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-vapor-pink via-vapor-purple to-vapor-blue z-50 transition-all duration-150" style="width: 0%;"></div>
+
+  <!-- Header Action Bar -->
+  <div class="mb-4 flex justify-between items-center font-retro">
+    <a href="/" class="win95-btn text-black px-3 py-1.5 font-bold no-underline" style="min-height: 32px;">
       &lt;&lt; QUAY LẠI TRANG CHỦ
     </a>
+
+    <div class="flex items-center gap-2">
+      <button id="share-article-btn" class="win95-btn text-black px-3 py-1.5 font-bold" style="min-height: 32px;">
+        🔗 CHIA SẺ
+      </button>
+      <button onclick="window.print()" class="win95-btn text-black px-3 py-1.5 font-bold no-print" style="min-height: 32px;">
+        🖨️ IN BÀI
+      </button>
+    </div>
   </div>
 
-  <!-- Chi tiết Bài báo -->
-  <div class="win95-container w-full font-retro mb-6 text-black">
-    <div class="win95-header">
-      <span>EXPLORER.EXE - {article.title}</span>
-      <button class="win95-btn py-0 px-1">?</button>
+  <!-- Win95 WordPad / Document Viewer Window -->
+  <article class="win95-window w-full font-retro mb-8 text-black">
+    <!-- Window Titlebar -->
+    <div class="win95-header py-1 px-2">
+      <div class="flex items-center gap-1.5 truncate">
+        <span>📝</span>
+        <span class="truncate font-bold text-xs">WORDPAD.EXE - [{article.title}.DOC]</span>
+      </div>
+      <div class="flex gap-1 shrink-0">
+        <button class="win95-btn py-0 px-1 text-[9px]">_</button>
+        <button class="win95-btn py-0 px-1 text-[9px]">□</button>
+        <button class="win95-btn py-0 px-1 text-[9px]">✕</button>
+      </div>
     </div>
-    <div class="p-6 bg-win-gray">
+
+    <!-- WordPad Menubar & Toolbar -->
+    <div class="win95-menubar">
+      <span>File</span>
+      <span>Edit</span>
+      <span>View</span>
+      <span>Insert</span>
+      <span>Format</span>
+      <span>Help</span>
+    </div>
+
+    <div class="bg-win-gray border-b border-win-dark p-1 flex items-center gap-2 text-xs select-none">
+      <span class="font-mono bg-white px-2 py-0.5 border border-win-dark">Courier New (12pt)</span>
+      <span class="font-bold border border-win-dark px-1.5 bg-win-light">B</span>
+      <span class="italic border border-win-dark px-1.5 bg-win-light">I</span>
+      <span class="underline border border-win-dark px-1.5 bg-win-light">U</span>
+    </div>
+
+    <!-- Document Content Area (Sunken White Page) -->
+    <div class="p-4 sm:p-8 bg-white border-2 border-win-darkest shadow-inner my-2 mx-1 sm:mx-2">
+      
+      <!-- Article Cover Image -->
       {article.cover && (
-        <img src={article.cover} alt={article.title} class="w-full h-80 object-cover border-2 border-win-dark filter saturate-125 brightness-110 mb-6" />
+        <div class="mb-6 border-2 border-black bg-black overflow-hidden shadow-md">
+          <img
+            src={article.cover}
+            alt={article.title}
+            class="w-full max-h-[460px] object-cover filter saturate-125 contrast-105"
+          />
+        </div>
       )}
       
-      <div class="border-b border-win-dark pb-4 mb-6">
-        <h1 class="text-2xl md:text-4xl font-extrabold uppercase leading-normal tracking-wide text-black">{article.title}</h1>
-        <div class="flex flex-wrap gap-2 mt-3">
-          {article.tags.map((tag) => (
-            <span class="text-[9px] px-2 py-0.5 border border-win-dark bg-[#e0e0e0] font-bold">
-              #{tag}
-            </span>
+      <!-- Article Header & Metadata -->
+      <div class="border-b-2 border-black pb-4 mb-6">
+        <div class="flex flex-wrap gap-2 mb-3">
+          {article.tags.map((tag: string) => (
+            <RetroSticker text={tag} variant="pill" />
           ))}
         </div>
-        <div class="flex justify-between items-center text-[10px] text-win-dark mt-4">
-          <span>
-            Xuất bản lúc: {article.date} // Tác giả: {article.authorId ? (
-              <a href={`/profile/${article.authorId}`} class="text-blue-800 hover:underline font-bold no-underline">
-                {article.author}
-              </a>
-            ) : (
-              article.author
+
+        <h1 class="text-xl sm:text-3xl font-black uppercase tracking-tight text-black leading-tight font-retro">
+          {article.title}
+        </h1>
+
+        <div class="flex flex-wrap justify-between items-center gap-2 mt-4 pt-3 border-t border-win-dark text-xs font-mono">
+          <div class="flex items-center gap-2">
+            {article.authorAvatar && (
+              <img src={article.authorAvatar} alt="Avatar" class="w-6 h-6 border border-black object-cover filter saturate-150" />
             )}
-          </span>
-          <span class="font-mono">💾 LƯỢT XEM: {article.view_count}</span>
+            <span>
+              Tác giả: {article.authorId ? (
+                <a href={`/profile/${article.authorId}`} class="text-[#0000ee] hover:underline font-bold">
+                  {article.author}
+                </a>
+              ) : (
+                <span class="font-bold">{article.author}</span>
+              )}
+            </span>
+          </div>
+          
+          <div class="flex items-center gap-3 text-black/70">
+            <span>📅 {article.date}</span>
+            <span>💾 LƯỢT XEM: {article.view_count}</span>
+          </div>
         </div>
       </div>
 
+      <!-- Excerpt Callout Block -->
       {article.excerpt && (
-        <p class="text-xs text-win-dark italic border-l-4 border-win-dark pl-3 mb-6 leading-relaxed">
+        <div class="border-l-4 border-vapor-purple bg-vapor-pink/10 p-3 sm:p-4 mb-6 text-xs sm:text-sm font-body italic text-black leading-relaxed">
           {article.excerpt}
-        </p>
+        </div>
       )}
 
-      {/* Nội dung bài viết hiển thị parse Markdown */}
-      <article class="prose prose-sm font-sans text-justify text-black/90">
+      <!-- Main Body Markdown -->
+      <div class="prose prose-neutral max-w-none font-body text-black text-sm sm:text-base leading-relaxed space-y-4">
         <div set:html={parseMarkdownToHtml(article.content)} />
-      </article>
+      </div>
     </div>
-  </div>
 
-  <!-- Thanh phản hồi Emoji bài viết (ReactionBar) -->
+    <!-- WordPad Statusbar -->
+    <div class="win95-statusbar justify-between text-[10px]">
+      <span>Document loaded successfully. Ready.</span>
+      <span class="win95-statusbar-panel font-mono">LN: 1, COL: 1</span>
+    </div>
+  </article>
+
+  <!-- Reaction Bar -->
   <div class="mb-8">
     <ReactionBar client:load articleId={slug || "unknown"} currentUser={currentUser} />
   </div>
 
-  <!-- Bài viết liên quan (Related Articles) kiểu Win95 3D nổi bật -->
+  <!-- Related Articles Stack -->
   {relatedArticles.length > 0 && (
     <div class="win95-container w-full font-retro mb-10 text-black">
-      <div class="win95-header">
-        <span>RELATED_ARTICLES.SYS - [Bài Viết Liên Quan]</span>
-        <button class="win95-btn py-0 px-1">?</button>
+      <div class="win95-header py-1 px-2">
+        <div class="flex items-center gap-1.5">
+          <span>📑</span>
+          <span class="font-bold text-xs">RELATED_ARTICLES.SYS // BÀI VIẾT LIÊN QUAN</span>
+        </div>
       </div>
-      <div class="p-4 bg-[#c0c0c0]">
-        <div class="grid sm:grid-cols-3 gap-4">
-          {relatedArticles.map((related) => (
-            <div class="border border-win-dark bg-white p-2.5 flex flex-col justify-between shadow-sm">
-              <div>
-                <img 
-                  src={related.cover} 
-                  alt={related.title} 
-                  class="w-full h-28 object-cover border border-win-dark filter saturate-125" 
-                />
-                <h4 class="text-xs font-bold text-black mt-2 mb-1 line-clamp-2 leading-tight">
-                  {related.title}
-                </h4>
-                <p class="text-[9px] text-win-dark line-clamp-2 leading-normal">
-                  {related.excerpt}
-                </p>
-              </div>
-              <div class="flex justify-between items-center pt-2 mt-2 border-t border-win-dark/10">
-                <span class="text-[8px] text-win-dark font-mono">{related.date}</span>
-                <a 
-                  href={`/articles/${related.slug}`} 
-                  class="win95-btn no-underline text-[8px] font-bold py-0.5 px-2 text-black"
-                >
-                  ĐỌC BÀI VIẾT &gt;
-                </a>
-              </div>
-            </div>
+      <div class="p-4 bg-win-gray">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {relatedArticles.map((related: any, i: number) => (
+            <RibbonCard
+              title={related.title}
+              tint={i === 0 ? "salmon" : i === 1 ? "sage" : "periwinkle"}
+              imageUrl={related.cover}
+              href={`/articles/${related.slug}`}
+              date={related.date}
+            >
+              <p class="text-xs text-black font-body line-clamp-2">
+                {related.excerpt}
+              </p>
+            </RibbonCard>
           ))}
         </div>
       </div>
     </div>
   )}
 
-  <!-- Phân hệ bình luận thời gian thực (React Island tải trực tiếp trên client) -->
-  <div class="max-w-3xl mx-auto mb-16">
-    <h3 class="text-xl font-retro text-vapor-pink tracking-widest uppercase mb-4 text-center">
-      // THẢO LUẬN NGHỆ THUẬT //
-    </h3>
+  <!-- Realtime Comments Island -->
+  <div class="max-w-4xl mx-auto mb-16">
+    <div class="border-2 border-black bg-gradient-to-r from-vapor-purple to-vapor-pink p-2 text-white font-retro text-center mb-4 shadow-md">
+      <h3 class="text-base sm:text-lg font-black uppercase tracking-widest drop-shadow-sm">
+        💬 DIỄN ĐÀN THẢO LUẬN NGHỆ THUẬT // REALTIME STREAM
+      </h3>
+    </div>
     <RealtimeComments 
       client:load 
       articleId={slug || "unknown"} 
@@ -293,3 +330,32 @@ if (dbArticle) {
     />
   </div>
 </BaseLayout>
+
+<script>
+  // Reading Progress Bar calculation
+  window.addEventListener("scroll", () => {
+    const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+    if (totalHeight > 0) {
+      const progress = (window.scrollY / totalHeight) * 100;
+      const bar = document.getElementById("reading-progress-bar");
+      if (bar) bar.style.width = `${progress}%`;
+    }
+  });
+
+  // Share Article Button (Copy Link)
+  const shareBtn = document.getElementById("share-article-btn");
+  if (shareBtn) {
+    shareBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        const originalText = shareBtn.textContent;
+        shareBtn.textContent = "✅ ĐÃ COPY!";
+        setTimeout(() => {
+          shareBtn.textContent = originalText;
+        }, 2000);
+      } catch (err) {
+        alert("Đường dẫn: " + window.location.href);
+      }
+    });
+  }
+</script>

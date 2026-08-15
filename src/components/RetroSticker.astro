@@ -1,0 +1,39 @@
+---
+interface Props {
+  text: string;
+  variant?: "burst" | "seal" | "pill" | "cyber";
+  className?: string;
+}
+
+const {
+  text,
+  variant = "burst",
+  className = ""
+} = Astro.props;
+---
+
+{variant === "burst" && (
+  <div class={`retro-sticker-burst ${className}`}>
+    ★ {text} ★
+  </div>
+)}
+
+{variant === "seal" && (
+  <div class={`retro-seal ${className}`}>
+    <span>{text}</span>
+  </div>
+)}
+
+{variant === "pill" && (
+  <div class={`inline-flex items-center gap-1 bg-vapor-pink text-cosmic-black px-2 py-0.5 font-retro font-bold text-[9px] uppercase border border-white shadow-[2px_2px_0px_#000] ${className}`}>
+    <span>●</span>
+    <span>{text}</span>
+  </div>
+)}
+
+{variant === "cyber" && (
+  <div class={`inline-flex items-center gap-1 bg-[#05ffa1] text-cosmic-black px-2 py-0.5 font-mono font-bold text-[9px] uppercase border border-black shadow-[2px_2px_0px_#000] ${className}`}>
+    <span>[#]</span>
+    <span>{text}</span>
+  </div>
+)}

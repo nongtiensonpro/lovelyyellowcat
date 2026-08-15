@@ -1,0 +1,170 @@
+---
+interface Props {
+  trackTitle?: string;
+}
+
+const { trackTitle = "MACINTOSH PLUS - リサフランク420 / 現代のコンピュ" } = Astro.props;
+---
+
+<div id="vapor-cassette-widget" class="win95-container bg-win-gray font-retro text-black p-1 shadow-lg w-full max-w-xs transition-all duration-300">
+  <div class="win95-header py-0.5 px-1.5 flex justify-between items-center text-[10px]">
+    <div class="flex items-center gap-1">
+      <span>📼</span>
+      <span class="font-bold tracking-wider truncate">AUDIO_DECK.EXE</span>
+    </div>
+    <button id="cassette-toggle-collapse" class="win95-btn py-0 px-1 text-[8px]" style="min-height: 16px;">_</button>
+  </div>
+
+  <div id="cassette-body" class="p-2 space-y-2">
+    <!-- Cassette Tape Graphic -->
+    <div class="relative bg-gradient-to-r from-[#202020] via-[#101010] to-[#202020] p-2 rounded-sm border-2 border-win-darkest shadow-inner">
+      <!-- Tape Label Area -->
+      <div class="bg-gradient-to-r from-vapor-pink/80 via-vapor-purple/80 to-vapor-blue/80 p-1.5 rounded-sm border border-win-light/40">
+        <div class="bg-white/90 px-1.5 py-0.5 text-center text-[9px] font-bold text-black truncate font-mono">
+          {trackTitle}
+        </div>
+      </div>
+
+      <!-- Tape Window with Reels -->
+      <div class="mt-2 bg-[#0b001a] border border-win-dark p-1 flex justify-around items-center h-10 relative overflow-hidden">
+        <!-- Left Reel -->
+        <div class="cassette-spool relative w-7 h-7 rounded-full bg-white/20 border-2 border-dashed border-white/60 flex items-center justify-center">
+          <div class="w-2 h-2 rounded-full bg-vapor-pink"></div>
+        </div>
+
+        <!-- Center Tape Bridge -->
+        <div class="h-4 w-12 bg-gradient-to-r from-vapor-purple/40 to-vapor-pink/40 border-t border-b border-win-dark flex items-center justify-center text-[8px] text-vapor-yellow font-mono">
+          SIDE A
+        </div>
+
+        <!-- Right Reel -->
+        <div class="cassette-spool relative w-7 h-7 rounded-full bg-white/20 border-2 border-dashed border-white/60 flex items-center justify-center">
+          <div class="w-2 h-2 rounded-full bg-vapor-blue"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center justify-between gap-1 pt-1">
+      <button id="cassette-play-btn" class="win95-btn flex-1 py-1 text-[10px] font-bold" style="min-height: 28px;">
+        ▶ PLAY
+      </button>
+      <button id="cassette-ambient-btn" class="win95-btn py-1 px-2 text-[10px] font-bold" style="min-height: 28px;" title="Bật/Tắt hiệu ứng âm thanh Synthesizer">
+        🔊 LO-FI
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Web Audio Synthwave Generator & Tape State Manager
+  let audioCtx: AudioContext | null = null;
+  let isPlaying = false;
+  let isMuted = false;
+  let synthInterval: number | null = null;
+
+  const playBtn = document.getElementById("cassette-play-btn");
+  const ambientBtn = document.getElementById("cassette-ambient-btn");
+  const spools = document.querySelectorAll(".cassette-spool");
+  const collapseBtn = document.getElementById("cassette-toggle-collapse");
+  const cassetteBody = document.getElementById("cassette-body");
+
+  // Retro Vaporwave Chords (Frequencies in Hz)
+  const vaporChords = [
+    [261.63, 329.63, 392.00, 493.88], // Cmaj7
+    [220.00, 261.63, 329.63, 392.00], // Am7
+    [174.61, 220.00, 261.63, 329.63], // Fmaj7
+    [196.00, 246.94, 293.66, 349.23], // G7
+  ];
+  let chordIndex = 0;
+
+  function playVaporSynthChord() {
+    if (!audioCtx || !isPlaying || isMuted) return;
+    try {
+      const chord = vaporChords[chordIndex % vaporChords.length];
+      chordIndex++;
+
+      chord.forEach((freq) => {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        // Warm analog synth filter
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+        filter.Q.setValueAtTime(4, audioCtx.currentTime);
+
+        // Soft dream wave
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq * 0.5, audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.04, audioCtx.currentTime + 0.6);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3.8);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 4.0);
+      });
+    } catch (e) {
+      console.warn("Audio playback notice:", e);
+    }
+  }
+
+  function togglePlay() {
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) audioCtx = new AudioContextClass();
+    }
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+
+    isPlaying = !isPlaying;
+    if (playBtn) {
+      playBtn.textContent = isPlaying ? "⏸ PAUSE" : "▶ PLAY";
+      if (isPlaying) {
+        playBtn.classList.add("active");
+      } else {
+        playBtn.classList.remove("active");
+      }
+    }
+
+    spools.forEach((spool) => {
+      if (isPlaying) {
+        spool.classList.add("animate-cassette-spin");
+      } else {
+        spool.classList.remove("animate-cassette-spin");
+      }
+    });
+
+    if (isPlaying) {
+      playVaporSynthChord();
+      synthInterval = window.setInterval(playVaporSynthChord, 4000);
+    } else if (synthInterval) {
+      clearInterval(synthInterval);
+      synthInterval = null;
+    }
+  }
+
+  if (playBtn) {
+    playBtn.addEventListener("click", togglePlay);
+  }
+
+  if (ambientBtn) {
+    ambientBtn.addEventListener("click", () => {
+      isMuted = !isMuted;
+      ambientBtn.textContent = isMuted ? "🔇 MUTE" : "🔊 LO-FI";
+    });
+  }
+
+  if (collapseBtn && cassetteBody) {
+    collapseBtn.addEventListener("click", () => {
+      cassetteBody.classList.toggle("hidden");
+    });
+  }
+</script>

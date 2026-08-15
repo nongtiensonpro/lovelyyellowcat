@@ -1,0 +1,96 @@
+---
+import RetroSticker from "./RetroSticker.astro";
+
+interface Props {
+  title: string;
+  tint?: "sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "periwinkle" | "olive";
+  eyebrow?: string;
+  stickerText?: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  href?: string;
+  date?: string;
+  badge?: string;
+  className?: string;
+}
+
+const {
+  title,
+  tint = "periwinkle",
+  eyebrow,
+  stickerText,
+  imageUrl,
+  imageAlt = "Artwork Preview",
+  href,
+  date,
+  badge,
+  className = ""
+} = Astro.props;
+
+const tintClassMap: Record<string, string> = {
+  sage: "ribbon-tint-sage",
+  salmon: "ribbon-tint-salmon",
+  peach: "ribbon-tint-peach",
+  lime: "ribbon-tint-lime",
+  sky: "ribbon-tint-sky",
+  steel: "ribbon-tint-steel",
+  periwinkle: "ribbon-tint-periwinkle",
+  olive: "ribbon-tint-olive"
+};
+
+const tintClass = tintClassMap[tint] || "ribbon-tint-periwinkle";
+---
+
+<div class={`ribbon-card relative overflow-hidden ${className}`}>
+  {stickerText && (
+    <div class="absolute -top-1 -right-1 z-20 pointer-events-none">
+      <RetroSticker text={stickerText} variant="burst" />
+    </div>
+  )}
+
+  <!-- Title Header Bar -->
+  <div class="ribbon-card-header">
+    <div class="flex items-center gap-2 truncate">
+      {eyebrow && <span class="text-[10px] px-1 bg-black text-white font-mono">{eyebrow}</span>}
+      <span class="truncate">{title}</span>
+    </div>
+    {badge && (
+      <span class="text-[9px] font-mono font-bold bg-win-titlebar text-white px-1.5 py-0.5 rounded-none shrink-0">
+        {badge}
+      </span>
+    )}
+  </div>
+
+  <!-- Tinted Body Block -->
+  <div class={`ribbon-card-body ${tintClass} flex flex-col md:flex-row gap-3 justify-between items-start`}>
+    <div class="space-y-2 flex-grow min-w-0">
+      <slot />
+      
+      {date && (
+        <div class="text-[10px] font-mono font-bold text-black/70 mt-2">
+          📅 {date}
+        </div>
+      )}
+    </div>
+
+    {imageUrl && (
+      <div class="w-full md:w-36 h-28 shrink-0 bg-black border-2 border-black overflow-hidden shadow-sm self-center md:self-start">
+        <img
+          src={imageUrl}
+          alt={imageAlt}
+          class="w-full h-full object-cover filter saturate-125 contrast-105 hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+        />
+      </div>
+    )}
+  </div>
+
+  {href && (
+    <div class="bg-white p-2 border-t-2 border-black flex justify-between items-center">
+      <span class="text-[10px] font-mono text-black/70">CATALOG_ID: #1996</span>
+      <a href={href} class="win95-btn font-bold px-3 py-1 text-black text-xs no-underline" style="min-height: 28px;">
+        XEM CHI TIẾT &gt;&gt;
+      </a>
+    </div>
+  )}
+</div>

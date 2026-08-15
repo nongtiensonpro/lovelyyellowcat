@@ -1,0 +1,58 @@
+---
+interface Props {
+  title?: string;
+  className?: string;
+}
+
+const {
+  title = "SONY TRINITRON // CRT MULTISCAN 17SF",
+  className = ""
+} = Astro.props;
+---
+
+<div class={`bg-win-gray p-3 sm:p-4 rounded-lg border-4 border-win-light shadow-[inset_-3px_-3px_0_#404040,inset_3px_3px_0_#dfdfdf,8px_8px_0_rgba(0,0,0,0.8)] font-retro text-black max-w-full ${className}`}>
+  <!-- Brand Badge & Speaker Grills -->
+  <div class="flex justify-between items-center mb-2 px-1">
+    <div class="flex items-center gap-1.5">
+      <span class="w-2.5 h-2.5 bg-black rounded-full inline-block border border-win-dark"></span>
+      <span class="text-[9px] sm:text-[10px] font-bold font-mono tracking-wider text-win-darkest uppercase">
+        {title}
+      </span>
+    </div>
+    
+    <div class="flex gap-1">
+      <span class="w-4 h-1 bg-win-dark rounded-full"></span>
+      <span class="w-4 h-1 bg-win-dark rounded-full"></span>
+      <span class="w-4 h-1 bg-win-dark rounded-full"></span>
+    </div>
+  </div>
+
+  <!-- Screen Bezel & Tube -->
+  <div class="bg-black p-2 sm:p-3 rounded-md border-4 border-win-darkest shadow-[inset_0_0_20px_rgba(0,0,0,0.9)] relative overflow-hidden">
+    <!-- Curved Glass Vignette & Scanlines -->
+    <div class="relative rounded-sm overflow-hidden z-10">
+      <slot />
+    </div>
+
+    <!-- Scanline effect across screen -->
+    <div class="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(to_bottom,transparent_0px,transparent_2px,rgba(0,0,0,0.25)_2px,rgba(0,0,0,0.25)_4px)] z-20"></div>
+    <div class="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(0,0,0,0.65)_100%)] z-20"></div>
+  </div>
+
+  <!-- Monitor Control Panel & Power LED -->
+  <div class="flex justify-between items-center mt-3 pt-2 border-t border-win-dark/40 px-1">
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-vapor-green shadow-[0_0_6px_#05ffa1] animate-pulse"></span>
+        <span class="text-[8px] font-mono text-win-darkest font-bold">POWER</span>
+      </div>
+      <span class="text-[8px] font-mono text-win-darkest hidden sm:inline">● 1024x768 @ 75Hz</span>
+    </div>
+
+    <div class="flex gap-1.5">
+      <button class="win95-btn text-[8px] py-0 px-1.5" style="min-height: 18px;" title="Degauss CRT Tube">DEGAUSS</button>
+      <button class="win95-btn text-[8px] py-0 px-1.5" style="min-height: 18px;" title="Contrast">CONTRAST</button>
+      <button class="win95-btn text-[8px] py-0 px-1.5 font-bold text-vapor-pink" style="min-height: 18px;" title="Menu">MENU</button>
+    </div>
+  </div>
+</div>

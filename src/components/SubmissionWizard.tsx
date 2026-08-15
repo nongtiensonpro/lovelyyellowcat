@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 
-// Khai báo window global cho TypeScript
 declare global {
   interface Window {
     __RECAPTCHA_SITEKEY__?: string;
@@ -15,6 +14,17 @@ interface SubmissionWizardProps {
   } | null;
 }
 
+const AVAILABLE_TAGS = [
+  "vaporwave",
+  "synthwave",
+  "retro95",
+  "cyberpunk",
+  "vhs_glitch",
+  "roman_statue",
+  "citypop",
+  "pixel_art"
+];
+
 export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser }) => {
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
@@ -28,11 +38,21 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
   // Trạng thái biểu mẫu thông tin
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>(["vaporwave"]);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  
+  const toggleTag = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      if (selectedTags.length > 1) {
+        setSelectedTags(selectedTags.filter((t) => t !== tag));
+      }
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
   // Lấy token reCAPTCHA v3
   const executeRecaptcha = async (action: string): Promise<string | null> => {
     return new Promise((resolve) => {
@@ -112,7 +132,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
 
     const token = await executeRecaptcha("submit_artwork");
     if (!token) {
-      setMessage({ type: "error", text: "Hệ thống bảo vệ (reCAPTCHA) gặp lỗi, vui lòng thử lại." });
+      setMessage({ type: "error", text: "Hệ thống bảo vệ (reCAPTCHA) gặp sự cố, vui lòng thử lại." });
       setIsSubmitting(false);
       return;
     }
@@ -126,6 +146,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
           description: description.trim(),
           image_url: imageUrl,
           image_pid: imagePid,
+          tags: selectedTags,
           recaptcha_token: token
         })
       });
@@ -135,7 +156,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
         throw new Error(responseData.error || "Gặp sự cố khi gửi tác phẩm.");
       }
 
-      setStep(3); // Bước hoàn thành
+      setStep(3);
       setMessage({ type: "success", text: "GỬI TÁC PHẨM THÀNH CÔNG!" });
     } catch (err: any) {
       setMessage({ type: "error", text: err.message });
@@ -151,24 +172,28 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
     setLocalPreview(null);
     setTitle("");
     setDescription("");
+    setSelectedTags(["vaporwave"]);
     setMessage(null);
   };
 
   if (!currentUser) {
     return (
-      <div className="win95-container font-retro text-black max-w-md mx-auto my-12 bg-win-gray">
-        <div className="win95-header">
-          <span>ACCESS_DENIED.SYS</span>
-          <button className="win95-btn py-0 px-1">X</button>
+      <div className="win95-window max-w-md mx-auto my-12 font-retro text-black">
+        <div className="win95-header py-1 px-2 bg-gradient-to-r from-red-800 to-red-600 text-white">
+          <div className="flex items-center gap-1.5 font-bold text-xs">
+            <span>🔒</span>
+            <span>AUTH_REQUIRED.SYS</span>
+          </div>
+          <button className="win95-btn py-0 px-1 text-[9px] font-bold">✕</button>
         </div>
-        <div className="p-6 text-center bg-[#c0c0c0]">
-          <span className="text-4xl block mb-3">🔒</span>
-          <p className="font-bold uppercase text-xs mb-2">HỆ THỐNG YÊU CẦU ĐĂNG NHẬP</p>
-          <p className="text-[10px] text-black/75 mb-6 leading-normal">
-            Bạn cần đăng nhập bằng tài khoản Google để có thể mở khóa tính năng tải lên tác phẩm nghệ thuật Vaporwave của riêng bạn.
+        <div className="p-6 text-center bg-win-gray space-y-4">
+          <span className="text-5xl block">🔑</span>
+          <h3 className="font-extrabold uppercase text-sm text-black">YÊU CẦU ĐĂNG NHẬP HỆ THỐNG</h3>
+          <p className="text-xs text-black/80 leading-relaxed">
+            Bạn cần đăng nhập bằng tài khoản Google để được cấp quyền đăng tải tác phẩm lên phòng triển lãm cộng đồng.
           </p>
-          <a href="/api/auth/signin" className="win95-btn no-underline inline-block px-6 py-2 font-bold uppercase text-xs">
-            🔑 ĐĂNG NHẬP BẰNG GOOGLE
+          <a href="/api/auth/signin" class="win95-btn no-underline inline-block px-6 py-2.5 font-bold uppercase text-xs bg-white border-2 border-black" style={{ minHeight: "44px" }}>
+            🔑 ĐĂNG NHẬP GOOGLE
           </a>
         </div>
       </div>
@@ -176,63 +201,70 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
   }
 
   return (
-    <div className="win95-container font-retro text-black max-w-xl mx-auto my-12 bg-win-gray flex flex-col">
+    <div className="win95-window max-w-2xl mx-auto my-6 font-retro text-black flex flex-col shadow-2xl">
       {/* Wizard Header */}
-      <div className="win95-header">
-        <span>VAPORWAVE_ART_WIZARD.EXE</span>
-        <span className="text-[10px] text-vapor-pink">BƯỚC {step}/3</span>
+      <div className="win95-header py-1.5 px-3 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+        <div className="flex items-center gap-2">
+          <span>🎨</span>
+          <span className="font-bold text-xs tracking-wide">INSTALLSHIELD_SETUP_WIZARD.EXE - [ĐĂNG TÁC PHẨM MỚI]</span>
+        </div>
+        <span className="font-mono text-[10px] bg-black text-vapor-green px-2 py-0.5">
+          BƯỚC {step}/3
+        </span>
       </div>
 
-      {/* Progress Graphic */}
+      {/* Setup Wizard Progress Steps */}
       <div className="flex bg-[#808080] text-white text-[10px] font-bold p-1 gap-1 border-b border-win-dark">
-        <div className={`flex-1 text-center py-1.5 border border-white ${step === 1 ? 'bg-vapor-pink text-black' : 'bg-transparent text-gray-300'}`}>
-          1. CHỌN TRANH NGHỆ THUẬT
+        <div className={`flex-1 text-center py-1.5 border border-white ${step === 1 ? 'win95-sunken bg-vapor-pink text-black font-extrabold' : 'bg-transparent text-gray-300'}`}>
+          1. CHỌN TỆP TRANH
         </div>
-        <div className={`flex-1 text-center py-1.5 border border-white ${step === 2 ? 'bg-vapor-blue text-black' : 'bg-transparent text-gray-300'}`}>
-          2. THÔNG TIN & MÔ TẢ
+        <div className={`flex-1 text-center py-1.5 border border-white ${step === 2 ? 'win95-sunken bg-vapor-blue text-black font-extrabold' : 'bg-transparent text-gray-300'}`}>
+          2. THÔNG TIN & THẺ
         </div>
-        <div className={`flex-1 text-center py-1.5 border border-white ${step === 3 ? 'bg-vapor-green text-black' : 'bg-transparent text-gray-300'}`}>
-          3. DUYỆT LƯU TRỮ
+        <div className={`flex-1 text-center py-1.5 border border-white ${step === 3 ? 'win95-sunken bg-vapor-green text-black font-extrabold' : 'bg-transparent text-gray-300'}`}>
+          3. HOÀN THÀNH
         </div>
       </div>
 
-      <div className="p-5 bg-win-gray flex-1 space-y-4">
+      <div className="p-4 sm:p-6 bg-win-gray flex-1 space-y-4">
         {message && step !== 3 && (
           <div className={`p-3 border-2 ${
             message.type === "success" 
               ? "bg-green-100 text-green-900 border-green-400" 
               : "bg-red-100 text-red-900 border-red-400"
-          } text-xs`}>
-            <strong>{message.type === "success" ? "💾" : "⚠️"} {message.text}</strong>
+          } text-xs font-bold`}>
+            {message.type === "success" ? "💾" : "⚠️"} {message.text}
           </div>
         )}
 
-        {/* BƯỚC 1: Chọn và upload ảnh */}
+        {/* STEP 1: Upload Image */}
         {step === 1 && (
           <div className="space-y-4">
-            <p className="text-xs leading-normal">
-              Chào mừng bạn đến với <strong>Cổng thông tin tranh cộng đồng</strong>! Hãy tải lên tranh vẽ, ảnh động 3D, hay thiết kế hoài cổ Vaporwave của bạn để hiển thị trên Phòng trưng bày công cộng sau khi được phê duyệt.
+            <p className="text-xs leading-relaxed text-black">
+              Hãy chọn tệp hình ảnh kỹ thuật số mang phong cách <strong>Vaporwave, Retro 90s, Synthwave hoặc Cyberpunk</strong> của bạn để đưa vào hàng đợi giám định nghệ thuật.
             </p>
 
-            <div className="w-full min-h-60 border-2 border-win-dark bg-black relative flex items-center justify-center overflow-hidden">
+            <div className="w-full min-h-64 border-2 border-win-darkest bg-black relative flex items-center justify-center overflow-hidden shadow-inner">
               {localPreview ? (
                 <img 
                   src={localPreview} 
                   alt="Preview" 
-                  className="max-h-56 max-w-full object-contain filter saturate-150 contrast-125" 
+                  className="max-h-60 max-w-full object-contain filter saturate-125 contrast-105" 
                 />
               ) : (
-                <div className="text-center text-vapor-pink p-4 animate-pulse">
-                  <span className="block text-5xl mb-2">🖼️</span>
-                  <p className="text-xs tracking-widest text-vapor-blue">VUI LÒNG CHỌN TRANH CỦA BẠN</p>
-                  <p className="text-[9px] text-win-dark mt-1">Hỗ trợ định dạng JPG, PNG, GIF</p>
+                <div className="text-center text-vapor-pink p-6 animate-pulse select-none">
+                  <span className="block text-6xl mb-3">🖼️</span>
+                  <p className="text-xs font-mono tracking-widest text-vapor-blue font-bold">CHƯA CÓ TỆP ẢNH NÀO ĐƯỢC CHỌN</p>
+                  <p className="text-[10px] text-win-dark mt-1 font-mono">Định dạng hỗ trợ: JPG, PNG, WEBP, GIF (Tối đa 10MB)</p>
                 </div>
               )}
 
               {isUploading && (
                 <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center">
-                  <div className="text-vapor-green text-xs font-bold mb-2 tracking-widest animate-pulse">ĐANG TRUYỀN TẢI TRANH...</div>
-                  <div className="w-2/3 bg-win-dark border border-white h-4 p-0.5">
+                  <div className="text-vapor-green text-xs font-bold mb-2 tracking-widest font-mono animate-pulse">
+                    ĐANG TRUYỀN TẢI TRANH LÊN CLOUD...
+                  </div>
+                  <div className="w-3/4 bg-win-dark border border-white h-4 p-0.5">
                     <div className="bg-gradient-to-r from-vapor-pink via-vapor-purple to-vapor-blue h-full w-4/5 animate-[pulse_1s_infinite]"></div>
                   </div>
                 </div>
@@ -247,82 +279,110 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
               className="hidden" 
               disabled={isUploading}
             />
+            
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="win95-btn w-full font-bold text-xs py-2"
+              className="win95-btn w-full font-bold text-xs py-2.5 bg-white border-2 border-black"
+              style={{ minHeight: "44px" }}
             >
-              {isUploading ? "ĐANG XỬ LÝ..." : "📁 TÌM FILE TÁC PHẨM"}
+              {isUploading ? "⏳ ĐANG XỬ LÝ TỆP..." : "📁 CHỌN FILE TRANH TỪ MÁY TÍNH"}
             </button>
-            <p className="text-[9px] text-center text-win-dark">Được bảo vệ bởi Google reCAPTCHA</p>
+            
+            <p className="text-[10px] text-center text-win-darkest font-mono">
+              🛡️ Được bảo vệ và phân phối an toàn bởi Cloudinary CDN & Google reCAPTCHA
+            </p>
           </div>
         )}
 
-        {/* BƯỚC 2: Nhập thông tin */}
+        {/* STEP 2: Metadata & Tags */}
         {step === 2 && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex gap-4 items-start">
-              <img src={imageUrl!} className="w-28 h-28 object-cover border border-win-dark" />
-              <div className="flex-1 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="w-full sm:w-36 h-36 bg-black border-2 border-black overflow-hidden shrink-0 shadow-md">
+                <img src={imageUrl!} alt="Thumbnail" className="w-full h-full object-cover filter saturate-125" />
+              </div>
+
+              <div className="flex-1 space-y-3 w-full">
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold mb-1 uppercase">Tiêu đề tác phẩm (*)</label>
+                  <label className="text-xs font-bold mb-1 uppercase text-black">Tiêu đề tác phẩm (*):</label>
                   <input
                     type="text"
                     required
-                    className="p-2 border border-win-dark bg-white outline-none text-xs shadow-inner"
-                    placeholder="VD: Cát-xét Trong Rừng Mưa Axít"
+                    className="p-2 border-2 border-win-darkest bg-white outline-none text-xs font-mono shadow-inner text-black"
+                    placeholder="VD: Neon Dreams in Neo-Tokyo"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                   />
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold mb-1 uppercase">Cảm hứng nghệ thuật (Mô tả)</label>
+                  <label className="text-xs font-bold mb-1 uppercase text-black">Cảm hứng nghệ thuật (Mô tả):</label>
                   <textarea
                     rows={3}
-                    className="p-2 border border-win-dark bg-white outline-none text-xs shadow-inner"
-                    placeholder="Viết một đoạn ngắn giới thiệu cảm hứng đằng sau tác phẩm..."
+                    className="p-2 border-2 border-win-darkest bg-white outline-none text-xs font-mono shadow-inner text-black"
+                    placeholder="Chia sẻ một vài câu về cảm hứng hoặc kỹ thuật tạo tác phẩm..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
                 </div>
               </div>
             </div>
+
+            {/* Tags Selection */}
+            <div className="border-t border-win-dark pt-3">
+              <label className="text-xs font-bold mb-1.5 block uppercase text-black">🏷️ Gắn thẻ thể loại:</label>
+              <div className="flex flex-wrap gap-1.5">
+                {AVAILABLE_TAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={`win95-btn px-2.5 py-1 text-[10px] font-mono font-bold uppercase ${
+                      selectedTags.includes(tag) ? "win95-sunken bg-vapor-pink/30 text-black border border-black font-extrabold" : "bg-white"
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            </div>
           </form>
         )}
 
-        {/* BƯỚC 3: Hoàn thành */}
+        {/* STEP 3: Completion */}
         {step === 3 && (
-          <div className="text-center space-y-4 py-6">
-            <span className="text-5xl block animate-bounce">🌈</span>
-            <h2 className="text-lg font-bold text-vapor-pink uppercase tracking-widest">
-              GỬI TÁC PHẨM THÀNH CÔNG!
+          <div className="text-center space-y-4 py-8">
+            <span className="text-6xl block animate-bounce">💾</span>
+            <h2 className="text-lg font-extrabold text-vapor-purple uppercase tracking-wider">
+              TÁC PHẨM ĐÃ ĐƯỢC GỬI THÀNH CÔNG!
             </h2>
-            <p className="text-xs text-black/85 leading-normal max-w-sm mx-auto">
-              Tranh của bạn đã được đưa vào hàng đợi lưu trữ. Ban biên tập sẽ phê duyệt và đưa lên tạp chí nghệ thuật sớm nhất có thể.
+            <p className="text-xs text-black leading-relaxed max-w-md mx-auto">
+              Tranh của bạn đã được lưu vào hệ thống cơ sở dữ liệu. Ban quản trị sẽ thẩm định và xuất bản tác phẩm lên phòng triển lãm công cộng trong thời gian sớm nhất.
             </p>
-            <div className="p-3 bg-[#d4d4d4] border border-win-dark text-[10px] text-left max-w-sm mx-auto">
-              💡 <strong>Phần thưởng:</strong> Khi tác phẩm được duyệt công khai, bạn sẽ lập tức nhận được <strong>+50 XP</strong> đóng góp để thăng cấp và nhận Huy hiệu hoài cổ!
+            <div className="p-3 bg-white border-2 border-black text-[11px] text-left max-w-md mx-auto font-mono">
+              💎 <strong>ĐẶC QUYỀN NGHỆ SĨ:</strong> Khi tác phẩm được duyệt công khai, hồ sơ của bạn sẽ tự động xuất hiện trên danh bạ nghệ sĩ <code>COMMUNITY_ARTISTS</code>!
             </div>
           </div>
         )}
       </div>
 
       {/* Wizard Footer Navigation */}
-      <div className="p-3 bg-win-gray border-t border-white flex justify-between">
+      <div className="p-3 bg-win-gray border-t-2 border-win-light flex justify-between items-center">
         {step === 1 && (
           <>
-            <a href="/" className="win95-btn no-underline text-black font-bold px-4 py-1.5 flex items-center">
-              &lt;&lt; Trang Chủ
+            <a href="/" className="win95-btn no-underline text-black font-bold px-4 py-1.5" style={{ minHeight: "36px" }}>
+              &lt;&lt; Hủy Bỏ
             </a>
             <button
               type="button"
               disabled={!imageUrl || isUploading}
               onClick={() => setStep(2)}
-              className="win95-btn font-bold px-6 py-1.5 flex items-center disabled:opacity-50"
+              className="win95-btn font-bold px-6 py-1.5 text-black disabled:opacity-50"
+              style={{ minHeight: "36px" }}
             >
-              Tiếp tục &gt;
+              Tiếp Tục &gt;
             </button>
           </>
         )}
@@ -332,7 +392,8 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="win95-btn font-bold px-4 py-1.5 flex items-center"
+              className="win95-btn font-bold px-4 py-1.5"
+              style={{ minHeight: "36px" }}
             >
               &lt; Quay Lại
             </button>
@@ -340,21 +401,28 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !title.trim()}
-              className="win95-btn font-bold px-6 py-1.5 flex items-center text-vapor-purple"
+              className="win95-btn font-bold px-6 py-1.5 text-black bg-[#05ffa1]/30 border-2 border-black"
+              style={{ minHeight: "36px" }}
             >
-              {isSubmitting ? "Đang gửi..." : "💾 Gửi Duyệt"}
+              {isSubmitting ? "⏳ Đang Gửi..." : "💾 Hoàn Tất & Gửi Duyệt"}
             </button>
           </>
         )}
 
         {step === 3 && (
-          <button
-            type="button"
-            onClick={handleReset}
-            className="win95-btn font-bold w-full py-2"
-          >
-            ĐÓNG / GỬI THÊM BÀI KHÁC
-          </button>
+          <div className="flex gap-2 w-full">
+            <a href="/gallery" className="win95-btn flex-1 text-center py-2 font-bold no-underline text-black" style={{ minHeight: "40px" }}>
+              🖼️ Đến Phòng Triển Lãm
+            </a>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="win95-btn flex-1 py-2 font-bold text-black bg-white"
+              style={{ minHeight: "40px" }}
+            >
+              🎨 Gửi Thêm Tranh Mới
+            </button>
+          </div>
         )}
       </div>
     </div>

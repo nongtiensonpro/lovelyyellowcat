@@ -1,5 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import RibbonCard from "../components/RibbonCard.astro";
+import RetroSticker from "../components/RetroSticker.astro";
+import CrtMonitorFrame from "../components/CrtMonitorFrame.astro";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
 const supabase = createSupabaseServerClient({
@@ -10,86 +13,268 @@ const supabase = createSupabaseServerClient({
 // Lấy thông tin người dùng hiện tại
 const userProfile = await getCurrentUserProfile(supabase);
 
-// Tải danh sách bài viết thực từ CSDL Supabase
+// Tải danh sách bài viết từ CSDL Supabase
 const { data: dbArticles } = await supabase
   .from("articles")
   .select("*")
   .eq("status", "published")
   .order("created_at", { ascending: false });
 
-let articles = [];
+// Tải 3 tác phẩm mới nhất để hiển thị Spotlight CRT
+const { data: dbSpotlights } = await supabase
+  .from("submissions")
+  .select("*, profiles:profiles!author_id(full_name, avatar_url)")
+  .eq("status", "approved")
+  .order("created_at", { ascending: false })
+  .limit(3);
 
+let articles = [];
 if (dbArticles && dbArticles.length > 0) {
   articles = dbArticles.map(a => ({
     slug: a.slug,
     title: a.title,
     description: a.excerpt || "Khám phá phong cách thiết kế đồ họa máy tính thời kỳ đầu, cội nguồn của làn sóng nghệ thuật hoài cổ Vaporwave.",
     cover: a.cover_url || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
-    date: new Date(a.created_at).toLocaleDateString("vi-VN")
+    date: new Date(a.created_at).toLocaleDateString("vi-VN"),
+    category: a.tags?.[0] || "AESTHETIC"
   }));
 } else {
-  // Dự phòng bài viết tĩnh mẫu ban đầu
+  // Dữ liệu mẫu chuẩn bị sẵn
   articles = [
     {
       slug: "retro-computing-aesthetic",
       title: "Hoài Niệm Windows 95: Vẻ Đẹp Của Hệ Điều Hành Cổ Điển",
       description: "Khám phá phong cách thiết kế đồ họa máy tính thời kỳ đầu, cội nguồn của làn sóng nghệ thuật hoài cổ Vaporwave.",
       cover: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
-      date: "2026-05-20"
+      date: "20/05/2026",
+      category: "WIN95"
     },
     {
       slug: "neon-dreamscape-art",
       title: "Neon Dreamscape: Sự Trỗi Dậy Của Không Gian Màu Neon 3D",
       description: "Tại sao những gam màu hồng rực rỡ và xanh điện tử tiếp tục thống trị nghệ thuật kỹ thuật số hiện đại.",
       cover: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop",
-      date: "2026-05-18"
+      date: "18/05/2026",
+      category: "SYNTHWAVE"
     }
   ];
 }
+
+const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "periwinkle" | "olive"> = [
+  "periwinkle", "salmon", "sage", "peach", "sky", "lime"
+];
 ---
 
-<BaseLayout title="VAPORWAVE ART JOURNAL // HOME" userProfile={userProfile}>
-  <!-- Tiêu đề lớn hiệu ứng Glitch chuẩn hóa Design System -->
-  <div class="text-center py-8">
-    <h1 class="hero-title text-glitch-soft">
-      Vapor Journal
-    </h1>
-    <p class="text-[9px] sm:text-xs tracking-[0.25em] text-vapor-blue mt-3 font-mono uppercase">
-      // A Cybernetic Oasis of Digital Nostalgia //
-    </p>
-  </div>
+<BaseLayout title="VAPORWAVE ART JOURNAL // A CYBERNETIC OASIS" userProfile={userProfile}>
+  <!-- ══════════════════════════════════════════
+     HERO SECTION: Perspective Grid & Sun Aesthetic
+     ══════════════════════════════════════════ -->
+  <section class="vapor-grid-bg win95-container bg-cosmic-deep py-8 px-4 sm:px-8 mb-8 text-center relative border-2 border-win-dark shadow-2xl">
+    <div class="relative z-10 flex flex-col items-center max-w-3xl mx-auto">
+      <!-- Vaporwave Sliced Sun -->
+      <div class="vapor-sun mb-3"></div>
 
-  <!-- Bố cục lưới bài viết toàn màn hình (Full-width articles grid) -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-10">
-    {articles.map(article => (
-      <div class="win95-container font-retro flex flex-col justify-between">
-        <div>
-          <div class="win95-header py-1">
-            <span>ART_VIEWER.EXE</span>
-            <button class="win95-btn py-0 px-1 text-[9px]" style="min-height: 18px;">?</button>
+      <!-- Glitch Typography Title -->
+      <h1 class="hero-title text-glitch-soft tracking-wider mb-2">
+        Vapor Journal
+      </h1>
+      
+      <p class="text-[11px] sm:text-xs tracking-[0.25em] text-vapor-blue font-mono uppercase bg-black/60 px-3 py-1 border border-vapor-purple/40 shadow-md">
+        // A CYBERNETIC OASIS OF DIGITAL NOSTALGIA 1995-2026 //
+      </p>
+
+      <!-- Sub-headline with Sticker Bursts -->
+      <div class="mt-4 flex flex-wrap justify-center items-center gap-2.5">
+        <RetroSticker text="RETRO 90S" variant="burst" />
+        <RetroSticker text="CYBERNETIC ART" variant="pill" />
+        <RetroSticker text="WINDOWS 95 UI" variant="cyber" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+     ENTERPRISE 2-COLUMN CATALOG LAYOUT (DESIGN-dell-1996)
+     Left Rail: 28% Navigation & System Status
+     Right Rail: 72% Content Feeds & Spotlight
+     ══════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- LEFT COLUMN (4 / 12 cols = ~33% desktop) -->
+    <aside class="lg:col-span-4 space-y-6">
+      
+      <!-- System Status Window -->
+      <div class="win95-window">
+        <div class="win95-header py-1 px-2">
+          <div class="flex items-center gap-1.5">
+            <span>💾</span>
+            <span class="font-bold text-xs">SYSTEM_STATUS.EXE</span>
           </div>
-          <div class="p-3 bg-win-gray">
-            <div class="bg-black aspect-video max-h-[200px] overflow-hidden border border-win-dark flex items-center justify-center">
-              <img 
-                src={article.cover} 
-                alt={article.title} 
-                class="w-full h-full object-cover filter saturate-[1.1] contrast-[1.03] hover:scale-[1.02] transition-transform duration-300"
-                loading="lazy"
-                width="360"
-                height="200"
-              />
-            </div>
-            <h2 class="text-sm sm:text-base font-bold text-black mt-3 mb-2 uppercase line-clamp-2 leading-tight min-h-[40px]">{article.title}</h2>
-            <p class="text-[10px] sm:text-xs text-black/85 leading-relaxed line-clamp-3">{article.description}</p>
+          <button class="win95-btn py-0 px-1 text-[9px]" style="min-height: 16px;">?</button>
+        </div>
+
+        <div class="win95-menubar">
+          <span>Info</span>
+          <span>Diagnostics</span>
+        </div>
+
+        <div class="p-3 bg-white text-black font-retro text-xs space-y-2.5">
+          <div class="flex justify-between items-center border-b border-win-dark pb-1">
+            <span class="font-bold text-win-darkest">Máy chủ mạng:</span>
+            <span class="text-vapor-purple font-mono font-bold">NODE_TOKYO_95</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-win-dark pb-1">
+            <span class="font-bold text-win-darkest">Bản phát hành:</span>
+            <span class="font-mono font-bold">v2.5.0-AESTHETIC</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-win-dark pb-1">
+            <span class="font-bold text-win-darkest">Bài viết đã nạp:</span>
+            <span class="font-mono font-bold text-vapor-pink">{articles.length} bài</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-win-darkest">Độ phân giải:</span>
+            <span class="font-mono font-bold">1024 x 768 (SVGA)</span>
           </div>
         </div>
-        <div class="p-3 bg-win-gray pt-0 flex justify-between items-center">
-          <span class="text-[9px] text-win-dark font-bold">{article.date}</span>
-          <a href={`/articles/${article.slug}`} class="win95-btn no-underline inline-flex items-center px-4 py-1 text-black font-bold text-xs" style="min-height: 32px;">
-            ĐỌC BÀI VIẾT >>
+
+        <div class="win95-statusbar justify-between text-[10px]">
+          <span>Mạng lưới hoạt động bình thường</span>
+          <span class="win95-statusbar-panel font-bold text-vapor-green">ONLINE</span>
+        </div>
+      </div>
+
+      <!-- Quick Catalog Categories (Dell 1996 Style Nav Rail) -->
+      <div class="win95-window">
+        <div class="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+          <div class="flex items-center gap-1.5">
+            <span>🗂️</span>
+            <span class="font-bold text-xs">DANH MỤC NGHỆ THUẬT</span>
+          </div>
+        </div>
+
+        <div class="p-2 bg-win-gray space-y-1.5 font-retro text-xs">
+          <a href="/gallery" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline" style="min-height: 32px;">
+            <span>🖼️ Phòng Triển Lãm Cộng Đồng</span>
+            <span class="text-[10px] font-mono text-win-darkest">&gt;&gt;</span>
+          </a>
+          <a href="/artists" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline" style="min-height: 32px;">
+            <span>👥 Danh Sách Nghệ Sĩ Kỹ Thuật Số</span>
+            <span class="text-[10px] font-mono text-win-darkest">&gt;&gt;</span>
+          </a>
+          <a href="/submit" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline bg-[#05ffa1]/20 border border-black" style="min-height: 32px;">
+            <span>🎨 Đăng Tải Tác Phẩm Của Bạn</span>
+            <span class="text-[10px] font-mono text-win-darkest font-bold">NEW!</span>
+          </a>
+          <a href="/terms" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline" style="min-height: 32px;">
+            <span>📜 Điều Khoản & Bản Quyền Số</span>
+            <span class="text-[10px] font-mono text-win-darkest">&gt;&gt;</span>
           </a>
         </div>
       </div>
-    ))}
+
+      <!-- Call-To-Action Dell-Red Panel (Enterprise 1996 Inspired) -->
+      <div class="border-2 border-black bg-gradient-to-br from-[#e91d2a] to-[#a0101a] p-4 text-white font-retro shadow-lg relative overflow-hidden">
+        <div class="absolute -bottom-4 -right-4 opacity-20 text-6xl select-none font-mono">
+          📼
+        </div>
+        <div class="relative z-10 space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="bg-yellow-400 text-black px-1.5 py-0.5 text-[9px] font-bold uppercase font-mono">HOTLINE</span>
+            <span class="text-xs font-mono font-bold tracking-widest">1-800-VAPORWAVE</span>
+          </div>
+          <h3 class="text-sm sm:text-base font-extrabold uppercase leading-tight drop-shadow-md">
+            Gia nhập cộng đồng sáng tạo nghệ thuật số
+          </h3>
+          <p class="text-[11px] font-body leading-relaxed text-white/90">
+            Nơi trưng bày các tác phẩm Retro 90s, Synthwave, Cyberpunk và thẩm mỹ hoài cổ đỉnh cao.
+          </p>
+          <a href="/submit" class="win95-btn w-full py-2 text-center text-black font-extrabold uppercase bg-white border-2 border-black block no-underline text-xs" style="min-height: 36px;">
+            🎨 GỬI TRANH NGAY HÔM NAY &gt;&gt;
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT COLUMN (8 / 12 cols = ~67% desktop) -->
+    <main class="lg:col-span-8 space-y-8">
+      
+      <!-- Eyebrow Section Block: Featured Articles -->
+      <div class="border-2 border-black bg-[#8e8a25] p-3 text-black font-retro shadow-[4px_4px_0_#000]">
+        <div class="flex justify-between items-center">
+          <h2 class="text-base sm:text-lg font-black uppercase tracking-wider text-white drop-shadow-[1px_1px_0_#000]">
+            📰 BÀI VIẾT NỔI BẬT // FEATURED ARTICLES
+          </h2>
+          <span class="text-[10px] font-mono font-bold bg-black text-white px-2 py-0.5">
+            VOL. 1996
+          </span>
+        </div>
+      </div>
+
+      <!-- Ribbon Card Stack -->
+      <div class="space-y-5">
+        {articles.map((article, idx) => (
+          <RibbonCard
+            title={article.title}
+            tint={tints[idx % tints.length]}
+            eyebrow={article.category}
+            stickerText={idx === 0 ? "NEW ISSUE!" : undefined}
+            imageUrl={article.cover}
+            imageAlt={article.title}
+            href={`/articles/${article.slug}`}
+            date={article.date}
+            badge={`DOC_${idx + 1}.EXE`}
+          >
+            <p class="text-xs sm:text-sm text-black font-body leading-relaxed line-clamp-3">
+              {article.description}
+            </p>
+          </RibbonCard>
+        ))}
+      </div>
+
+      <!-- Spotlight Artworks Section inside CRT Monitor Frame -->
+      <div class="mt-10">
+        <div class="border-2 border-black bg-[#6a26a4] p-3 text-white font-retro shadow-[4px_4px_0_#000] mb-4">
+          <div class="flex justify-between items-center">
+            <h2 class="text-base sm:text-lg font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000]">
+              📺 TÁC PHẨM TÂM ĐIỂM // SPOTLIGHT CRT
+            </h2>
+            <a href="/gallery" class="text-xs font-mono font-bold text-vapor-yellow hover:underline no-underline">
+              XEM TOÀN BỘ TRIỂN LÃM &gt;&gt;
+            </a>
+          </div>
+        </div>
+
+        {dbSpotlights && dbSpotlights.length > 0 ? (
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {dbSpotlights.map((item: any) => (
+              <CrtMonitorFrame title={item.title}>
+                <a href={`/gallery`} class="block relative aspect-video bg-black group overflow-hidden">
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    class="w-full h-full object-cover filter saturate-125 contrast-105 group-hover:scale-110 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div class="absolute bottom-0 inset-x-0 bg-black/80 p-1.5 text-center font-retro text-[10px] text-white truncate">
+                    {item.title}
+                  </div>
+                </a>
+              </CrtMonitorFrame>
+            ))}
+          </div>
+        ) : (
+          <CrtMonitorFrame title="COMMUNITY ARTWORKS">
+            <div class="aspect-video bg-black flex flex-col items-center justify-center p-6 text-center text-vapor-blue font-mono">
+              <span class="text-3xl mb-2">🖼️</span>
+              <p class="text-xs uppercase font-bold">MẠNG LƯỚI TRIỂN LÃM ĐANG HOẠT ĐỘNG</p>
+              <p class="text-[10px] text-text-muted mt-1">Ghé thăm phòng tranh cộng đồng để thưởng thức các kiệt tác nghệ thuật số.</p>
+              <a href="/gallery" class="win95-btn mt-3 text-black font-bold text-xs no-underline py-1 px-4">
+                VÀO PHÒNG TRANH &gt;&gt;
+              </a>
+            </div>
+          </CrtMonitorFrame>
+        )}
+      </div>
+
+    </main>
   </div>
 </BaseLayout>

@@ -34,14 +34,16 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [reactionsMap, setReactionsMap] = useState<Record<string, number>>({});
   const [selectedTag, setSelectedTag] = useState<string>("Tất Cả");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<"newest" | "reactions" | "random">("newest");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "crt">("grid");
   const [visibleCount, setVisibleCount] = useState<number>(9);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // 1. Tải tất cả reactions để tính số lượng cảm xúc cho từng tranh phục vụ sắp xếp
+  // 1. Tải tất cả reactions
   const fetchAllReactions = async () => {
     const { data, error } = await supabaseClient
       .from("reactions")
@@ -56,7 +58,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     }
   };
 
-  // 2. Fetch danh sách submissions mới nhất từ database khi component mount
+  // 2. Fetch danh sách submissions mới nhất từ database
   const fetchSubmissions = async () => {
     setLoading(true);
     const { data, error } = await supabaseClient
@@ -75,9 +77,8 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     fetchSubmissions();
     fetchAllReactions();
 
-    // Lắng nghe Realtime để cập nhật khi có tranh mới được phê duyệt
     const channel = supabaseClient
-      .channel("gallery-realtime")
+      .channel("gallery-realtime-sync")
       .on(
         "postgres_changes",
         {
@@ -108,7 +109,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     };
   }, []);
 
-  // 3. Đọc tham số `?view=submissionId` từ URL khi tải trang để tự mở Lightbox
+  // 3. Đọc tham số URL ?view=id
   useEffect(() => {
     const handleUrlParams = () => {
       const params = new URLSearchParams(window.location.search);
@@ -125,7 +126,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     return () => window.removeEventListener("popstate", handleUrlParams);
   }, []);
 
-  // 4. Lọc danh sách thẻ Tag độc nhất (Unique Tags)
+  // 4. Lọc tags
   const allTags = ["Tất Cả"];
   submissions.forEach((sub) => {
     if (sub.tags && Array.isArray(sub.tags)) {
@@ -138,13 +139,17 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     }
   });
 
-  // 5. Áp dụng Lọc Tag
+  // 5. Áp dụng Lọc Tag & Tìm Kiếm
   let processed = submissions.filter((sub) => {
-    if (selectedTag === "Tất Cả") return true;
-    return sub.tags?.some((t) => t.trim() === selectedTag);
+    const matchTag = selectedTag === "Tất Cả" || sub.tags?.some((t) => t.trim() === selectedTag);
+    const matchQuery = !searchQuery.trim() || 
+      sub.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      sub.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sub.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchTag && matchQuery;
   });
 
-  // 6. Áp dụng Sắp Xếp
+  // 6. Sắp Xếp
   if (sortBy === "newest") {
     processed = [...processed].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -161,7 +166,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     });
   }
 
-  // 7. Thiết lập Infinite Scroll bằng IntersectionObserver
+  // 7. Infinite Scroll
   useEffect(() => {
     if (!sentinelRef.current) return;
 
@@ -170,10 +175,10 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
         if (entries[0].isIntersecting && visibleCount < processed.length) {
           setTimeout(() => {
             setVisibleCount((prev) => prev + 6);
-          }, 350); // Mượt mà 350ms delay
+          }, 250);
         }
       },
-      { rootMargin: "150px" }
+      { rootMargin: "200px" }
     );
 
     observer.observe(sentinelRef.current);
@@ -191,92 +196,228 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
 
   return (
     <div className="font-retro text-black select-none">
-      {/* 1. Thanh công cụ Toolbar lọc và sắp xếp (Win95 Panel Style) */}
-      <div className="win95-container bg-win-gray p-2.5 sm:p-3 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Bộ lọc Tags */}
-        <div className="flex flex-col gap-1.5 flex-1">
-          <span className="text-[10px] text-win-dark font-bold uppercase tracking-wider">📂 Danh mục nhãn dán:</span>
-          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => {
-                  setSelectedTag(tag);
-                  setVisibleCount(9); // Reset infinite scroll
-                }}
-                className={`win95-btn px-3 py-1.5 text-[10px] uppercase font-bold transition-all active:scale-95`}
-                style={{
-                  minHeight: "36px", // Touch friendly
-                  background: selectedTag === tag ? "rgba(255, 113, 206, 0.15)" : "var(--color-win-gray)",
-                  borderColor: selectedTag === tag ? "var(--color-vapor-pink)" : "initial"
-                }}
-              >
-                {tag === "Tất Cả" ? "📁 Tất Cả" : `#${tag}`}
-              </button>
-            ))}
+      {/* 1. Windows Explorer Navigation Toolbar */}
+      <div className="win95-container bg-win-gray p-2.5 sm:p-3 mb-6 space-y-3">
+        {/* Explorer Menubar & Address Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-win-dark pb-2">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto flex-1">
+            <span className="text-[10px] font-bold text-win-darkest uppercase shrink-0">📍 VỊ TRÍ:</span>
+            <div className="win95-sunken bg-white px-2 py-1 flex items-center gap-1 text-xs w-full sm:max-w-md font-mono">
+              <span className="text-win-darkest">C:\VAPOR_OS\GALLERY\</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm tranh, nghệ sĩ, từ khóa..."
+                className="bg-transparent border-none outline-none text-black w-full text-xs font-mono"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="text-win-dark hover:text-black font-bold px-1"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* View Mode Switcher */}
+          <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
+            <span className="text-[10px] font-bold text-win-darkest uppercase mr-1">CHẾ ĐỘ XEM:</span>
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`win95-btn py-1 px-2 text-[10px] font-bold ${viewMode === 'grid' ? 'win95-sunken bg-vapor-pink/20' : ''}`}
+              title="Lưới Icon Windows 95"
+            >
+              ▦ LƯỚI
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`win95-btn py-1 px-2 text-[10px] font-bold ${viewMode === 'list' ? 'win95-sunken bg-vapor-blue/20' : ''}`}
+              title="Danh Sách Chi Tiết Explorer"
+            >
+              ☰ CHI TIẾT
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("crt")}
+              className={`win95-btn py-1 px-2 text-[10px] font-bold ${viewMode === 'crt' ? 'win95-sunken bg-vapor-green/20' : ''}`}
+              title="Khung TV CRT"
+            >
+              📺 CRT TV
+            </button>
           </div>
         </div>
 
-        {/* Bộ sắp xếp */}
-        <div className="flex flex-col gap-1.5 shrink-0">
-          <span className="text-[10px] text-win-dark font-bold uppercase tracking-wider">⚡ Sắp xếp theo:</span>
-          <div className="flex gap-1.5">
-            {(["newest", "reactions", "random"] as const).map((type) => {
-              const label = type === "newest" ? "💾 Mới nhất" : type === "reactions" ? "💜 Cảm Xúc" : "🎰 Ngẫu nhiên";
-              const activeColor = type === "newest" ? "rgba(1, 205, 254, 0.15)" : type === "reactions" ? "rgba(185, 103, 255, 0.15)" : "rgba(255, 251, 150, 0.15)";
-              const activeBorder = type === "newest" ? "var(--color-vapor-blue)" : type === "reactions" ? "var(--color-vapor-purple)" : "var(--color-vapor-yellow)";
-              
-              return (
+        {/* Filter Tags & Sort Control Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+          {/* Tags */}
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <span className="text-[9px] text-win-darkest font-bold uppercase tracking-wider">🏷️ NHÃN THỂ LOẠI:</span>
+            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1">
+              {allTags.map((tag) => (
                 <button
-                  key={type}
-                  onClick={() => setSortBy(type)}
-                  className="win95-btn px-3 py-1.5 text-[10px] uppercase font-bold active:scale-95"
-                  style={{
-                    minHeight: "36px",
-                    background: sortBy === type ? activeColor : "var(--color-win-gray)",
-                    borderColor: sortBy === type ? activeBorder : "initial"
+                  key={tag}
+                  onClick={() => {
+                    setSelectedTag(tag);
+                    setVisibleCount(9);
                   }}
+                  className={`win95-btn px-2.5 py-1 text-[10px] uppercase font-bold ${
+                    selectedTag === tag ? "win95-sunken bg-vapor-pink/25 font-extrabold text-black" : "bg-win-gray"
+                  }`}
+                  style={{ minHeight: "28px" }}
                 >
-                  {label}
+                  {tag === "Tất Cả" ? "📁 Tất Cả" : `#${tag}`}
                 </button>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+
+          {/* Sắp xếp */}
+          <div className="flex flex-col gap-1 shrink-0">
+            <span className="text-[9px] text-win-darkest font-bold uppercase tracking-wider">⚡ SẮP XẾP:</span>
+            <div className="flex gap-1">
+              {(["newest", "reactions", "random"] as const).map((type) => {
+                const label = type === "newest" ? "💾 Mới Nhất" : type === "reactions" ? "💜 Yêu Thích" : "🎰 Ngẫu Nhiên";
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setSortBy(type)}
+                    className={`win95-btn px-2.5 py-1 text-[10px] uppercase font-bold ${
+                      sortBy === type ? "win95-sunken bg-vapor-blue/25 font-extrabold" : "bg-win-gray"
+                    }`}
+                    style={{ minHeight: "28px" }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Lưới Masonry hiển thị tác phẩm */}
+      {/* 2. Content Display by View Mode */}
       {visibleSubmissions.length === 0 ? (
         <div className="win95-container bg-win-gray p-12 text-center text-win-dark italic font-bold">
           {loading ? (
             <div className="space-y-2 py-4">
-              <span className="animate-spin inline-block text-lg">💾</span>
-              <p className="text-xs uppercase">Đang đồng bộ mạng lưới triển lãm...</p>
+              <span className="animate-spin inline-block text-2xl">💾</span>
+              <p className="text-xs uppercase font-mono">ĐANG ĐỒNG BỘ CSDL TRIỂN LÃM...</p>
             </div>
           ) : (
-            <div className="py-4">
-              <p className="text-2xl">📭</p>
-              <p className="text-xs uppercase mt-2">Không tìm thấy tác phẩm nào phù hợp bộ lọc.</p>
+            <div className="py-4 space-y-2">
+              <p className="text-3xl">📭</p>
+              <p className="text-xs uppercase font-bold text-black">KHÔNG TÌM THẤY TÁC PHẨM PHÙ HỢP</p>
+              <p className="text-[10px] text-win-darkest">Hãy thử đổi từ khóa tìm kiếm hoặc chọn nhãn khác.</p>
             </div>
           )}
         </div>
+      ) : viewMode === "list" ? (
+        /* DETAIL LIST VIEW */
+        <div className="win95-container bg-white overflow-x-auto shadow-md">
+          <table className="w-full text-left text-xs font-retro border-collapse">
+            <thead>
+              <tr className="bg-win-gray border-b border-win-dark text-black select-none">
+                <th className="p-2 border-r border-win-light font-bold">TÁC PHẨM</th>
+                <th className="p-2 border-r border-win-light font-bold">NGHỆ SĨ</th>
+                <th className="p-2 border-r border-win-light font-bold">THỂ LOẠI</th>
+                <th className="p-2 border-r border-win-light font-bold text-center">CẢM XÚC</th>
+                <th className="p-2 font-bold text-center">HÀNH ĐỘNG</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleSubmissions.map((sub, idx) => {
+                const reactionCount = reactionsMap[sub.id] || 0;
+                return (
+                  <tr
+                    key={sub.id}
+                    className={`border-b border-win-light hover:bg-vapor-pink/10 cursor-pointer transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#f7f7f7]'}`}
+                    onClick={() => handleOpenLightbox(sub.id)}
+                  >
+                    <td className="p-2 flex items-center gap-2">
+                      <img src={sub.image_url} alt={sub.title} className="w-8 h-8 object-cover border border-win-dark shrink-0" />
+                      <span className="font-bold truncate max-w-[200px]">{sub.title}</span>
+                    </td>
+                    <td className="p-2 font-mono text-xs">
+                      {sub.profiles?.full_name || "Ẩn danh"}
+                    </td>
+                    <td className="p-2">
+                      <div className="flex gap-1 flex-wrap">
+                        {(sub.tags || []).slice(0, 2).map((t, i) => (
+                          <span key={i} className="text-[9px] font-mono bg-win-gray px-1 border border-win-dark">
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="p-2 text-center font-mono font-bold text-vapor-purple">
+                      💜 {reactionCount}
+                    </td>
+                    <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      <FavoriteButton submissionId={sub.id} currentUser={currentUser} variant="button" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : viewMode === "crt" ? (
+        /* CRT TV MONITOR SHOWCASE VIEW */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleSubmissions.map((sub) => {
+            const reactionCount = reactionsMap[sub.id] || 0;
+            return (
+              <div
+                key={sub.id}
+                className="bg-win-gray p-3 rounded-lg border-4 border-win-light shadow-[inset_-2px_-2px_0_#404040,inset_2px_2px_0_#dfdfdf,6px_6px_0_rgba(0,0,0,0.8)] cursor-pointer group"
+                onClick={() => handleOpenLightbox(sub.id)}
+              >
+                <div className="flex justify-between items-center mb-1 text-[9px] font-mono font-bold">
+                  <span className="truncate">{sub.title}</span>
+                  <span className="text-vapor-pink shrink-0">● CRT-RGB</span>
+                </div>
+                <div className="bg-black p-1.5 rounded border-2 border-win-darkest relative overflow-hidden aspect-video flex items-center justify-center">
+                  <LazyImage
+                    src={sub.image_url}
+                    alt={sub.title}
+                    className="w-full h-full object-cover filter saturate-[1.15] contrast-[1.05] group-hover:scale-105 transition-transform duration-300"
+                    width="480"
+                    height="270"
+                  />
+                  <div className="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(to_bottom,transparent_0px,transparent_2px,rgba(0,0,0,0.3)_2px,rgba(0,0,0,0.3)_4px)] z-10" />
+                </div>
+                <div className="flex justify-between items-center mt-2 text-[10px] font-bold">
+                  <span className="truncate text-black/80">{sub.profiles?.full_name}</span>
+                  <span className="font-mono text-vapor-purple shrink-0">💜 {reactionCount}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
+        /* GRID MASONRY VIEW (Default) */
         <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
           {visibleSubmissions.map((sub) => {
             const reactionCount = reactionsMap[sub.id] || 0;
             return (
               <div
                 key={sub.id}
-                className="break-inside-avoid win95-container bg-[#c0c0c0] p-1 flex flex-col group hover:border-[#ff71ce] hover:shadow-[0_0_12px_#ff71ce] transition-all duration-200 relative cursor-pointer"
+                className="break-inside-avoid win95-container bg-[#c0c0c0] p-1 flex flex-col group hover:border-vapor-pink hover:shadow-[0_0_15px_rgba(255,113,206,0.6)] transition-all duration-200 relative cursor-pointer"
                 onClick={() => handleOpenLightbox(sub.id)}
               >
-                {/* Header Window mini của tranh */}
-                <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-dark to-black text-[9px] group-hover:from-vapor-purple group-hover:to-vapor-pink flex justify-between items-center transition-all duration-200">
+                {/* Header Window mini */}
+                <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-[9px] flex justify-between items-center">
                   <span className="truncate max-w-[70%] font-bold uppercase">{sub.title}</span>
-                  <span className="text-[8px] opacity-70">ART_VIEW.DLL</span>
+                  <span className="text-[8px] opacity-80 font-mono">ART_VIEW.DLL</span>
                 </div>
 
-                {/* Khung chứa ảnh (Tránh CLS giật màn hình với min-height) */}
+                {/* Khung chứa ảnh */}
                 <div className="relative bg-[#1a003a]/10 overflow-hidden aspect-auto min-h-[160px] max-h-[420px] border border-win-dark flex items-center justify-center">
                   <LazyImage
                     src={sub.image_url}
@@ -285,13 +426,12 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                     width="480"
                     height="360"
                   />
-                  {/* Overlay CRT scanline nhẹ */}
                   <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none" />
 
-                  {/* Nút yêu thích dạng floating (Có stopPropagation chặn nổi bọt sự kiện!) */}
+                  {/* Nút yêu thích dạng floating */}
                   <div 
                     className="absolute top-2 right-2 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20"
-                    onClick={(e) => e.stopPropagation()} // Khóa click bubble mở lightbox
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <FavoriteButton
                       submissionId={sub.id}
@@ -302,7 +442,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                 </div>
 
                 {/* Footer của tranh */}
-                <div className="p-2 bg-[#d8d8d8] flex justify-between items-center text-[10px] select-none">
+                <div className="p-2 bg-[#d8d8d8] flex justify-between items-center text-[10px]">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <img
                       src={sub.profiles?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50&auto=format&fit=crop"}
@@ -311,7 +451,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                     />
                     <span className="truncate text-black font-bold">{sub.profiles?.full_name}</span>
                   </div>
-                  <div className="flex gap-2 text-win-dark font-bold shrink-0">
+                  <div className="flex gap-2 text-win-darkest font-mono font-bold shrink-0">
                     <span>💜 {reactionCount}</span>
                   </div>
                 </div>
@@ -321,7 +461,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
         </div>
       )}
 
-      {/* 3. Sentinel kích hoạt Infinite Scroll & Loading Skeleton hoài cổ */}
+      {/* 3. Sentinel kích hoạt Infinite Scroll */}
       <div ref={sentinelRef} className="pt-8 pb-4 text-center">
         {visibleCount < processed.length && (
           <div className="win95-container max-w-xs mx-auto bg-win-gray p-2.5 animate-pulse text-[10px] font-bold text-center">
@@ -329,7 +469,6 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
               <span className="inline-block animate-bounce">⏳</span>
               <span>SYNCHRONIZING CYBER_GALLERY.DAT...</span>
             </div>
-            {/* ProgressBar ảo */}
             <div className="h-2 bg-black border border-win-dark p-0.5 mt-1.5">
               <div className="h-full bg-vapor-pink w-1/3 animate-[scanline_1s_ease-in-out_infinite]" />
             </div>
@@ -337,13 +476,18 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
         )}
       </div>
 
-      {/* 4. Trình xem ảnh toàn màn hình Lightbox */}
+      {/* 4. Trình xem ảnh Lightbox */}
       {activeViewId && (
         <GalleryLightbox
           submissions={processed}
           activeId={activeViewId}
           currentUser={currentUser}
-          onClose={() => setActiveViewId(null)}
+          onClose={() => {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete("view");
+            window.history.pushState(null, "", newUrl.toString());
+            setActiveViewId(null);
+          }}
         />
       )}
     </div>

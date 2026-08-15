@@ -10,109 +10,153 @@ const { userProfile = null } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
-<header class="win95-container w-full mb-6 font-retro site-header relative z-50">
-  <!-- Desktop & Base Header -->
+<header class="win95-container w-full mb-6 font-retro site-header relative z-50 select-none">
+  <!-- Desktop & Base Header (Win95 Taskbar & Menu) -->
   <div class="flex justify-between items-center bg-win-gray p-1 gap-2 min-h-[44px]">
-    <!-- Left Navigation Links (Desktop) -->
+    <!-- Left Navigation Group -->
     <div class="flex gap-2 items-center">
-      <a href="/" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath === '/' ? 'bg-vapor-pink/10' : ''}`} style="min-height: 32px;">
-        💾 Start
+      <!-- Start Button with active press state -->
+      <a
+        href="/"
+        class={`win95-btn font-bold px-3 py-1 flex items-center gap-1.5 text-black no-underline ${currentPath === '/' ? 'win95-sunken bg-white/60' : ''}`}
+        style="min-height: 32px;"
+      >
+        <span class="w-3.5 h-3.5 flex items-center justify-center font-mono text-xs">💾</span>
+        <span class="tracking-wider">Start</span>
       </a>
-      <div class="border-l border-white h-6 my-auto mx-0.5 hidden md:block"></div>
+      
+      <div class="border-l border-win-darkest border-r border-r-win-light h-6 my-auto mx-0.5 hidden md:block"></div>
       
       <!-- Desktop Nav Link Group -->
       <nav class="hidden md:flex gap-1.5 items-center">
-        <a href="/gallery" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/gallery') ? 'bg-vapor-pink/20 border-vapor-pink' : ''}`} style="min-height: 32px;">
-          🖼️ Triển Lãm
+        <a
+          href="/gallery"
+          class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/gallery') ? 'win95-sunken bg-vapor-pink/20 text-vapor-pink' : ''}`}
+          style="min-height: 32px;"
+        >
+          <span>🖼️</span> Triển Lãm
         </a>
-        <a href="/artists" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/artists') ? 'bg-vapor-green/20 border-vapor-green' : ''}`} style="min-height: 32px;">
-          👥 Nghệ Sĩ
+        <a
+          href="/artists"
+          class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/artists') ? 'win95-sunken bg-vapor-green/20' : ''}`}
+          style="min-height: 32px;"
+        >
+          <span>👥</span> Nghệ Sĩ
         </a>
         {userProfile && (
-          <a href="/favorites" class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/favorites') ? 'bg-vapor-purple/20 border-vapor-purple' : ''}`} style="min-height: 32px;">
-            💜 Yêu Thích
+          <a
+            href="/favorites"
+            class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/favorites') ? 'win95-sunken bg-vapor-purple/20' : ''}`}
+            style="min-height: 32px;"
+          >
+            <span>💜</span> Yêu Thích
           </a>
         )}
       </nav>
-      <div class="border-l border-white h-6 my-auto mx-0.5 hidden lg:block"></div>
-      <span class="text-[10px] text-black my-auto font-bold tracking-wider hidden lg:inline">AESTHETIC_SYS_V2.EXE</span>
+      
+      <div class="border-l border-win-darkest border-r border-r-win-light h-6 my-auto mx-0.5 hidden lg:block"></div>
+      <span class="text-[9px] text-win-darkest font-mono font-bold tracking-widest hidden lg:inline bg-win-light/50 px-1.5 py-0.5 border border-win-dark">
+        SYS_V2.0 // ONLINE
+      </span>
     </div>
 
-    <!-- Right Controls (Desktop) -->
+    <!-- Right Controls (Desktop System Tray) -->
     <div class="hidden md:flex gap-2 items-center flex-wrap justify-end">
-      <!-- Nút Tìm kiếm -->
+      <!-- Search Modal -->
       <SearchModal client:load />
 
-      <!-- Chuông thông báo Realtime -->
+      <!-- Notification Bell -->
       {userProfile && <NotificationBell client:load currentUser={userProfile} />}
 
-      <!-- Nút Gửi tranh cộng đồng -->
+      <!-- Submit Artwork CTA -->
       {userProfile && (
-        <a href="/submit" class={`win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#05ffa1]/20 border-[#05ffa1] ${currentPath === '/submit' ? 'bg-[#05ffa1]/40' : ''}`} style="min-height: 32px;">
-          🎨 Gửi Tranh
+        <a
+          href="/submit"
+          class={`win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#05ffa1]/25 border-2 border-black ${currentPath === '/submit' ? 'win95-sunken bg-[#05ffa1]/50' : ''}`}
+          style="min-height: 32px;"
+        >
+          <span>🎨</span> Gửi Tranh
         </a>
       )}
 
-      <!-- Nút Quản trị Dashboard -->
+      <!-- Admin Panel CTA -->
       {userProfile && (userProfile.role === 'admin' || userProfile.role === 'editor') && (
-        <a href="/admin" class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#fffb96]/30 border-[#fffb96]" style="min-height: 32px;">
-          ⚙️ Bảng Quản Trị
+        <a
+          href="/admin"
+          class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#fffb96]/40 border-2 border-black"
+          style="min-height: 32px;"
+        >
+          <span>⚙️</span> Bảng Quản Trị
         </a>
       )}
 
-      <!-- Nút Quản lý Người dùng (chỉ Admin) -->
+      <!-- User Management (Admin Only) -->
       {userProfile && userProfile.role === 'admin' && (
-        <a href="/admin/users" class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#ff71ce]/20 border-[#ff71ce]" style="min-height: 32px;">
-          👥 Người Dùng
+        <a
+          href="/admin/users"
+          class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#ff71ce]/25 border-2 border-black"
+          style="min-height: 32px;"
+        >
+          <span>👥</span> Người Dùng
         </a>
       )}
 
-      <div class="border-l border-white h-6 my-auto mx-1"></div>
+      <div class="border-l border-win-darkest border-r border-r-win-light h-6 my-auto mx-0.5"></div>
 
+      <!-- User Profile / Auth State -->
       {userProfile ? (
-        <div class="flex gap-2 items-center">
+        <div class="flex gap-2 items-center win95-sunken bg-white/40 px-2 py-0.5">
           <a href={`/profile/${userProfile.id}`} class="flex gap-1.5 items-center no-underline hover:underline text-black">
-            <img src={userProfile.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"} class="w-6 h-6 border border-win-dark filter saturate-150 object-cover" />
-            <span class="text-xs font-bold truncate max-w-[120px]">{userProfile.full_name}</span>
+            <img
+              src={userProfile.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
+              alt="Avatar"
+              class="w-5 h-5 border border-win-dark object-cover filter saturate-150"
+            />
+            <span class="text-xs font-bold truncate max-w-[110px]">{userProfile.full_name}</span>
           </a>
           <form action="/api/auth/signout" method="POST" class="m-0">
-            <button type="submit" class="win95-btn text-xs py-1" style="min-height: 28px;">Đăng xuất</button>
+            <button type="submit" class="win95-btn text-[10px] py-0 px-1 font-bold" style="min-height: 22px;">
+              Đăng xuất
+            </button>
           </form>
         </div>
       ) : (
-        <a href="/api/auth/signin" class="win95-btn text-xs font-bold text-black no-underline py-1" style="min-height: 32px;">
-          🔑 Đăng Nhập Với Google
+        <a href="/api/auth/signin" class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-white" style="min-height: 32px;">
+          🔑 Đăng Nhập
         </a>
       )}
+
+      <!-- Realtime Clock Tray -->
+      <div id="tray-clock" class="win95-sunken px-2 py-1 text-[10px] font-mono font-bold bg-white text-black shrink-0">
+        00:00:00
+      </div>
     </div>
 
-    <!-- Mobile Navigation Toggle (Hamburger) -->
+    <!-- Mobile Navigation Controls (Hamburger) -->
     <div class="flex md:hidden items-center gap-2">
       {userProfile && <NotificationBell client:load currentUser={userProfile} />}
       <button 
         id="hamburger-btn" 
-        class="hamburger-btn win95-btn text-black py-1 px-2.5 flex items-center justify-center font-bold" 
-        aria-label="Mở thực đơn hệ thống" 
+        class="hamburger-btn win95-btn text-black py-1 px-3 flex items-center justify-center font-bold" 
+        aria-label="Mở menu hệ thống" 
         aria-expanded="false"
         aria-controls="mobile-menu-drawer"
-        style="min-height: 36px;"
+        style="min-height: 38px;"
       >
         <span class="mr-1">📂</span> Menu
       </button>
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-     MOBILE MENU DRAWER — Hamburger Win95 Popup Window
-     ══════════════════════════════════════════ -->
+  <!-- Mobile Menu Drawer (Win95 Popup Window) -->
   <div 
     id="mobile-menu-drawer" 
-    class="mobile-menu absolute top-[45px] left-0 right-0 hidden bg-win-gray p-1 win95-window z-50 text-black font-retro shadow-2xl"
+    class="mobile-menu absolute top-[48px] left-0 right-0 hidden bg-win-gray p-1 win95-window z-50 text-black font-retro shadow-2xl"
     aria-hidden="true"
   >
     <!-- Thanh tiêu đề cửa sổ Win95 của Menu di động -->
     <div class="win95-header bg-gradient-to-r from-vapor-pink to-vapor-purple mb-2">
-      <span class="flex items-center gap-1">🗂️ SYSTEM_MENU.EXE</span>
+      <span class="flex items-center gap-1.5 font-bold">🗂️ SYSTEM_MENU.EXE</span>
       <button id="close-menu-btn" class="win95-btn py-0 px-1.5 font-bold" style="min-height: 20px; font-size: 10px;" aria-label="Đóng thực đơn">✕</button>
     </div>
 
@@ -120,17 +164,17 @@ const currentPath = Astro.url.pathname;
     <div class="win95-sunken bg-cosmic-black text-white p-3 space-y-4 max-h-[70vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
       <!-- Menu Links -->
       <div class="space-y-2">
-        <a href="/" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath === '/' ? 'bg-vapor-pink/20 border-vapor-pink text-white' : 'bg-win-gray text-black'}`}>
+        <a href="/" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath === '/' ? 'bg-vapor-pink/20 border-vapor-pink text-white font-extrabold' : 'bg-win-gray text-black'}`}>
           💾 TRANG CHỦ (START)
         </a>
-        <a href="/gallery" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/gallery') ? 'bg-vapor-pink/20 border-vapor-pink text-white' : 'bg-win-gray text-black'}`}>
+        <a href="/gallery" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/gallery') ? 'bg-vapor-pink/20 border-vapor-pink text-white font-extrabold' : 'bg-win-gray text-black'}`}>
           🖼️ PHÒNG TRIỂN LÃM
         </a>
-        <a href="/artists" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/artists') ? 'bg-vapor-green/20 border-vapor-green' : 'bg-win-gray text-black'}`}>
+        <a href="/artists" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/artists') ? 'bg-vapor-green/20 border-vapor-green text-white font-extrabold' : 'bg-win-gray text-black'}`}>
           👥 DANH SÁCH NGHỆ SĨ
         </a>
         {userProfile && (
-          <a href="/favorites" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/favorites') ? 'bg-vapor-purple/20 border-vapor-purple' : 'bg-win-gray text-black'}`}>
+          <a href="/favorites" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/favorites') ? 'bg-vapor-purple/20 border-vapor-purple text-white font-extrabold' : 'bg-win-gray text-black'}`}>
             💜 TRÊN KỆ YÊU THÍCH
           </a>
         )}
@@ -138,11 +182,10 @@ const currentPath = Astro.url.pathname;
 
       <hr class="border-t border-win-dark opacity-40 my-2" />
 
-      <!-- Quick Actions (Search, Submit, Admin) -->
+      <!-- Quick Actions -->
       <div class="space-y-3">
         <div class="win95-container bg-win-gray p-2 text-black space-y-2">
-          <span class="block text-[10px] font-bold text-win-dark uppercase">🔍 Tìm kiếm thông tin</span>
-          <!-- Nạp SearchModal lồng trong container -->
+          <span class="block text-[10px] font-bold text-win-dark uppercase">🔍 Tìm kiếm dữ liệu</span>
           <div class="w-full flex justify-center">
             <SearchModal client:load />
           </div>
@@ -151,17 +194,17 @@ const currentPath = Astro.url.pathname;
         {userProfile && (
           <>
             <div class="flex gap-2">
-              <a href="/submit" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#05ffa1]/20 border-[#05ffa1] no-underline">
-                🎨 Gửi Tranh Mới
+              <a href="/submit" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#05ffa1]/30 border-2 border-black no-underline">
+                🎨 Gửi Tranh
               </a>
               {(userProfile.role === 'admin' || userProfile.role === 'editor') && (
-                <a href="/admin" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#fffb96]/30 border-[#fffb96] no-underline">
-                  ⚙️ Admin Panel
+                <a href="/admin" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#fffb96]/40 border-2 border-black no-underline">
+                  ⚙️ Admin
                 </a>
               )}
             </div>
             {userProfile.role === 'admin' && (
-              <a href="/admin/users" class="block win95-btn text-center py-2.5 text-black font-bold bg-[#ff71ce]/20 border-[#ff71ce] no-underline">
+              <a href="/admin/users" class="block win95-btn text-center py-2.5 text-black font-bold bg-[#ff71ce]/30 border-2 border-black no-underline">
                 👥 Quản Lý Người Dùng
               </a>
             )}
@@ -179,22 +222,22 @@ const currentPath = Astro.url.pathname;
               <img src={userProfile.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"} class="w-10 h-10 border border-win-dark filter saturate-150 object-cover" />
               <div class="font-retro leading-tight">
                 <span class="block font-bold text-xs">{userProfile.full_name}</span>
-                <span class="block text-[8px] text-win-dark font-semibold uppercase">● {userProfile.role}</span>
+                <span class="block text-[8px] text-win-dark font-semibold uppercase">● Vai trò: {userProfile.role}</span>
               </div>
             </div>
             <div class="flex gap-2 w-full">
-              <a href={`/profile/${userProfile.id}`} class="win95-btn flex-1 text-center py-1.5 text-black font-bold no-underline uppercase text-[10px]">
+              <a href={`/profile/${userProfile.id}`} class="win95-btn flex-1 text-center py-2 text-black font-bold no-underline uppercase text-[10px]">
                 📁 Hồ sơ
               </a>
               <form action="/api/auth/signout" method="POST" class="m-0 flex-1">
-                <button type="submit" class="win95-btn w-full text-center py-1.5 text-black font-bold uppercase text-[10px]" style="min-height: auto;">
+                <button type="submit" class="win95-btn w-full text-center py-2 text-black font-bold uppercase text-[10px]" style="min-height: auto;">
                   🚪 Đăng xuất
                 </button>
               </form>
             </div>
           </>
         ) : (
-          <a href="/api/auth/signin" class="win95-btn w-full text-center py-2.5 text-black font-bold no-underline uppercase text-xs">
+          <a href="/api/auth/signin" class="win95-btn w-full text-center py-2.5 text-black font-bold no-underline uppercase text-xs bg-white">
             🔑 ĐĂNG NHẬP VỚI GOOGLE
           </a>
         )}
@@ -204,6 +247,17 @@ const currentPath = Astro.url.pathname;
 </header>
 
 <script>
+  // Cập nhật đồng hồ thời gian thực ở Taskbar Tray
+  function updateClock() {
+    const clockEl = document.getElementById("tray-clock");
+    if (clockEl) {
+      const now = new Date();
+      clockEl.textContent = now.toLocaleTimeString("vi-VN", { hour12: false });
+    }
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
   // Quản lý đóng/mở Mobile Menu Drawer
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const closeMenuBtn = document.getElementById('close-menu-btn');
