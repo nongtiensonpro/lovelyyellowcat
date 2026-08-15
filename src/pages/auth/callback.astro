@@ -7,11 +7,31 @@ import { env } from "cloudflare:workers";
 const requestUrl = new URL(Astro.request.url);  
 const code = requestUrl.searchParams.get("code");  
 const next = requestUrl.searchParams.get("next") || "/";
-const noStoreHeaders = {
-  "Cache-Control": "no-store, private, max-age=0",
-  "CDN-Cache-Control": "no-store",
-  Pragma: "no-cache",
-};
+
+/**
+ * Tạo redirect Response kèm Set-Cookie headers từ Astro.cookies store.
+ *
+ * Trên Cloudflare Workers, cả `Astro.redirect()` lẫn `new Response()` đều
+ * KHÔNG tự gắn cookies đã set qua `Astro.cookies.set()`. Vì vậy ta phải
+ * dùng `Astro.cookies.headers()` để đọc các Set-Cookie header đã pending
+ * và tự append vào Response.
+ */
+function redirectWithCookies(location: string, status: 302 | 307 = 307): Response {
+  const response = new Response(null, {
+    status,
+    headers: {
+      Location: location,
+      "Cache-Control": "no-store, private, max-age=0",
+      "CDN-Cache-Control": "no-store",
+      Pragma: "no-cache",
+    },
+  });
+  // Gắn thủ công tất cả cookies (bao gồm session token chunks) vào response
+  for (const cookieHeader of Astro.cookies.headers()) {
+    response.headers.append("Set-Cookie", cookieHeader);
+  }
+  return response;
+}
 
 if (code) {  
   const supabase = createSupabaseServerClient({  
@@ -62,7 +82,7 @@ if (code) {
       console.error("[AUTH] Welcome email check error:", welcomeErr.message);
     }
 
-    return Astro.redirect(next, 307);
+    return redirectWithCookies(next);
   }
 
   // A browser retry, back/forward navigation, or a duplicate edge request
@@ -78,7 +98,7 @@ if (code) {
   if (isReplayedFlow) {
     const { data: { user: existingUser } } = await supabase.auth.getUser();
     if (existingUser) {
-      return Astro.redirect(next, 307);
+      return redirectWithCookies(next);
     }
   }
 
@@ -86,5 +106,5 @@ if (code) {
 }
 
 // Chuyển hướng về trang chủ kèm cờ thông báo lỗi xác thực  
-return Astro.redirect("/?error=auth-failed", 307);  
+return redirectWithCookies("/?error=auth-failed");
 ---
