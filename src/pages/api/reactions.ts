@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
 
+const ALLOWED_EMOJIS = new Set(["💜", "💖", "🔥", "✨", "💾", "📼", "🌸", "⭐", "👍", "🚀", "😍", "🎉"]);
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   const supabase = createSupabaseServerClient({ request, cookies });
 
@@ -13,13 +15,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const body = await request.json();
     const { article_id, emoji, action } = body;
 
+    if (!article_id || typeof emoji !== "string" || !ALLOWED_EMOJIS.has(emoji.trim())) {
+      return new Response(JSON.stringify({ error: "Cảm xúc (emoji) không hợp lệ." }), { status: 400 });
+    }
+
+    const cleanEmoji = emoji.trim();
+
     if (action === "add") {
       const { data, error } = await supabase
         .from("reactions")
         .insert({
           article_id,
           profile_id: user.id,
-          emoji,
+          emoji: cleanEmoji,
         })
         .select()
         .single();
@@ -35,7 +43,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .delete()
         .eq("article_id", article_id)
         .eq("profile_id", user.id)
-        .eq("emoji", emoji);
+        .eq("emoji", cleanEmoji);
 
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });

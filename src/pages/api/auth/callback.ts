@@ -3,15 +3,28 @@ import { createSupabaseServerClient } from "../../../lib/supabase";
 import { sendWelcomeEmail } from "../../../lib/emailNotification";
 import { env } from "cloudflare:workers";
 
+/**
+ * Kiểm tra và làm sạch URL chuyển hướng chống lỗ hổng Open Redirect (CWE-601)
+ */
+function sanitizeRedirectUrl(target: string | null | undefined): string {
+  if (!target) return "/";
+  const trimmed = target.trim();
+  // Chỉ cho phép đường dẫn tương đối nội bộ (bắt đầu bằng / và không phải // hoặc /\)
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.startsWith("/\\")) {
+    return trimmed;
+  }
+  return "/";
+}
+
 export const GET: APIRoute = async ({ request, cookies, redirect, url }) => {
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") || "/";
+  const rawNext = url.searchParams.get("next");
+  const next = sanitizeRedirectUrl(rawNext);
 
   if (code) {
     const supabase = createSupabaseServerClient({ request, cookies });
 
     // Trao đổi mã code lấy token phiên đăng nhập (session token) từ Supabase Auth
-    // Supabase SSR sẽ tự động gọi cookies.set() thông qua setAll
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {

@@ -11,10 +11,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   try {
     const body = await request.json();
-    const { article_id, content, parent_id = null, depth } = body;
+    const { article_id, content, parent_id = null, depth = 0 } = body;
 
-    if (!article_id || !content) {
+    if (!article_id || typeof content !== "string" || !content.trim()) {
       return new Response(JSON.stringify({ error: "Thiếu article_id hoặc nội dung bình luận." }), { status: 400 });
+    }
+
+    const trimmedContent = content.trim();
+    if (trimmedContent.length > 2000) {
+      return new Response(JSON.stringify({ error: "Nội dung bình luận không được vượt quá 2000 ký tự." }), { status: 400 });
     }
 
     const { data, error } = await supabase
@@ -22,9 +27,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .insert({
         article_id,
         profile_id: user.id,
-        content,
+        content: trimmedContent,
         parent_id,
-        depth,
+        depth: Math.min(Math.max(0, depth || 0), 5), // Giới hạn độ sâu tối đa 5 cấp
       })
       .select()
       .single();
