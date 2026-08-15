@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../../lib/supabase";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../../lib/supabase";
 
 const { userId } = Astro.params;
 
@@ -10,15 +10,15 @@ const supabase = createSupabaseServerClient({
 });
 
 // 1. Kiểm tra session của người dùng hiện tại
-const { data: { user: currentUser } } = await supabase.auth.getUser();
-const isOwner = currentUser?.id === userId;
+const currentUserProfile = await getCurrentUserProfile(supabase);
+const isOwner = currentUserProfile?.id === userId;
 
 // 2. Tải thông tin người dùng được xem hồ sơ
 const { data: profile, error: profileError } = await supabase
   .from("profiles")
   .select("*")
   .eq("id", userId)
-  .single();
+  .maybeSingle();
 
 if (profileError || !profile) {
   console.error("Lỗi fetch profile:", profileError?.message);
@@ -99,7 +99,7 @@ if (articles.length > 0) {
 const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString("vi-VN");
 ---
 
-<BaseLayout title={`HỒ SƠ NGHỆ SĨ // ${profile.full_name.toUpperCase()} // VAPOR JOURNAL`} userProfile={currentUser}>
+<BaseLayout title={`HỒ SƠ NGHỆ SĨ // ${profile.full_name.toUpperCase()} // VAPOR JOURNAL`} userProfile={currentUserProfile}>
   <!-- Nút chỉnh sửa hồ sơ (nếu là chủ sở hữu) -->
   {isOwner && (
     <div class="mb-6 font-retro flex justify-end">

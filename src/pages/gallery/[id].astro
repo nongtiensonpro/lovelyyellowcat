@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../../lib/supabase";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../../lib/supabase";
 import { ReactionBar } from "../../components/ReactionBar";
 import { RealtimeComments } from "../../components/RealtimeComments";
 import { FavoriteButton } from "../../components/FavoriteButton";
@@ -13,17 +13,7 @@ const supabase = createSupabaseServerClient({
 });
 
 // 1. Tải thông tin người dùng đăng nhập hiện tại
-const { data: { user } } = await supabase.auth.getUser();
-let userProfile = null;
-
-if (user) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-  userProfile = data;
-}
+const userProfile = await getCurrentUserProfile(supabase);
 
 // 2. Tải thông tin tác phẩm từ submissions
 const { data: submission } = await supabase

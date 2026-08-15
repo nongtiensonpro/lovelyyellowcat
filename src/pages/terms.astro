@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../lib/supabase";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
 const supabase = createSupabaseServerClient({
     request: Astro.request,
@@ -8,18 +8,7 @@ const supabase = createSupabaseServerClient({
 });
 
 // Lấy thông tin người dùng chỉ để hiển thị trên header nếu có
-const {
-    data: { user },
-} = await supabase.auth.getUser();
-let userProfile = null;
-if (user) {
-    const { data } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url, role")
-        .eq("id", user.id)
-        .single();
-    userProfile = data;
-}
+const userProfile = await getCurrentUserProfile(supabase);
 ---
 
 <BaseLayout

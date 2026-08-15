@@ -15,15 +15,31 @@ export const GET: APIRoute = async ({ request, cookies, redirect, url }) => {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Kiểm tra xem đây có phải lần đăng nhập đầu tiên không
+      // Đảm bảo profile luôn tồn tại và kiểm tra welcome email
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          const fullName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Thành viên mới";
+          const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+
+          // 1. Tự động upsert vào bảng profiles để chắc chắn database luôn có thông tin user
+          try {
+            await supabase.from("profiles").upsert({
+              id: user.id,
+              email: user.email,
+              full_name: fullName,
+              avatar_url: avatarUrl,
+            }, { onConflict: "id" });
+          } catch (upsertErr) {
+            console.error("[AUTH] Lỗi upsert profile:", upsertErr);
+          }
+
+          // 2. Lấy profile để kiểm tra welcome email
           const { data: profile } = await supabase
             .from("profiles")
             .select("created_at, full_name, email")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
 
           // Nếu profile mới tạo trong 60 giây → là người dùng mới → gửi welcome email
           if (profile?.created_at) {

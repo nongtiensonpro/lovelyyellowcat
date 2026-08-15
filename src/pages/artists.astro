@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../lib/supabase";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -8,17 +8,7 @@ const supabase = createSupabaseServerClient({
 });
 
 // Tải thông tin phiên người dùng hiện tại
-const { data: { user } } = await supabase.auth.getUser();
-let userProfile = null;
-
-if (user) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-  userProfile = data;
-}
+const userProfile = await getCurrentUserProfile(supabase);
 
 // Tải danh sách nghệ sĩ hoạt động từ view thống kê public.artist_stats
 const { data: artists } = await supabase

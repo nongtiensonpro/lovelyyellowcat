@@ -31,7 +31,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         .from("profiles")
         .select("role, is_banned")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       console.log("[MIDDLEWARE] Profile query - Role:", profile?.role || "KHÔNG CÓ", "| Banned:", profile?.is_banned, "| Error:", error?.message || "không");
 
@@ -84,7 +84,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
           .from("profiles")
           .select("is_banned")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
         if (profile?.is_banned) {
           console.log("[MIDDLEWARE] → Chặn user bị cấm truy cập:", url.pathname);

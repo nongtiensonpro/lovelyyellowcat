@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { createSupabaseServerClient } from "../lib/supabase";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 import { GalleryGrid } from "../components/GalleryGrid";
 
 const supabase = createSupabaseServerClient({
@@ -9,17 +9,10 @@ const supabase = createSupabaseServerClient({
 });
 
 // Lấy thông tin người dùng đăng nhập hiện tại
-const { data: { user } } = await supabase.auth.getUser();
-let userProfile = null;
+const userProfile = await getCurrentUserProfile(supabase);
 let initialSubmissions = [];
 
-if (user) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-  userProfile = data;
+if (userProfile) {
 
   // Lấy các tác phẩm đã lưu trong mục yêu thích
   const { data: dbFavorites } = await supabase
