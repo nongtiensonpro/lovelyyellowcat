@@ -100,8 +100,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // Đảm bảo /auth/callback không bị cache bởi CDN/browser
-  if (url.pathname === "/auth/callback") {
+  // Đảm bảo các route xác thực auth không bị cache bởi CDN/browser
+  if (url.pathname === "/auth/callback" || url.pathname.startsWith("/api/auth/")) {
     const response = await next();
     response.headers.set("Cache-Control", "no-store, private, max-age=0");
     response.headers.set("CDN-Cache-Control", "no-store");
