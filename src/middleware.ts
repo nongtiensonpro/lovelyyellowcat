@@ -100,6 +100,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  // Đảm bảo /auth/callback không bị cache bởi CDN/browser
+  if (url.pathname === "/auth/callback") {
+    const response = await next();
+    response.headers.set("Cache-Control", "no-store, private, max-age=0");
+    response.headers.set("CDN-Cache-Control", "no-store");
+    response.headers.set("Pragma", "no-cache");
+    return response;
+  }
+
   console.log("[MIDDLEWARE] → Gọi next() cho:", url.pathname);
   return next();
 });

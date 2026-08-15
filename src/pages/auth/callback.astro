@@ -62,13 +62,7 @@ if (code) {
       console.error("[AUTH] Welcome email check error:", welcomeErr.message);
     }
 
-    return new Response(null, {
-      status: 307,
-      headers: {
-        ...noStoreHeaders,
-        Location: next,
-      },
-    });
+    return Astro.redirect(next, 307);
   }
 
   // A browser retry, back/forward navigation, or a duplicate edge request
@@ -84,13 +78,7 @@ if (code) {
   if (isReplayedFlow) {
     const { data: { user: existingUser } } = await supabase.auth.getUser();
     if (existingUser) {
-      return new Response(null, {
-        status: 307,
-        headers: {
-          ...noStoreHeaders,
-          Location: next,
-        },
-      });
+      return Astro.redirect(next, 307);
     }
   }
 
@@ -98,11 +86,5 @@ if (code) {
 }
 
 // Chuyển hướng về trang chủ kèm cờ thông báo lỗi xác thực  
-return new Response(null, {  
-  status: 307,  
-  headers: {  
-    ...noStoreHeaders,
-    Location: "/?error=auth-failed",  
-  },  
-});  
+return Astro.redirect("/?error=auth-failed", 307);  
 ---
