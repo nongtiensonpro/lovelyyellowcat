@@ -278,7 +278,7 @@ create table if not exists public.admin_audit_log (
   details    jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
-+
+
 -- ------------------------------------------------------------
 -- 4. Search, views and indexes
 -- ------------------------------------------------------------
@@ -532,7 +532,7 @@ drop policy if exists "admin_insert_audit_log" on public.admin_audit_log;
 create policy "admin_insert_audit_log"
   on public.admin_audit_log for insert to authenticated
   with check (public.current_user_has_role(array['admin']));
-+
+
 -- ------------------------------------------------------------
 -- 6. RPC functions and triggers
 -- ------------------------------------------------------------
