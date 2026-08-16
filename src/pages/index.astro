@@ -4,6 +4,7 @@ import RibbonCard from "../components/RibbonCard.astro";
 import RetroSticker from "../components/RetroSticker.astro";
 import CrtMonitorFrame from "../components/CrtMonitorFrame.astro";
 import ServerStatusWidget from "../components/ServerStatusWidget.astro";
+import { AiChatWindow } from "../components/AiChatWindow";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
 const supabase = createSupabaseServerClient({
@@ -105,6 +106,9 @@ const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "per
       
       <!-- Server Status Monitor Widget (Live API) -->
       <ServerStatusWidget />
+
+      <!-- Mèo Vàng Cybernetic AI Assistant Chatbox -->
+      <AiChatWindow client:load />
 
       <!-- Quick Catalog Categories (Dell 1996 Style Nav Rail) -->
       <div class="win95-window">
