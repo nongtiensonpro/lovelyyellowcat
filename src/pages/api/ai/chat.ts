@@ -9,6 +9,11 @@ export const FALLBACK_MODEL_ORDER = [
   "gemini-pro-latest",
   "gemini-2.5-pro",
   "gemini-3.1-pro-preview",
+  // Các model Gemini tiêu chuẩn luôn khả dụng trên Google AI Studio Free Tier
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro",
 ] as const;
 
 const PERSONA_INSTRUCTIONS: Record<string, string> = {
@@ -61,7 +66,13 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const body = await request.json();
-    const { messages, persona = "cybercat", preferredModel, temperature = 0.7 } = body;
+    const { 
+      messages, 
+      persona = "cybercat", 
+      preferredModel, 
+      allowFallback = true, 
+      temperature = 0.7 
+    } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -73,10 +84,23 @@ export const POST: APIRoute = async ({ request }) => {
     // Chọn System Prompt theo persona
     const systemPrompt = PERSONA_INSTRUCTIONS[persona] || PERSONA_INSTRUCTIONS.cybercat;
 
-    // Sắp xếp thứ tự Model thử nghiệm: nếu người dùng chọn model cụ thể, ưu tiên đưa lên đầu
-    let modelsToTry: string[] = [...FALLBACK_MODEL_ORDER];
-    if (preferredModel && modelsToTry.includes(preferredModel)) {
-      modelsToTry = [preferredModel, ...modelsToTry.filter(m => m !== preferredModel)];
+    // Sắp xếp danh sách Model thử nghiệm
+    let modelsToTry: string[] = [];
+
+    if (preferredModel && preferredModel !== "auto") {
+      if (allowFallback) {
+        // Ưu tiên model được chọn, nếu lỗi mới fallback các model khác
+        modelsToTry = [
+          preferredModel,
+          ...FALLBACK_MODEL_ORDER.filter(m => m !== preferredModel)
+        ];
+      } else {
+        // Chỉ dùng duy nhất model được chọn
+        modelsToTry = [preferredModel];
+      }
+    } else {
+      // Chế độ Auto Fallback: duyệt qua toàn bộ danh sách
+      modelsToTry = [...FALLBACK_MODEL_ORDER];
     }
 
     // Định dạng lịch sử hội thoại chuẩn theo Google Gemini REST API
@@ -85,12 +109,12 @@ export const POST: APIRoute = async ({ request }) => {
       parts: [{ text: m.content || "" }],
     }));
 
-    let lastError: any = null;
+    const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
     let successfulReply: string | null = null;
     let modelUsed: string = "";
     const startTime = Date.now();
 
-    // Duyệt qua danh sách Model Fallback theo thứ tự ưu tiên
+    // Duyệt qua danh sách Model theo thứ tự
     for (const model of modelsToTry) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -118,16 +142,31 @@ export const POST: APIRoute = async ({ request }) => {
           if (candidateText) {
             successfulReply = candidateText;
             modelUsed = model;
-            break; // Thành công, thoát vòng lặp fallback
+            break; // Thành công, kết thúc vòng lặp
+          } else {
+            attemptLogs.push({
+              model,
+              status: response.status,
+              error: "API trả về 200 OK nhưng không có nội dung văn bản (candidates rỗng)."
+            });
           }
         } else {
           const errData = await response.json().catch(() => ({}));
-          console.warn(`[GEMINI FALLBACK] Model ${model} trả về HTTP ${response.status}:`, errData);
-          lastError = errData;
+          const errMsg = errData.error?.message || errData.message || `HTTP ${response.status}`;
+          attemptLogs.push({
+            model,
+            status: response.status,
+            error: errMsg
+          });
+          console.warn(`[GEMINI ATTEMPT] Model ${model} thất bại (${response.status}):`, errMsg);
         }
       } catch (err: any) {
-        console.warn(`[GEMINI FALLBACK] Lỗi khi gọi model ${model}:`, err?.message || err);
-        lastError = err;
+        attemptLogs.push({
+          model,
+          status: 0,
+          error: err?.message || String(err)
+        });
+        console.warn(`[GEMINI ATTEMPT] Model ${model} exception:`, err?.message || err);
       }
     }
 
@@ -145,29 +184,25 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Nếu tất cả model trong danh sách fallback đều gặp sự cố
-    let formattedErrorDetail = "";
-    if (lastError) {
-      if (typeof lastError === "string") {
-        formattedErrorDetail = lastError;
-      } else if (lastError.error) {
-        formattedErrorDetail = `[GOOGLE_AI_ERROR ${lastError.error.code || 'N/A'}] ${lastError.error.message || JSON.stringify(lastError.error)} (Status: ${lastError.error.status || 'FAILED'})`;
-      } else {
-        formattedErrorDetail = JSON.stringify(lastError, null, 2);
-      }
-    } else {
-      formattedErrorDetail = "Không nhận được phản hồi hợp lệ từ máy chủ Google AI Studio.";
-    }
+    // Nếu tất cả model đều không thành công, tạo báo cáo chi tiết cho từng model
+    const logDetails = attemptLogs
+      .map((att, idx) => `${idx + 1}. [${att.model}] (HTTP ${att.status}): ${att.error}`)
+      .join("\n");
 
-    formattedErrorDetail += `\n[Models Attempted]: ${modelsToTry.join(" -> ")}`;
+    const formattedErrorDetail = 
+      `[TỔNG HỢP KẾT QUẢ THỬ NGHIỆM MODEL]\n` +
+      `Model ưu tiên ban đầu: ${preferredModel || "auto"}\n` +
+      `Cho phép Fallback: ${allowFallback ? "BẬT" : "TẮT"}\n\n` +
+      `Chi tiết từng model:\n${logDetails}`;
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: lastError?.error?.message || "Tất cả các Model AI đều không phản hồi.",
+        error: "Tất cả các Model AI được thử nghiệm đều không phản hồi.",
         reply:
-          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
+          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng hoặc model bạn chọn đang bị giới hạn hạn mức (Quota). Bạn hãy mở chi tiết lỗi bên dưới hoặc chọn Model khác (như Gemini 2.0 Flash / 1.5 Flash) nhé! 🐱💾",
         errorDetail: formattedErrorDetail,
+        attemptLogs,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -178,7 +213,7 @@ export const POST: APIRoute = async ({ request }) => {
         success: false,
         error: error.message || "Lỗi máy chủ nội bộ khi xử lý hội thoại.",
         reply:
-          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
+          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp sự cố nội bộ. Bạn hãy mở chi tiết lỗi bên dưới để báo cho Dev nhé! 🐱💾",
         errorDetail: `[INTERNAL_SERVER_ERROR]: ${error.stack || error.message || error}`,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }

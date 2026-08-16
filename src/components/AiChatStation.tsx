@@ -66,13 +66,16 @@ export const PERSONAS = [
 
 // Danh sách các Model Gemini hỗ trợ
 export const MODEL_OPTIONS = [
-  { id: "auto", name: "⚡ Tự Động Fallback (Khuyên dùng)" },
-  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Siêu nhanh)" },
+  { id: "auto", name: "⚡ Tự Động Fallback (Khuyên dùng - Tự tìm model sẵn sàng)" },
+  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Ổn định nhất - Miễn phí 15 RPM)" },
+  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash (Rất nhanh & Bền bỉ)" },
+  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro (Tư duy sâu)" },
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
   { id: "gemini-flash-latest", name: "Gemini Flash Latest" },
   { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-  { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite" },
+  { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite Preview" },
   { id: "gemini-pro-latest", name: "Gemini Pro Latest" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Tư duy sâu)" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
   { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
 ];
 
@@ -148,6 +151,7 @@ export const AiChatStation: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedPersonaId, setSelectedPersonaId] = useState("cybercat");
   const [selectedModel, setSelectedModel] = useState("auto");
+  const [allowFallback, setAllowFallback] = useState(true);
   const [temperature, setTemperature] = useState(0.7);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -273,6 +277,7 @@ export const AiChatStation: React.FC = () => {
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
           persona: currentSession.persona,
           preferredModel: selectedModel === "auto" ? undefined : selectedModel,
+          allowFallback,
           temperature,
         }),
       });
@@ -504,11 +509,27 @@ export const AiChatStation: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Quick Model Selector on Menubar */}
+            <div className="flex items-center gap-1 bg-white px-1 py-0.5 border border-win-dark">
+              <span className="text-[9px] font-bold text-win-darkest font-mono">⚡ MODEL:</span>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="bg-transparent border-none outline-none font-mono text-[9px] text-black font-bold cursor-pointer max-w-[140px] sm:max-w-[200px] truncate"
+              >
+                {MODEL_OPTIONS.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               type="button"
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="win95-btn py-0 px-2 text-[10px] font-mono flex items-center gap-1"
+              className="win95-btn py-0.5 px-2 text-[10px] font-mono flex items-center gap-1"
               title="Bật/Tắt âm thanh hiệu ứng retro"
             >
               <span>{soundEnabled ? "🔊 Âm Thanh: BẬT" : "🔇 Âm Thanh: TẮT"}</span>
@@ -516,7 +537,7 @@ export const AiChatStation: React.FC = () => {
             <button
               type="button"
               onClick={() => handleExportChat("txt")}
-              className="win95-btn py-0 px-2 text-[10px] font-mono flex items-center gap-1"
+              className="win95-btn py-0.5 px-2 text-[10px] font-mono flex items-center gap-1"
               title="Xuất nhật ký trò chuyện"
             >
               <span>💾 Xuất File</span>
@@ -950,8 +971,20 @@ export const AiChatStation: React.FC = () => {
                         </option>
                       ))}
                     </select>
+
+                    <label className="flex items-center gap-2 cursor-pointer pt-1 font-retro text-xs">
+                      <input
+                        type="checkbox"
+                        checked={allowFallback}
+                        onChange={(e) => setAllowFallback(e.target.checked)}
+                        className="cursor-pointer"
+                      />
+                      <span className="font-bold">
+                        Tự động chuyển tiếp (Fallback) sang Model khác nếu Model được chọn bị lỗi Quota / quá tải
+                      </span>
+                    </label>
                     <p className="text-[10px] text-win-dark">
-                      * Chế độ tự động sẽ duyệt lần lượt qua danh sách Fallback Model nếu có model bị quá tải.
+                      * Nếu tắt tùy chọn này, hệ thống sẽ CHỈ gọi đúng Model bạn đã chọn và báo lỗi trực tiếp nếu Model đó vượt hạn mức Quota.
                     </p>
                   </div>
 
