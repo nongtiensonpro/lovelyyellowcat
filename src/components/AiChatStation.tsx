@@ -267,9 +267,14 @@ async function executeClientDirectChat(
     .map((att, idx) => `${idx + 1}. [${att.model}] (HTTP ${att.status}): ${att.error}`)
     .join("\n");
 
+  const hasQuotaError = attemptLogs.some(a => a.error?.includes("Quota exceeded") || a.status === 429);
+
   return {
     success: false,
-    reply: "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi khi gọi qua API Key cá nhân. Bạn hãy kiểm tra lại hạn mức Quota của Key hoặc đổi sang Model khác nhé! 🐱💾",
+    hasQuotaError,
+    reply: hasQuotaError
+      ? "Meow~! Hạn mức miễn phí (Quota) của Key AI hiện đang bị quá tải. Bạn hãy thử chọn Model khác (như Gemini 2.0 Flash / 1.5 Flash) hoặc đổi sang API Key cá nhân trong Cài đặt nhé! 🐱💾"
+      : "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi phản hồi. Bạn hãy mở chi tiết lỗi bên dưới để xem thêm nhé! 🐱💾",
     errorDetail: `[CLIENT-SIDE DIRECT EXECUTION]\nChi tiết từng model:\n${logDetails}`,
   };
 }
@@ -289,8 +294,11 @@ export const AiChatStation: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"chat" | "topics" | "settings">("chat");
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({});
   
-  // Custom API Key lưu trên trình duyệt của người dùng
-  const [userApiKey, setUserApiKey] = useState<string>("");
+  // Key từ cấu hình hệ thống (env) tự động nạp
+  const [systemApiKey, setSystemApiKey] = useState<string>("");
+  
+  // Custom API Key do người dùng tự đổi khi hệ thống quá tải
+  const [userCustomApiKey, setUserCustomApiKey] = useState<string>("");
   const [inlineKeyInput, setInlineKeyInput] = useState<string>("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -325,15 +333,27 @@ export const AiChatStation: React.FC = () => {
     return newSession;
   };
 
-  // Nạp lịch sử và API key từ LocalStorage khi khởi động
+  // Nạp lịch sử và cấu hình tự động khi khởi động
   useEffect(() => {
     try {
-      const savedKey = localStorage.getItem(API_KEY_STORAGE);
-      if (savedKey) {
-        setUserApiKey(savedKey);
-        setInlineKeyInput(savedKey);
+      // 1. Tự động lấy system API Key từ máy chủ (env)
+      fetch("/api/ai/config")
+        .then(res => res.json())
+        .then(data => {
+          if (data?.apiKey) {
+            setSystemApiKey(data.apiKey);
+          }
+        })
+        .catch(e => console.warn("Không thể lấy cấu hình AI mặc định:", e));
+
+      // 2. Nạp key cá nhân nếu người dùng đã từng lưu
+      const savedCustomKey = localStorage.getItem(API_KEY_STORAGE);
+      if (savedCustomKey) {
+        setUserCustomApiKey(savedCustomKey);
+        setInlineKeyInput(savedCustomKey);
       }
 
+      // 3. Nạp lịch sử chat
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed: ChatSession[] = JSON.parse(saved);
@@ -372,17 +392,17 @@ export const AiChatStation: React.FC = () => {
     scrollToBottom();
   }, [currentSession?.messages, isTyping]);
 
-  // Lưu Custom API Key
-  const handleSaveApiKey = (keyToSave: string) => {
+  // Lưu Custom API Key khi người dùng muốn tự đổi
+  const handleSaveCustomApiKey = (keyToSave: string) => {
     const trimmed = keyToSave.trim();
     if (!trimmed) {
       localStorage.removeItem(API_KEY_STORAGE);
-      setUserApiKey("");
-      alert("Đã gỡ bỏ API Key cá nhân. Hệ thống sẽ quay về dùng kết nối máy chủ.");
+      setUserCustomApiKey("");
+      alert("Đã khôi phục về sử dụng API Key mặc định của hệ thống.");
     } else {
       localStorage.setItem(API_KEY_STORAGE, trimmed);
-      setUserApiKey(trimmed);
-      alert("✓ Đã lưu API Key cá nhân thành công! Trình duyệt sẽ gọi trực tiếp Google AI Studio mà không bao giờ bị chặn IP.");
+      setUserCustomApiKey(trimmed);
+      alert("✓ Đã lưu API Key cá nhân thành công!");
     }
   };
 
@@ -423,12 +443,13 @@ export const AiChatStation: React.FC = () => {
     setInputVal("");
     setIsTyping(true);
 
-    const effectiveApiKey = (overrideApiKey || userApiKey).trim();
+    // Ưu tiên key override -> user custom key -> system key từ env
+    const effectiveApiKey = (overrideApiKey || userCustomApiKey || systemApiKey).trim();
 
     try {
       let result: any = null;
 
-      // NẾU CÓ USER API KEY -> GỌI TRỰC TIẾP TỪ TRÌNH DUYỆT (100% BYPASS IP BLOCKING)
+      // NẾU CÓ KEY (KEY HỆ THỐNG HOẶC KEY CÁ NHÂN) -> GỌI TRỰC TIẾP TỪ TRÌNH DUYỆT ĐỂ BỎ QUA CHẶN IP CLOUDFLARE
       if (effectiveApiKey) {
         result = await executeClientDirectChat(
           effectiveApiKey,
@@ -439,7 +460,7 @@ export const AiChatStation: React.FC = () => {
           temperature
         );
       } else {
-        // NẾU CHƯA CÓ API KEY -> GỌI QUA BACKEND WORKER
+        // Fallback gọi qua backend nếu chưa tải được key
         const res = await fetch("/api/ai/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -461,7 +482,7 @@ export const AiChatStation: React.FC = () => {
         const errorModelMsg: ChatMessage = {
           id: `err-${Date.now()}`,
           role: "model",
-          content: result.reply || "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
+          content: result.reply || "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy thử đổi sang Model khác nhé! 🐱💾",
           timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
           isError: true,
           errorDetail: result.errorDetail || result.error || "Lỗi không xác định khi kết nối với máy chủ Google AI Studio.",
@@ -648,9 +669,13 @@ export const AiChatStation: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] font-mono">
-            {userApiKey ? (
+            {userCustomApiKey ? (
+              <span className="bg-vapor-yellow text-black px-2 py-0.5 font-bold border border-black shadow-xs">
+                🔑 KEY CÁ NHÂN
+              </span>
+            ) : systemApiKey ? (
               <span className="bg-[#05ffa1] text-black px-2 py-0.5 font-bold border border-black shadow-xs">
-                🟢 CLIENT DIRECT // 100% BYPASS
+                ⚡ KEY HỆ THỐNG (SẴN SÀNG)
               </span>
             ) : (
               <span className="bg-black text-vapor-green px-2 py-0.5 font-bold">
@@ -682,7 +707,7 @@ export const AiChatStation: React.FC = () => {
               onClick={() => setActiveTab("settings")}
               className={`font-bold hover:underline ${activeTab === 'settings' ? 'text-vapor-purple underline font-black' : 'text-black'}`}
             >
-              ⚙️ Cấu Hình & API Key
+              ⚙️ Cấu Hình & Model
             </button>
           </div>
 
@@ -833,9 +858,9 @@ export const AiChatStation: React.FC = () => {
             {/* Connection Status Box */}
             <div className="p-2 bg-[#c0c0c0] border border-win-dark text-[10px] font-mono space-y-1">
               <div className="flex justify-between items-center">
-                <span>Chế độ kết nối:</span>
-                <span className={`font-bold px-1 py-0.2 ${userApiKey ? 'bg-[#05ffa1] text-black' : 'bg-black text-vapor-yellow'}`}>
-                  {userApiKey ? '🔑 Trực Tiếp Browser' : '☁️ Cloudflare Edge'}
+                <span>Nguồn API Key:</span>
+                <span className={`font-bold px-1 py-0.2 ${userCustomApiKey ? 'bg-vapor-yellow text-black' : systemApiKey ? 'bg-[#05ffa1] text-black' : 'bg-black text-white'}`}>
+                  {userCustomApiKey ? '🔑 Key Cá Nhân' : systemApiKey ? '⚡ Key Mặc Định Sẵn Có' : '☁️ Server Cloudflare'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -913,14 +938,13 @@ export const AiChatStation: React.FC = () => {
                           ))}
                         </div>
 
-                        {/* Inline API Key Activation Card if Location Blocked or Error */}
+                        {/* Optional Key Switcher if Quota Error occurs */}
                         {msg.isError && (
                           <div className="mt-3 pt-2 border-t border-red-300 font-mono space-y-2">
-                            {/* Bypass Card */}
-                            <div className="bg-[#fffb96]/60 border-2 border-dashed border-vapor-purple p-2.5 space-y-2 rounded-xs">
+                            <div className="bg-[#fffb96]/60 border border-win-dark p-2.5 space-y-2 rounded-xs">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-xs text-vapor-purple flex items-center gap-1">
-                                  <span>🔑</span> GIẢI PHÁP BỎ QUA CHẶN IP CLOUDFLARE 100%:
+                                  <span>⚡</span> TÙY CHỌN: ĐỔI SANG API KEY CÁ NHÂN KHI HỆ THỐNG QUÁ TẢI
                                 </span>
                                 <a
                                   href="https://aistudio.google.com/"
@@ -928,16 +952,16 @@ export const AiChatStation: React.FC = () => {
                                   rel="noopener noreferrer"
                                   className="text-[10px] text-blue-700 underline font-bold"
                                 >
-                                  Lấy API Key Miễn Phí ↗
+                                  Lấy Key Miễn Phí ↗
                                 </a>
                               </div>
                               <p className="text-[11px] text-black font-body leading-tight">
-                                Do Google chặn IP máy chủ Cloudflare tại Châu Á, bạn chỉ cần dán <strong>API Key Google AI Studio</strong> vào ô dưới. Trình duyệt của bạn sẽ gọi trực tiếp sang Google mà không qua Cloudflare Edge, đảm bảo hoạt động 100%!
+                                Nếu khóa AI mặc định của trang web đang bị quá tải hoặc hết hạn mức trong ngày, bạn có thể tự đổi sang API Key cá nhân của bạn để tiếp tục trò chuyện.
                               </p>
                               <div className="flex flex-col sm:flex-row gap-1.5">
                                 <input
                                   type="password"
-                                  placeholder="Dán API Key (AIzaSy...)"
+                                  placeholder="Dán API Key cá nhân (AIzaSy...)"
                                   value={inlineKeyInput}
                                   onChange={(e) => setInlineKeyInput(e.target.value)}
                                   className="win95-sunken bg-white p-1.5 text-xs font-mono flex-1 border border-win-dark"
@@ -946,8 +970,7 @@ export const AiChatStation: React.FC = () => {
                                   type="button"
                                   onClick={() => {
                                     if (inlineKeyInput.trim()) {
-                                      handleSaveApiKey(inlineKeyInput);
-                                      // Thử gửi lại tin nhắn trước đó
+                                      handleSaveCustomApiKey(inlineKeyInput);
                                       const lastUserMsg = currentSession?.messages.filter(m => m.role === "user").slice(-1)[0];
                                       if (lastUserMsg) {
                                         handleSendMessage(lastUserMsg.content, inlineKeyInput.trim());
@@ -956,9 +979,9 @@ export const AiChatStation: React.FC = () => {
                                       alert("Vui lòng nhập API Key.");
                                     }
                                   }}
-                                  className="win95-btn py-1.5 px-3 text-xs font-extrabold bg-[#05ffa1] text-black border border-black shrink-0 hover:bg-[#04df8d]"
+                                  className="win95-btn py-1.5 px-3 text-xs font-bold bg-[#05ffa1] text-black border border-black shrink-0 hover:bg-[#04df8d]"
                                 >
-                                  💾 Lưu & Gửi Lại Ngay &gt;&gt;
+                                  💾 Đổi Key & Thử Lại
                                 </button>
                               </div>
                             </div>
@@ -1173,64 +1196,12 @@ export const AiChatStation: React.FC = () => {
             {activeTab === "settings" && (
               <div className="space-y-4 p-3 h-[550px] overflow-y-auto">
                 <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
-                  <span>⚙️ TÙY CHỈNH THÔNG SỐ AI & API KEY</span>
+                  <span>⚙️ TÙY CHỈNH THÔNG SỐ AI & MODEL</span>
                 </div>
 
                 <div className="win95-container bg-white p-4 space-y-4 text-xs">
-                  {/* Personal API Key Config (Bypass Cloudflare Edge IP Block) */}
-                  <div className="p-3 bg-[#fffb96]/30 border-2 border-win-dark space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="font-bold uppercase tracking-wide text-vapor-purple flex items-center gap-1.5">
-                        <span>🔑</span> API Key Google AI Studio Cá Nhân:
-                      </label>
-                      <a
-                        href="https://aistudio.google.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-blue-700 underline font-bold"
-                      >
-                        Lấy API Key Miễn Phí Tại Đây ↗
-                      </a>
-                    </div>
-                    <p className="text-[11px] text-black leading-relaxed">
-                      Khi nhập API Key cá nhân, toàn bộ truy vấn sẽ được trình duyệt của bạn gọi <strong>trực tiếp tới Google</strong>, giải quyết triệt để lỗi chặn vị trí địa lý <code>User location is not supported</code> từ máy chủ Cloudflare. Khóa được lưu an toàn trên máy bạn.
-                    </p>
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        placeholder="Nhập khóa API Key (AIzaSy...)"
-                        value={userApiKey}
-                        onChange={(e) => setUserApiKey(e.target.value)}
-                        className="w-full p-2 border border-win-dark bg-white font-mono text-xs"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveApiKey(userApiKey)}
-                        className="win95-btn py-1.5 px-4 font-bold text-xs bg-[#05ffa1] text-black border border-black shrink-0"
-                      >
-                        💾 Lưu
-                      </button>
-                      {userApiKey && (
-                        <button
-                          type="button"
-                          onClick={() => handleSaveApiKey("")}
-                          className="win95-btn py-1.5 px-3 font-bold text-xs bg-red-100 text-red-700 shrink-0"
-                        >
-                          Xóa
-                        </button>
-                      )}
-                    </div>
-                    <div className="text-[10px] font-mono">
-                      {userApiKey ? (
-                        <span className="text-green-700 font-bold">● Đang kích hoạt chế độ Gọi Trực Tiếp Từ Trình Duyệt (Bypass 100% Chặn IP)</span>
-                      ) : (
-                        <span className="text-win-dark font-bold">● Đang dùng kết nối mặc định qua Máy chủ Cloudflare</span>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Model Choice */}
-                  <div className="space-y-1.5 pt-2">
+                  <div className="space-y-1.5">
                     <label className="font-bold uppercase tracking-wide block">
                       ⚡ Lựa chọn Model Google AI Studio:
                     </label>
@@ -1257,6 +1228,61 @@ export const AiChatStation: React.FC = () => {
                         Tự động chuyển tiếp (Fallback) sang Model khác nếu Model được chọn bị lỗi Quota / quá tải
                       </span>
                     </label>
+                  </div>
+
+                  {/* Optional Custom API Key Config */}
+                  <div className="p-3 bg-[#fffb96]/30 border-2 border-win-dark space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="font-bold uppercase tracking-wide text-vapor-purple flex items-center gap-1.5">
+                        <span>🔑</span> Tự Đổi API Key Khi Quá Tải:
+                      </label>
+                      <a
+                        href="https://aistudio.google.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-blue-700 underline font-bold"
+                      >
+                        Lấy API Key Miễn Phí ↗
+                      </a>
+                    </div>
+                    <p className="text-[11px] text-black leading-relaxed font-body">
+                      Hệ thống đã tự động tích hợp sẵn API Key mặc định của trang web. Bạn chỉ cần nhập API Key cá nhân vào đây khi khóa mặc định bị hết hạn mức Quota trong ngày hoặc khi bạn muốn dùng hạn mức riêng.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        placeholder="Nhập khóa API Key cá nhân của bạn (AIzaSy...)"
+                        value={userCustomApiKey}
+                        onChange={(e) => setUserCustomApiKey(e.target.value)}
+                        className="w-full p-2 border border-win-dark bg-white font-mono text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveCustomApiKey(userCustomApiKey)}
+                        className="win95-btn py-1.5 px-4 font-bold text-xs bg-[#05ffa1] text-black border border-black shrink-0"
+                      >
+                        💾 Lưu
+                      </button>
+                      {userCustomApiKey && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveCustomApiKey("")}
+                          className="win95-btn py-1.5 px-3 font-bold text-xs bg-red-100 text-red-700 shrink-0"
+                          title="Khôi phục về dùng Key mặc định của hệ thống"
+                        >
+                          🔄 Khôi Phục Mặc Định
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-mono">
+                      {userCustomApiKey ? (
+                        <span className="text-vapor-purple font-bold">● Đang dùng API Key Cá Nhân (Đã ghi đè thành công)</span>
+                      ) : systemApiKey ? (
+                        <span className="text-green-700 font-bold">● Đang dùng API Key Mặc Định Của Hệ Thống (Sẵn Sàng)</span>
+                      ) : (
+                        <span className="text-win-dark font-bold">● Đang kết nối máy chủ Cloudflare</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Temperature */}
@@ -1320,7 +1346,7 @@ export const AiChatStation: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-win-dark font-mono">
-              {userApiKey ? "Client-Side Direct Mode" : "Cloudflare Edge Engine"}
+              {userCustomApiKey ? "Custom User Key" : "System Default Key (Direct Engine)"}
             </span>
             <span className="win95-statusbar-panel font-mono font-bold text-win-titlebar">READY</span>
           </div>
