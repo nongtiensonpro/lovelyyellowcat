@@ -63,42 +63,36 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
   // 2. Fetch danh sách submissions từ database
   const fetchSubmissions = async () => {
     setLoading(true);
-    if (isFavoritesOnly) {
-      if (!currentUser?.id) {
-        setSubmissions([]);
-        setLoading(false);
-        return;
-      }
-      const { data, error } = await supabaseClient
-        .from("favorites")
-        .select(`
-          saved_at,
-          submissions:submissions!submission_id(
-            *,
-            profiles:profiles!author_id(full_name, avatar_url)
-          )
-        `)
-        .eq("profile_id", currentUser.id)
-        .order("saved_at", { ascending: false });
+    try {
+      if (isFavoritesOnly) {
+        if (!currentUser?.id) {
+          setSubmissions([]);
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/favorites");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.submissions)) {
+            setSubmissions(data.submissions as Submission[]);
+          }
+        }
+      } else {
+        const { data, error } = await supabaseClient
+          .from("submissions")
+          .select("*, profiles:profiles!author_id(full_name, avatar_url)")
+          .eq("status", "approved")
+          .order("created_at", { ascending: false });
 
-      if (!error && data) {
-        const mapped = data
-          .map((f: any) => f.submissions)
-          .filter((s: any) => s !== null && s.status === "approved");
-        setSubmissions(mapped as Submission[]);
+        if (!error && data) {
+          setSubmissions(data as Submission[]);
+        }
       }
-    } else {
-      const { data, error } = await supabaseClient
-        .from("submissions")
-        .select("*, profiles:profiles!author_id(full_name, avatar_url)")
-        .eq("status", "approved")
-        .order("created_at", { ascending: false });
-
-      if (!error && data) {
-        setSubmissions(data as Submission[]);
-      }
+    } catch (err) {
+      console.error("Lỗi khi tải tranh:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -409,7 +403,17 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                       💜 {reactionCount}
                     </td>
                     <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
-                      <FavoriteButton submissionId={sub.id} currentUser={currentUser} variant="button" />
+                      <FavoriteButton 
+                        submissionId={sub.id} 
+                        currentUser={currentUser} 
+                        variant="button"
+                        initialIsFavorited={isFavoritesOnly ? true : undefined}
+                        onToggle={(isFav) => {
+                          if (isFavoritesOnly && !isFav) {
+                            setSubmissions((prev) => prev.filter((s) => s.id !== sub.id));
+                          }
+                        }}
+                      />
                     </td>
                   </tr>
                 );
@@ -487,6 +491,12 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                       submissionId={sub.id}
                       currentUser={currentUser}
                       variant="icon"
+                      initialIsFavorited={isFavoritesOnly ? true : undefined}
+                      onToggle={(isFav) => {
+                        if (isFavoritesOnly && !isFav) {
+                          setSubmissions((prev) => prev.filter((s) => s.id !== sub.id));
+                        }
+                      }}
                     />
                   </div>
                 </div>

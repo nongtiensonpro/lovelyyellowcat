@@ -8,8 +8,9 @@ interface FavoriteButtonProps {
   currentUser: {
     id: string;
   } | null;
-  variant?: "win95" | "icon";
+  variant?: "win95" | "icon" | "button";
   id?: string;
+  initialIsFavorited?: boolean;
   onToggle?: (isFavorited: boolean) => void;
 }
 
@@ -17,9 +18,10 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   submissionId,
   currentUser,
   variant = "win95",
+  initialIsFavorited = false,
   onToggle
 }) => {
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -28,22 +30,22 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     Math.random().toString(36).substring(2, 8)
   );
 
-  // Kiểm tra trạng thái yêu thích ban đầu từ database (đọc công khai)
+  // Kiểm tra trạng thái yêu thích ban đầu từ server API
   useEffect(() => {
     if (!currentUser) return;
 
+    let isMounted = true;
     const checkFavoriteStatus = async () => {
-      const { data, error } = await supabaseClient
-        .from("favorites")
-        .select("submission_id")
-        .eq("profile_id", currentUser.id)
-        .eq("submission_id", submissionId)
-        .maybeSingle();
-
-      if (!error && data) {
-        setIsFavorited(true);
-      } else if (!error && !data) {
-        setIsFavorited(false);
+      try {
+        const res = await fetch(`/api/favorites?submission_id=${submissionId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setIsFavorited(!!data.isFavorited);
+          }
+        }
+      } catch {
+        // Giữ trạng thái hiện tại
       }
     };
 
