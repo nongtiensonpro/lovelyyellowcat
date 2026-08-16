@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import RibbonCard from "../components/RibbonCard.astro";
 import RetroSticker from "../components/RetroSticker.astro";
 import CrtMonitorFrame from "../components/CrtMonitorFrame.astro";
+import ServerStatusWidget from "../components/ServerStatusWidget.astro";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
 const supabase = createSupabaseServerClient({
@@ -102,45 +103,8 @@ const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "per
     <!-- LEFT COLUMN (4 / 12 cols = ~33% desktop) -->
     <aside class="lg:col-span-4 space-y-6">
       
-      <!-- System Status Window -->
-      <div class="win95-window">
-        <div class="win95-header py-1 px-2">
-          <div class="flex items-center gap-1.5">
-            <span>💾</span>
-            <span class="font-bold text-xs">SYSTEM_STATUS.EXE</span>
-          </div>
-          <button class="win95-btn py-0 px-1 text-[9px]" style="min-height: 16px;">?</button>
-        </div>
-
-        <div class="win95-menubar">
-          <span>Info</span>
-          <span>Diagnostics</span>
-        </div>
-
-        <div class="p-3 bg-white text-black font-retro text-xs space-y-2.5">
-          <div class="flex justify-between items-center border-b border-win-dark pb-1">
-            <span class="font-bold text-win-darkest">Máy chủ mạng:</span>
-            <span class="text-vapor-purple font-mono font-bold">NODE_TOKYO_95</span>
-          </div>
-          <div class="flex justify-between items-center border-b border-win-dark pb-1">
-            <span class="font-bold text-win-darkest">Bản phát hành:</span>
-            <span class="font-mono font-bold">v2.5.0-AESTHETIC</span>
-          </div>
-          <div class="flex justify-between items-center border-b border-win-dark pb-1">
-            <span class="font-bold text-win-darkest">Bài viết đã nạp:</span>
-            <span class="font-mono font-bold text-vapor-pink">{articles.length} bài</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-win-darkest">Độ phân giải:</span>
-            <span class="font-mono font-bold">1024 x 768 (SVGA)</span>
-          </div>
-        </div>
-
-        <div class="win95-statusbar justify-between text-[10px]">
-          <span>Mạng lưới hoạt động bình thường</span>
-          <span class="win95-statusbar-panel font-bold text-vapor-green">ONLINE</span>
-        </div>
-      </div>
+      <!-- Server Status Monitor Widget (Live API) -->
+      <ServerStatusWidget />
 
       <!-- Quick Catalog Categories (Dell 1996 Style Nav Rail) -->
       <div class="win95-window">

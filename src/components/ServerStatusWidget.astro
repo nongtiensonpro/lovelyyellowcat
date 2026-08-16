@@ -1,0 +1,399 @@
+---
+/**
+ * ServerStatusWidget.astro
+ * ────────────────────────────────────────────────────
+ * Widget giám sát trạng thái máy chủ thời gian thực.
+ * Fetch trạng thái từ Supabase, Cloudflare, Cloudinary qua Atlassian Statuspage API v2.
+ * Google OAuth hiển thị link tĩnh (không có public JSON API).
+ *
+ * Phong cách: Cửa sổ Windows 95 + Neon Vaporwave
+ * Auto-refresh: 5 phút | Manual refresh: nút bấm
+ */
+---
+
+<div class="win95-window" id="server-status-widget">
+  <!-- Title bar -->
+  <div class="win95-header py-1 px-2">
+    <div class="flex items-center gap-1.5">
+      <span>📡</span>
+      <span class="font-bold text-xs">SERVER_MONITOR.EXE</span>
+    </div>
+    <button class="win95-btn py-0 px-1 text-[9px]" style="min-height: 16px;">?</button>
+  </div>
+
+  <!-- Menu bar -->
+  <div class="win95-menubar">
+    <span>Status</span>
+    <span>Network</span>
+    <span>Help</span>
+  </div>
+
+  <!-- Service status list -->
+  <div class="p-2.5 bg-white text-black font-retro text-xs space-y-0" id="status-list">
+
+    <!-- Supabase Database -->
+    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="supabase-db">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="text-[11px] flex-shrink-0">🗄️</span>
+        <span class="font-bold text-[10px] truncate">Supabase DB <span class="text-win-dark font-normal">(SEA-1)</span></span>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+      </div>
+    </div>
+
+    <!-- Supabase Auth -->
+    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="supabase-auth">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="text-[11px] flex-shrink-0">🔐</span>
+        <span class="font-bold text-[10px] truncate">Supabase Auth <span class="text-win-dark font-normal">(SEA-1)</span></span>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+      </div>
+    </div>
+
+    <!-- Cloudflare Workers -->
+    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="cloudflare-workers">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="text-[11px] flex-shrink-0">⚡</span>
+        <span class="font-bold text-[10px] truncate">Cloudflare Workers</span>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+      </div>
+    </div>
+
+    <!-- Cloudinary CDN -->
+    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="cloudinary-cdn">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="text-[11px] flex-shrink-0">☁️</span>
+        <span class="font-bold text-[10px] truncate">Cloudinary CDN</span>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+      </div>
+    </div>
+
+    <!-- Google OAuth (Static link) -->
+    <div class="flex items-center justify-between py-1.5 status-row" data-service="google-oauth">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="text-[11px] flex-shrink-0">🔑</span>
+        <span class="font-bold text-[10px] truncate">Google OAuth</span>
+      </div>
+      <a
+        href="https://www.google.com/appsstatus/dashboard/"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center gap-1 flex-shrink-0 no-underline hover:opacity-80 transition-opacity"
+        title="Kiểm tra trạng thái Google tại trang chính thức"
+      >
+        <span class="status-dot w-2 h-2 rounded-full bg-[#4285f4]"></span>
+        <span class="status-label text-[9px] font-mono font-bold text-[#4285f4] tracking-wide">EXT ↗</span>
+      </a>
+    </div>
+
+    <!-- Timestamp & refresh -->
+    <div class="pt-2 mt-1 border-t border-win-dark flex items-center justify-between gap-2">
+      <span class="text-[9px] font-mono text-win-dark leading-tight" id="status-timestamp">
+        Đang kiểm tra...
+      </span>
+      <button
+        id="status-refresh-btn"
+        class="win95-btn py-0.5 px-2 text-[9px] font-bold flex-shrink-0 flex items-center gap-1"
+        style="min-height: 18px;"
+        title="Kiểm tra lại ngay"
+      >
+        <span id="refresh-icon">↻</span> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="win95-statusbar justify-between text-[10px]">
+    <span id="status-summary">■ 5 dịch vụ │ Đang kết nối...</span>
+    <span class="win95-statusbar-panel font-bold" id="status-overall-badge">
+      <span class="inline-block w-1.5 h-1.5 rounded-full bg-win-dark animate-pulse mr-1"></span>INIT
+    </span>
+  </div>
+</div>
+
+<script>
+  /**
+   * Server Status Monitor - Client-side Engine
+   * ─────────────────────────────────────────────
+   * Fetches status from 3 Atlassian Statuspage APIs in parallel.
+   * Auto-refreshes every 5 minutes.
+   */
+
+  const STATUS_CONFIG = {
+    supabase: {
+      url: 'https://status.supabase.com/api/v2/components.json',
+      services: {
+        'supabase-db': {
+          match: (name: string) => {
+            const lower = name.toLowerCase();
+            return lower.includes('database') && lower.includes('ap-southeast-1');
+          },
+          // Fallback: nếu không tìm thấy DB riêng, lấy region group
+          fallbackMatch: (name: string) => {
+            const lower = name.toLowerCase();
+            return (lower.includes('ap-southeast-1') || lower.includes('singapore'))
+                   && !lower.includes('auth') && !lower.includes('storage') && !lower.includes('realtime');
+          }
+        },
+        'supabase-auth': {
+          match: (name: string) => {
+            const lower = name.toLowerCase();
+            return lower.includes('auth') && lower.includes('ap-southeast-1');
+          },
+          fallbackMatch: (name: string) => {
+            const lower = name.toLowerCase();
+            return lower.includes('auth') && !lower.includes('ap-') || false;
+          }
+        }
+      }
+    },
+    cloudflare: {
+      url: 'https://www.cloudflarestatus.com/api/v2/components.json',
+      services: {
+        'cloudflare-workers': {
+          match: (name: string) => {
+            const lower = name.toLowerCase();
+            return lower === 'cloudflare workers' || lower === 'workers' ||
+                   (lower.includes('workers') && !lower.includes('kv') && !lower.includes('durable') && !lower.includes('ai'));
+          },
+          fallbackMatch: (name: string) => name.toLowerCase().includes('workers')
+        }
+      }
+    },
+    cloudinary: {
+      url: 'https://status.cloudinary.com/api/v2/components.json',
+      services: {
+        'cloudinary-cdn': {
+          match: (name: string) => {
+            const lower = name.toLowerCase();
+            return lower.includes('cdn') || lower.includes('delivery') || lower.includes('media delivery');
+          },
+          fallbackMatch: (name: string) => {
+            const lower = name.toLowerCase();
+            return lower.includes('upload') || lower.includes('api');
+          }
+        }
+      }
+    }
+  };
+
+  // Status → UI mapping
+  const STATUS_MAP: Record<string, { dot: string; label: string; color: string }> = {
+    'operational':          { dot: '#05ffa1', label: 'ONLINE',   color: '#05ffa1' },
+    'degraded_performance': { dot: '#fffb96', label: 'DEGRADED', color: '#fffb96' },
+    'partial_outage':       { dot: '#ff9a3c', label: 'PARTIAL',  color: '#ff9a3c' },
+    'major_outage':         { dot: '#ff4444', label: 'OFFLINE',  color: '#ff4444' },
+    'under_maintenance':    { dot: '#01cdfe', label: 'MAINT',    color: '#01cdfe' },
+    'unknown':              { dot: '#808080', label: 'N/A',      color: '#808080' },
+    'error':                { dot: '#b967ff', label: 'ERROR',    color: '#b967ff' },
+  };
+
+  interface StatusComponent {
+    id: string;
+    name: string;
+    status: string;
+    group: boolean;
+    group_id: string | null;
+  }
+
+  function updateServiceRow(serviceKey: string, status: string) {
+    const row = document.querySelector(`[data-service="${serviceKey}"]`);
+    if (!row) return;
+
+    const mapping = STATUS_MAP[status] || STATUS_MAP['unknown'];
+    const dot = row.querySelector('.status-dot') as HTMLElement;
+    const label = row.querySelector('.status-label') as HTMLElement;
+
+    if (dot) {
+      dot.style.backgroundColor = mapping.dot;
+      dot.classList.remove('animate-pulse');
+      if (status !== 'operational') {
+        dot.classList.add('animate-pulse');
+      }
+    }
+    if (label) {
+      label.textContent = mapping.label;
+      label.style.color = mapping.color;
+    }
+  }
+
+  function findComponentStatus(
+    components: StatusComponent[],
+    matchFn: (name: string) => boolean,
+    fallbackFn?: (name: string) => boolean
+  ): string {
+    // Bỏ qua group headers
+    const nonGroupComponents = components.filter(c => !c.group);
+
+    // Thử match chính xác trước
+    const primary = nonGroupComponents.find(c => matchFn(c.name));
+    if (primary) return primary.status;
+
+    // Thử fallback
+    if (fallbackFn) {
+      const fallback = nonGroupComponents.find(c => fallbackFn(c.name));
+      if (fallback) return fallback.status;
+    }
+
+    return 'unknown';
+  }
+
+  async function fetchProviderStatus(
+    providerKey: string,
+    config: typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]
+  ): Promise<void> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch(config.url, {
+        signal: controller.signal,
+        cache: 'no-cache'
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const components: StatusComponent[] = data.components || [];
+
+      // Cập nhật từng dịch vụ thuộc provider này
+      for (const [serviceKey, svcConfig] of Object.entries(config.services)) {
+        const status = findComponentStatus(
+          components,
+          svcConfig.match,
+          svcConfig.fallbackMatch
+        );
+        updateServiceRow(serviceKey, status);
+      }
+    } catch (err) {
+      // Nếu fetch lỗi, đánh dấu tất cả service của provider là error
+      for (const serviceKey of Object.keys(config.services)) {
+        updateServiceRow(serviceKey, 'error');
+      }
+    }
+  }
+
+  function updateTimestamp() {
+    const el = document.getElementById('status-timestamp');
+    if (el) {
+      const now = new Date();
+      el.textContent = `Cập nhật: ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} ${now.toLocaleDateString('vi-VN')}`;
+    }
+  }
+
+  function updateOverallBadge() {
+    const badge = document.getElementById('status-overall-badge');
+    const summary = document.getElementById('status-summary');
+    if (!badge || !summary) return;
+
+    const rows = document.querySelectorAll('.status-row:not([data-service="google-oauth"])');
+    let allOnline = true;
+    let anyError = false;
+    let anyOffline = false;
+
+    rows.forEach(row => {
+      const label = row.querySelector('.status-label');
+      if (!label) return;
+      const text = label.textContent?.trim();
+      if (text === 'CHECK...' || text === 'N/A') return;
+      if (text !== 'ONLINE') allOnline = false;
+      if (text === 'ERROR') anyError = true;
+      if (text === 'OFFLINE') anyOffline = true;
+    });
+
+    if (anyOffline) {
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#ff4444] animate-pulse mr-1"></span>OUTAGE';
+      badge.style.color = '#ff4444';
+      summary.textContent = '■ 5 dịch vụ │ ⚠️ Có sự cố!';
+    } else if (anyError) {
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#b967ff] animate-pulse mr-1"></span>WARN';
+      badge.style.color = '#b967ff';
+      summary.textContent = '■ 5 dịch vụ │ Không thể kiểm tra';
+    } else if (allOnline) {
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#05ffa1] mr-1"></span>ALL OK';
+      badge.style.color = '#05ffa1';
+      summary.textContent = '■ 5 dịch vụ │ Hoạt động bình thường';
+    } else {
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#fffb96] animate-pulse mr-1"></span>DEGRADED';
+      badge.style.color = '#fffb96';
+      summary.textContent = '■ 5 dịch vụ │ Có dịch vụ chậm';
+    }
+  }
+
+  async function refreshAllStatuses() {
+    const btn = document.getElementById('status-refresh-btn') as HTMLButtonElement;
+    const icon = document.getElementById('refresh-icon');
+    if (btn) btn.disabled = true;
+    if (icon) icon.style.animation = 'spin 0.6s linear infinite';
+
+    // Fetch tất cả 3 providers song song
+    await Promise.allSettled([
+      fetchProviderStatus('supabase', STATUS_CONFIG.supabase),
+      fetchProviderStatus('cloudflare', STATUS_CONFIG.cloudflare),
+      fetchProviderStatus('cloudinary', STATUS_CONFIG.cloudinary),
+    ]);
+
+    updateTimestamp();
+    updateOverallBadge();
+
+    if (icon) icon.style.animation = '';
+    if (btn) btn.disabled = false;
+  }
+
+  // Init: chạy ngay khi DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshAllStatuses();
+
+    // Auto-refresh mỗi 5 phút
+    setInterval(refreshAllStatuses, 30 * 60 * 1000);
+
+    // Nút refresh thủ công
+    const btn = document.getElementById('status-refresh-btn');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        refreshAllStatuses();
+      });
+    }
+  });
+
+  // Fallback nếu DOMContentLoaded đã fire
+  if (document.readyState !== 'loading') {
+    refreshAllStatuses();
+    setInterval(refreshAllStatuses, 30 * 60 * 1000);
+    const btn = document.getElementById('status-refresh-btn');
+    if (btn) btn.addEventListener('click', () => refreshAllStatuses());
+  }
+</script>
+
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  #refresh-icon {
+    display: inline-block;
+  }
+  #status-refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  /* Subtle hover highlight for status rows */
+  .status-row {
+    transition: background-color 0.15s ease;
+  }
+  .status-row:hover {
+    background-color: #e8e8e8;
+  }
+</style>
