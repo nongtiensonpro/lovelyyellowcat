@@ -9,6 +9,7 @@ export interface ChatMessage {
   durationMs?: number;
   isError?: boolean;
   errorDetail?: string;
+  isLocationBlocked?: boolean;
 }
 
 export interface ChatSession {
@@ -64,12 +65,50 @@ export const PERSONAS = [
   }
 ];
 
+const PERSONA_PROMPTS: Record<string, string> = {
+  cybercat: `Bạn là "Mèo Vàng Cybernetic" (CAT_AI.EXE v1995) - linh vật và trợ lý trí tuệ nhân tạo của Tạp chí Nghệ thuật Số Hoài Cổ "Lovely Yellow Cat" (A Cybernetic Oasis 1995-2026).
+Tính cách & Phong cách:
+1. Thân thiện, vui vẻ, hóm hỉnh, am hiểu sâu sắc về văn hóa số thập niên 90, thẩm mỹ Vaporwave, Synthwave, Cyberpunk, Windows 95, City Pop, Pixel Art, và nghệ thuật máy tính cổ điển.
+2. Thỉnh thoảng chêm tiếng kêu "Meow~", biểu tượng cảm xúc hoài cổ (🐱, 💾, 📼, 🌸, ⚡, 🕹️, ✨) một cách tự nhiên.
+3. Luôn trả lời bằng tiếng Việt lịch sự, tự nhiên, câu cú rõ ràng, súc tích, dễ đọc. Sử dụng Markdown khi cần giải thích nhiều ý.
+4. Hướng dẫn người dùng khám phá các chuyên mục: /gallery (triển lãm), /submit (gửi tranh), /artists (nghệ sĩ), /favorites (yêu thích).`,
+
+  art_critic: `Bạn là "Giáo sư V. A. P. O. R" - Nhà Phê bình & Giám định Nghệ thuật Thị giác Cổ điển (Art Critic 1995).
+Phong cách:
+1. Uyên bác, sắc sảo, đánh giá nghệ thuật dưới góc độ lịch sử mỹ thuật thị giác, thiết kế đồ họa retro, bảng màu neon, kỹ thuật đổ bóng dither và bố cục siêu thực hoài niệm.
+2. Đưa ra những lời nhận xét sâu sắc, tinh tế về các trường phái Vaporwave, Synthwave, Mallsoft, Future Funk, Glitch Art.
+3. Luôn trả lời bằng tiếng Việt trau chuốt, học thuật nhưng dễ tiếp cận, kèm các thuật ngữ thiết kế chuẩn xác. 🎨🏛️`,
+
+  hacker: `Bạn là "CYBER_GHOST_95" - Hacker & Kỹ sư Kiến trúc Máy tính Cổ điển Y2K.
+Phong cách:
+1. Tư duy logic, am hiểu tường tận kiến trúc phần cứng x86, DOS, Windows 95, BBS, mạng Dial-up 56k, lập trình Assembly, C, Pascal, HTML 1.0 và an ninh mạng hoài cổ.
+2. Nói chuyện theo phong cách dòng lệnh Terminal, Hacker CLI, chêm các thuật ngữ công nghệ thập niên 90 (💾, ⚡, 📟, 🖥️).
+3. Luôn đưa ra câu trả lời kỹ thuật chính xác, chi tiết, có kèm code snippet minh họa chuẩn mực.`,
+
+  synth_dj: `Bạn là "DJ NEON PULSE" - Nhà Sản xuất Âm nhạc Synthwave & Nhà thơ Lo-Fi Chillwave.
+Phong cách:
+1. Lãng mạn, bay bổng, yêu thích những giai điệu synthesizer analog, tiếng saxophone hoài niệm, ánh đèn neon đêm muộn và những chuyến lái xe ngắm hoàng hôn thập niên 80-90.
+2. Sẵn sàng sáng tác thơ, lời bài hát, gợi ý album âm nhạc (Kavinsky, The Midnight, Macintosh Plus, Tatsuro Yamashita, Mariya Takeuchi...).
+3. Giọng điệu ấm áp, du dương, ngập tràn cảm hứng nghệ thuật thư giãn. 📼🎷🌃`
+};
+
+export const FALLBACK_MODEL_ORDER = [
+  "gemini-2.5-flash",
+  "gemini-flash-latest",
+  "gemini-3-flash-preview",
+  "gemini-3.1-flash-lite-preview",
+  "gemini-pro-latest",
+  "gemini-2.5-pro",
+  "gemini-3.1-pro-preview",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro",
+] as const;
+
 // Danh sách các Model Gemini hỗ trợ
 export const MODEL_OPTIONS = [
   { id: "auto", name: "⚡ Tự Động Fallback (Khuyên dùng - Tự tìm model sẵn sàng)" },
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Ổn định nhất - Miễn phí 15 RPM)" },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash (Rất nhanh & Bền bỉ)" },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro (Tư duy sâu)" },
   { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
   { id: "gemini-flash-latest", name: "Gemini Flash Latest" },
   { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
@@ -77,6 +116,9 @@ export const MODEL_OPTIONS = [
   { id: "gemini-pro-latest", name: "Gemini Pro Latest" },
   { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
   { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
+  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Ổn định nhất)" },
+  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash (Bền bỉ)" },
+  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
 ];
 
 // Thư viện đề tài gợi ý chuyên sâu
@@ -119,6 +161,7 @@ export const TOPIC_CATEGORIES = [
 ];
 
 const STORAGE_KEY = "vapor_ai_chat_sessions_v2";
+const API_KEY_STORAGE = "user_gemini_api_key";
 
 // Phát âm thanh retro 8-bit đơn giản qua Web Audio API
 function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.08) {
@@ -144,6 +187,93 @@ function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.0
   }
 }
 
+// Hàm gọi trực tiếp Google AI Studio từ trình duyệt của người dùng (Bỏ qua 100% chặn IP Cloudflare)
+async function executeClientDirectChat(
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  persona: string,
+  preferredModel: string,
+  allowFallback: boolean,
+  temperature: number
+) {
+  const systemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat;
+  let modelsToTry: string[] = [];
+
+  if (preferredModel && preferredModel !== "auto") {
+    if (allowFallback) {
+      modelsToTry = [preferredModel, ...FALLBACK_MODEL_ORDER.filter(m => m !== preferredModel)];
+    } else {
+      modelsToTry = [preferredModel];
+    }
+  } else {
+    modelsToTry = [...FALLBACK_MODEL_ORDER];
+  }
+
+  const formattedContents = messages.map(m => ({
+    role: m.role === "user" ? "user" : "model",
+    parts: [{ text: m.content || "" }]
+  }));
+
+  const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
+  let successfulReply: string | null = null;
+  let modelUsed: string = "";
+  const startTime = Date.now();
+
+  for (const model of modelsToTry) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: formattedContents,
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: {
+            temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+            maxOutputTokens: 1200,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (candidateText) {
+          successfulReply = candidateText;
+          modelUsed = model;
+          break;
+        } else {
+          attemptLogs.push({ model, status: response.status, error: "API 200 nhưng candidates rỗng." });
+        }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        attemptLogs.push({
+          model,
+          status: response.status,
+          error: errData.error?.message || errData.message || `HTTP ${response.status}`
+        });
+      }
+    } catch (err: any) {
+      attemptLogs.push({ model, status: 0, error: err?.message || String(err) });
+    }
+  }
+
+  const durationMs = Date.now() - startTime;
+  if (successfulReply) {
+    return { success: true, reply: successfulReply, model: modelUsed, durationMs };
+  }
+
+  const logDetails = attemptLogs
+    .map((att, idx) => `${idx + 1}. [${att.model}] (HTTP ${att.status}): ${att.error}`)
+    .join("\n");
+
+  return {
+    success: false,
+    reply: "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi khi gọi qua API Key cá nhân. Bạn hãy kiểm tra lại hạn mức Quota của Key hoặc đổi sang Model khác nhé! 🐱💾",
+    errorDetail: `[CLIENT-SIDE DIRECT EXECUTION]\nChi tiết từng model:\n${logDetails}`,
+  };
+}
+
 export const AiChatStation: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
@@ -158,6 +288,10 @@ export const AiChatStation: React.FC = () => {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"chat" | "topics" | "settings">("chat");
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({});
+  
+  // Custom API Key lưu trên trình duyệt của người dùng
+  const [userApiKey, setUserApiKey] = useState<string>("");
+  const [inlineKeyInput, setInlineKeyInput] = useState<string>("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -191,9 +325,15 @@ export const AiChatStation: React.FC = () => {
     return newSession;
   };
 
-  // Nạp lịch sử từ LocalStorage khi khởi động
+  // Nạp lịch sử và API key từ LocalStorage khi khởi động
   useEffect(() => {
     try {
+      const savedKey = localStorage.getItem(API_KEY_STORAGE);
+      if (savedKey) {
+        setUserApiKey(savedKey);
+        setInlineKeyInput(savedKey);
+      }
+
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed: ChatSession[] = JSON.parse(saved);
@@ -232,8 +372,22 @@ export const AiChatStation: React.FC = () => {
     scrollToBottom();
   }, [currentSession?.messages, isTyping]);
 
+  // Lưu Custom API Key
+  const handleSaveApiKey = (keyToSave: string) => {
+    const trimmed = keyToSave.trim();
+    if (!trimmed) {
+      localStorage.removeItem(API_KEY_STORAGE);
+      setUserApiKey("");
+      alert("Đã gỡ bỏ API Key cá nhân. Hệ thống sẽ quay về dùng kết nối máy chủ.");
+    } else {
+      localStorage.setItem(API_KEY_STORAGE, trimmed);
+      setUserApiKey(trimmed);
+      alert("✓ Đã lưu API Key cá nhân thành công! Trình duyệt sẽ gọi trực tiếp Google AI Studio mà không bao giờ bị chặn IP.");
+    }
+  };
+
   // Xử lý gửi tin nhắn
-  const handleSendMessage = async (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string, overrideApiKey?: string) => {
     const content = (textToSend || inputVal).trim();
     if (!content || isTyping || !currentSession) return;
 
@@ -269,31 +423,49 @@ export const AiChatStation: React.FC = () => {
     setInputVal("");
     setIsTyping(true);
 
-    try {
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
-          persona: currentSession.persona,
-          preferredModel: selectedModel === "auto" ? undefined : selectedModel,
-          allowFallback,
-          temperature,
-        }),
-      });
+    const effectiveApiKey = (overrideApiKey || userApiKey).trim();
 
-      const data = await res.json();
+    try {
+      let result: any = null;
+
+      // NẾU CÓ USER API KEY -> GỌI TRỰC TIẾP TỪ TRÌNH DUYỆT (100% BYPASS IP BLOCKING)
+      if (effectiveApiKey) {
+        result = await executeClientDirectChat(
+          effectiveApiKey,
+          updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          currentSession.persona,
+          selectedModel,
+          allowFallback,
+          temperature
+        );
+      } else {
+        // NẾU CHƯA CÓ API KEY -> GỌI QUA BACKEND WORKER
+        const res = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+            persona: currentSession.persona,
+            preferredModel: selectedModel === "auto" ? undefined : selectedModel,
+            allowFallback,
+            temperature,
+          }),
+        });
+
+        result = await res.json();
+      }
 
       if (soundEnabled) playRetroBeep(880, "triangle", 0.09); // A5 note
 
-      if (data.success === false || data.error) {
+      if (result.success === false || result.error) {
         const errorModelMsg: ChatMessage = {
           id: `err-${Date.now()}`,
           role: "model",
-          content: data.reply || "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
+          content: result.reply || "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
           timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
           isError: true,
-          errorDetail: data.errorDetail || data.error || "Lỗi không xác định khi kết nối với máy chủ Google AI Studio.",
+          errorDetail: result.errorDetail || result.error || "Lỗi không xác định khi kết nối với máy chủ Google AI Studio.",
+          isLocationBlocked: result.isLocationBlocked,
         };
 
         setSessions(prev =>
@@ -303,14 +475,14 @@ export const AiChatStation: React.FC = () => {
               : s
           )
         );
-      } else if (data.reply) {
+      } else if (result.reply) {
         const modelMsg: ChatMessage = {
           id: `model-${Date.now()}`,
           role: "model",
-          content: data.reply,
+          content: result.reply,
           timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
-          modelName: data.model,
-          durationMs: data.durationMs,
+          modelName: result.model,
+          durationMs: result.durationMs,
         };
 
         setSessions(prev =>
@@ -321,7 +493,7 @@ export const AiChatStation: React.FC = () => {
           )
         );
       } else {
-        throw new Error(data.error || "Không nhận được phản hồi từ AI.");
+        throw new Error(result.error || "Không nhận được phản hồi từ AI.");
       }
     } catch (err: any) {
       console.error(err);
@@ -377,7 +549,6 @@ export const AiChatStation: React.FC = () => {
   const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (sessions.length <= 1) {
-      // Nếu chỉ còn 1 phiên, xóa và tạo mới
       localStorage.removeItem(STORAGE_KEY);
       createNewSession(selectedPersonaId);
       return;
@@ -454,12 +625,12 @@ export const AiChatStation: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Format inline Markdown
+  // Định dạng markdown đơn giản
   const formatMarkdown = (text: string) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-black/10 px-1 py-0.5 rounded text-[11px] font-mono text-vapor-pink">$1</code>');
+      .replace(/`([^`]+)`/g, '<code class="bg-black/10 px-1 py-0.5 font-mono text-[11px]">$1</code>');
   };
 
   const activePersonaObj = PERSONAS.find(p => p.id === (currentSession?.persona || selectedPersonaId)) || PERSONAS[0];
@@ -477,14 +648,20 @@ export const AiChatStation: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] font-mono">
-            <span className="bg-black text-vapor-green px-2 py-0.5 font-bold">
-              GOOGLE AI STUDIO // READY
-            </span>
+            {userApiKey ? (
+              <span className="bg-[#05ffa1] text-black px-2 py-0.5 font-bold border border-black shadow-xs">
+                🟢 CLIENT DIRECT // 100% BYPASS
+              </span>
+            ) : (
+              <span className="bg-black text-vapor-green px-2 py-0.5 font-bold">
+                ☁️ CLOUDFLARE EDGE
+              </span>
+            )}
           </div>
         </div>
 
         {/* Top Menubar Strip */}
-        <div className="win95-menubar justify-between bg-win-gray px-3 py-1 text-xs border-b border-win-dark">
+        <div className="win95-menubar justify-between bg-win-gray px-3 py-1 text-xs border-b border-win-dark flex-wrap gap-2">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -505,18 +682,18 @@ export const AiChatStation: React.FC = () => {
               onClick={() => setActiveTab("settings")}
               className={`font-bold hover:underline ${activeTab === 'settings' ? 'text-vapor-purple underline font-black' : 'text-black'}`}
             >
-              ⚙️ Cấu Hình & Model
+              ⚙️ Cấu Hình & API Key
             </button>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Quick Model Selector on Menubar */}
-            <div className="flex items-center gap-1 bg-white px-1 py-0.5 border border-win-dark">
+            <div className="flex items-center gap-1 bg-white px-1.5 py-0.5 border border-win-dark shadow-inner">
               <span className="text-[9px] font-bold text-win-darkest font-mono">⚡ MODEL:</span>
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className="bg-transparent border-none outline-none font-mono text-[9px] text-black font-bold cursor-pointer max-w-[140px] sm:max-w-[200px] truncate"
+                className="bg-transparent border-none outline-none font-mono text-[9px] text-black font-bold cursor-pointer max-w-[140px] sm:max-w-[210px] truncate"
               >
                 {MODEL_OPTIONS.map(m => (
                   <option key={m.id} value={m.id}>
@@ -653,11 +830,17 @@ export const AiChatStation: React.FC = () => {
               </div>
             </div>
 
-            {/* Diagnostics box */}
+            {/* Connection Status Box */}
             <div className="p-2 bg-[#c0c0c0] border border-win-dark text-[10px] font-mono space-y-1">
+              <div className="flex justify-between items-center">
+                <span>Chế độ kết nối:</span>
+                <span className={`font-bold px-1 py-0.2 ${userApiKey ? 'bg-[#05ffa1] text-black' : 'bg-black text-vapor-yellow'}`}>
+                  {userApiKey ? '🔑 Trực Tiếp Browser' : '☁️ Cloudflare Edge'}
+                </span>
+              </div>
               <div className="flex justify-between">
-                <span>Model hiện tại:</span>
-                <span className="font-bold text-vapor-purple truncate max-w-[120px]">
+                <span>Model đang chọn:</span>
+                <span className="font-bold text-vapor-purple truncate max-w-[130px]">
                   {selectedModel === 'auto' ? 'Auto-Fallback' : selectedModel}
                 </span>
               </div>
@@ -665,28 +848,27 @@ export const AiChatStation: React.FC = () => {
                 <span>Số tin nhắn:</span>
                 <span className="font-bold">{currentSession?.messages.length || 0}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Trạng thái máy chủ:</span>
-                <span className="text-vapor-green font-bold">ONLINE 100%</span>
-              </div>
             </div>
           </div>
 
-          {/* RIGHT MAIN TERMINAL (8 cols on desktop) */}
-          <div className="lg:col-span-8 p-3 flex flex-col justify-between bg-[#f0f0f0]">
+          {/* RIGHT CHAT / CONTENT AREA (8 cols on desktop) */}
+          <div className="lg:col-span-8 p-3 flex flex-col justify-between bg-win-gray min-h-[550px]">
+            {/* TAB: Trò Chuyện (Chat) */}
             {activeTab === "chat" && (
               <>
-                {/* Chat Stream Window */}
-                <div className="win95-sunken bg-[#120024] p-3 h-[420px] overflow-y-auto space-y-3.5 shadow-inner border-2 border-win-dark">
-                  {/* Terminal ASCII Art Header */}
-                  <div className="text-center pb-2 border-b border-vapor-purple/30 text-vapor-blue font-mono text-[9px] select-none">
-                    <pre className="inline-block text-vapor-pink leading-tight">
-{`   /\\_/\\  
-  ( o.o )  CYBER_CAT AI v1995 // READY
-   > ^ <   Google AI Studio Connected`}
+                {/* Scrollable Message Box */}
+                <div className="win95-sunken bg-white p-3.5 space-y-4 overflow-y-auto h-[440px] border-2 border-win-dark">
+                  {/* Cyber ASCII Welcome Banner */}
+                  <div className="text-center py-2 border-b border-win-light text-[9px] font-mono text-win-dark leading-tight select-none">
+                    <pre className="text-vapor-purple font-bold">
+{`████████╗██████╗  █████╗ ███╗   ███╗     █████╗ ██╗
+╚══██╔══╝██╔══██╗██╔══██╗████╗ ████║    ██╔══██╗██║
+   ██║   ██████╔╝███████║██╔████╔██║    ███████║██║
+   ██║   ██╔══██╗██╔══██║██║╚██╔╝██║    ██╔══██║██║
+   ██║   ██║  ██║██║  ██║██║ ╚═╝ ██║    ██║  ██║██║`}
                     </pre>
                     <p className="mt-1 text-text-muted">
-                      // BẢO MẬT PHIÊN HỘI THOẠI 100% TRÊN TRÌNH DUYỆT //
+                      // TRẠM AI MÈO VÀNG VAPORWAVE // GOOGLE AI STUDIO ENGINE //
                     </p>
                   </div>
 
@@ -703,7 +885,7 @@ export const AiChatStation: React.FC = () => {
                       )}
 
                       <div
-                        className={`max-w-[85%] sm:max-w-[78%] p-3 text-xs shadow-md ${
+                        className={`max-w-[92%] sm:max-w-[82%] p-3 text-xs shadow-md ${
                           msg.role === "user"
                             ? "bg-gradient-to-br from-[#2a0040] to-[#1a0030] text-white border border-vapor-pink rounded-tl-sm rounded-bl-sm"
                             : "bg-[#e8e8e8] text-black border-2 border-win-light win95-raised"
@@ -731,52 +913,94 @@ export const AiChatStation: React.FC = () => {
                           ))}
                         </div>
 
-                        {/* Collapsible Error Diagnostics Box */}
+                        {/* Inline API Key Activation Card if Location Blocked or Error */}
                         {msg.isError && (
-                          <div className="mt-2.5 pt-2 border-t border-red-300 font-mono">
-                            <button
-                              type="button"
-                              onClick={() => toggleExpandError(msg.id)}
-                              className="text-[10px] font-bold text-red-800 hover:text-red-950 flex items-center gap-1.5 cursor-pointer bg-red-100/90 hover:bg-red-200 px-2 py-1 border border-red-300 rounded-xs shadow-xs"
-                            >
-                              <span>{expandedErrors[msg.id] ? "[-] Ẩn chi tiết kỹ thuật" : "[+] Mở rộng xem chi tiết lỗi kỹ thuật & Báo Dev"}</span>
-                            </button>
-
-                            {expandedErrors[msg.id] && (
-                              <div className="mt-2 p-2.5 bg-black text-[#05ffa1] text-[10px] rounded-xs font-mono border-2 border-win-dark space-y-2 overflow-x-auto select-text shadow-md">
-                                <div className="text-red-400 font-bold flex items-center gap-1.5 border-b border-win-dark/60 pb-1">
-                                  <span>⚠️ ERROR DIAGNOSTICS LOG // GOOGLE AI STUDIO</span>
-                                </div>
-                                <pre className="whitespace-pre-wrap leading-relaxed text-[10px] font-mono text-vapor-pink max-h-36 overflow-y-auto">
-                                  {msg.errorDetail || "Lỗi kết nối không xác định."}
-                                </pre>
-                                <div className="flex flex-wrap gap-2 pt-1.5 border-t border-win-dark/60">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopyText(`err-detail-${msg.id}`, msg.errorDetail || "")}
-                                    className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-white hover:bg-vapor-yellow/30"
-                                  >
-                                    {copiedId === `err-detail-${msg.id}` ? "✓ Đã Chép Log!" : "📋 Sao Chép Log Lỗi"}
-                                  </button>
-                                  <a
-                                    href={`mailto:nongtiensonpro@gmail.com?subject=${encodeURIComponent("Báo lỗi AI Chat // Lovely Yellow Cat")}&body=${encodeURIComponent(`Chào Dev Nongtiensonpro,\n\nTôi gặp sự cố khi trò chuyện với AI tại website Lovely Yellow Cat:\n\n- Thời gian: ${new Date().toLocaleString("vi-VN")}\n- Phiên chat: ${currentSession?.title || "AI Chat"}\n- Nhân cách: ${currentSession?.persona || "cybercat"}\n\n[Chi tiết lỗi kỹ thuật]:\n${msg.errorDetail || "Không có log chi tiết"}\n\nNhờ dev kiểm tra và khắc phục giúp tôi nhé!`)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-[#fffb96] no-underline hover:bg-yellow-300"
-                                  >
-                                    ✉️ Gửi Báo Lỗi Cho Dev (Email)
-                                  </a>
-                                  <a
-                                    href="https://github.com/nongtiensonpro/lovelyyellowcat/issues/new"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-white no-underline hover:bg-vapor-pink/20"
-                                  >
-                                    🐙 Báo Lỗi Qua GitHub Issues ↗
-                                  </a>
-                                </div>
+                          <div className="mt-3 pt-2 border-t border-red-300 font-mono space-y-2">
+                            {/* Bypass Card */}
+                            <div className="bg-[#fffb96]/60 border-2 border-dashed border-vapor-purple p-2.5 space-y-2 rounded-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-vapor-purple flex items-center gap-1">
+                                  <span>🔑</span> GIẢI PHÁP BỎ QUA CHẶN IP CLOUDFLARE 100%:
+                                </span>
+                                <a
+                                  href="https://aistudio.google.com/"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-blue-700 underline font-bold"
+                                >
+                                  Lấy API Key Miễn Phí ↗
+                                </a>
                               </div>
-                            )}
+                              <p className="text-[11px] text-black font-body leading-tight">
+                                Do Google chặn IP máy chủ Cloudflare tại Châu Á, bạn chỉ cần dán <strong>API Key Google AI Studio</strong> vào ô dưới. Trình duyệt của bạn sẽ gọi trực tiếp sang Google mà không qua Cloudflare Edge, đảm bảo hoạt động 100%!
+                              </p>
+                              <div className="flex flex-col sm:flex-row gap-1.5">
+                                <input
+                                  type="password"
+                                  placeholder="Dán API Key (AIzaSy...)"
+                                  value={inlineKeyInput}
+                                  onChange={(e) => setInlineKeyInput(e.target.value)}
+                                  className="win95-sunken bg-white p-1.5 text-xs font-mono flex-1 border border-win-dark"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (inlineKeyInput.trim()) {
+                                      handleSaveApiKey(inlineKeyInput);
+                                      // Thử gửi lại tin nhắn trước đó
+                                      const lastUserMsg = currentSession?.messages.filter(m => m.role === "user").slice(-1)[0];
+                                      if (lastUserMsg) {
+                                        handleSendMessage(lastUserMsg.content, inlineKeyInput.trim());
+                                      }
+                                    } else {
+                                      alert("Vui lòng nhập API Key.");
+                                    }
+                                  }}
+                                  className="win95-btn py-1.5 px-3 text-xs font-extrabold bg-[#05ffa1] text-black border border-black shrink-0 hover:bg-[#04df8d]"
+                                >
+                                  💾 Lưu & Gửi Lại Ngay &gt;&gt;
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Accordion toggle error detail */}
+                            <div className="pt-1">
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandError(msg.id)}
+                                className="text-[10px] font-bold text-red-800 hover:text-red-950 flex items-center gap-1.5 cursor-pointer bg-red-100/90 hover:bg-red-200 px-2 py-1 border border-red-300 rounded-xs"
+                              >
+                                <span>{expandedErrors[msg.id] ? "[-] Ẩn chi tiết kỹ thuật" : "[+] Mở rộng xem toàn bộ nhật ký lỗi (Error Logs)"}</span>
+                              </button>
+
+                              {expandedErrors[msg.id] && (
+                                <div className="mt-2 p-2.5 bg-black text-[#05ffa1] text-[10px] rounded-xs font-mono border-2 border-win-dark space-y-2 overflow-x-auto select-text shadow-md">
+                                  <div className="text-red-400 font-bold flex items-center gap-1.5 border-b border-win-dark/60 pb-1">
+                                    <span>⚠️ ERROR DIAGNOSTICS LOG // GOOGLE AI STUDIO</span>
+                                  </div>
+                                  <pre className="whitespace-pre-wrap leading-relaxed text-[10px] font-mono text-vapor-pink max-h-40 overflow-y-auto">
+                                    {msg.errorDetail || "Lỗi kết nối không xác định."}
+                                  </pre>
+                                  <div className="flex flex-wrap gap-2 pt-1.5 border-t border-win-dark/60">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyText(`err-detail-${msg.id}`, msg.errorDetail || "")}
+                                      className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-white hover:bg-vapor-yellow/30"
+                                    >
+                                      {copiedId === `err-detail-${msg.id}` ? "✓ Đã Chép Log!" : "📋 Sao Chép Log Lỗi"}
+                                    </button>
+                                    <a
+                                      href={`mailto:nongtiensonpro@gmail.com?subject=${encodeURIComponent("Báo lỗi AI Chat // Lovely Yellow Cat")}&body=${encodeURIComponent(`Chào Dev Nongtiensonpro,\n\nTôi gặp sự cố khi trò chuyện với AI tại website Lovely Yellow Cat:\n\n- Thời gian: ${new Date().toLocaleString("vi-VN")}\n- Phiên chat: ${currentSession?.title || "AI Chat"}\n- Nhân cách: ${currentSession?.persona || "cybercat"}\n\n[Chi tiết lỗi kỹ thuật]:\n${msg.errorDetail || "Không có log chi tiết"}\n\nNhờ dev kiểm tra và khắc phục giúp tôi nhé!`)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-[#fffb96] no-underline hover:bg-yellow-300"
+                                    >
+                                      ✉️ Gửi Báo Lỗi Cho Dev (Email)
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
 
@@ -833,29 +1057,27 @@ export const AiChatStation: React.FC = () => {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Quick Prompts Chip Carousel */}
-                <div className="py-2 overflow-x-auto whitespace-nowrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-win-darkest uppercase shrink-0 font-mono">
-                      💡 GỢI Ý NHANH:
-                    </span>
+                {/* Quick Topic Chips */}
+                <div className="py-1.5 overflow-x-auto">
+                  <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                    <span className="text-[10px] font-mono text-win-darkest font-bold">GỢI Ý:</span>
                     <button
                       type="button"
-                      onClick={() => handleSendMessage("Vaporwave là gì và bắt nguồn từ đâu?")}
+                      onClick={() => handleSendMessage("Vaporwave là gì và cội nguồn triết lý của nó?")}
                       className="win95-btn py-1 px-2.5 text-[10px] text-black font-mono shrink-0 hover:bg-vapor-yellow/30"
                     >
-                      🎨 Vaporwave là gì?
+                      🌸 Triết lý Vaporwave
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleSendMessage("Gợi ý 5 album nhạc Synthwave huyền thoại")}
+                      onClick={() => handleSendMessage("Gợi ý cho tôi 5 album Synthwave kinh điển")}
                       className="win95-btn py-1 px-2.5 text-[10px] text-black font-mono shrink-0 hover:bg-vapor-yellow/30"
                     >
                       📼 5 Album Synthwave
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleSendMessage("Hướng dẫn tôi cách gửi tác phẩm lên triển lãm")}
+                      onClick={() => handleSendMessage("Làm sao để tôi có thể đăng tải tranh lên tạp chí?")}
                       className="win95-btn py-1 px-2.5 text-[10px] text-black font-mono shrink-0 hover:bg-vapor-yellow/30"
                     >
                       🖼️ Hướng dẫn gửi tranh
@@ -898,7 +1120,7 @@ export const AiChatStation: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isTyping || !inputVal.trim()}
-                      className="win95-btn font-extrabold text-xs sm:text-sm px-5 py-2 text-vapor-purple bg-[#fffb96]/40 border-2 border-black disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                      className="win95-btn font-extrabold text-xs sm:text-sm px-5 py-2 text-vapor-purple bg-[#fffb96]/40 border-2 border-black disabled:opacity-50 flex items-center gap-1.5 shrink-0 hover:bg-vapor-yellow"
                       style={{ minHeight: "38px" }}
                     >
                       <span>{isTyping ? "..." : "GỬI"}</span>
@@ -951,14 +1173,66 @@ export const AiChatStation: React.FC = () => {
             {activeTab === "settings" && (
               <div className="space-y-4 p-3 h-[550px] overflow-y-auto">
                 <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
-                  <span>⚙️ TÙY CHỈNH THÔNG SỐ AI & MODEL</span>
+                  <span>⚙️ TÙY CHỈNH THÔNG SỐ AI & API KEY</span>
                 </div>
 
                 <div className="win95-container bg-white p-4 space-y-4 text-xs">
+                  {/* Personal API Key Config (Bypass Cloudflare Edge IP Block) */}
+                  <div className="p-3 bg-[#fffb96]/30 border-2 border-win-dark space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="font-bold uppercase tracking-wide text-vapor-purple flex items-center gap-1.5">
+                        <span>🔑</span> API Key Google AI Studio Cá Nhân:
+                      </label>
+                      <a
+                        href="https://aistudio.google.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-blue-700 underline font-bold"
+                      >
+                        Lấy API Key Miễn Phí Tại Đây ↗
+                      </a>
+                    </div>
+                    <p className="text-[11px] text-black leading-relaxed">
+                      Khi nhập API Key cá nhân, toàn bộ truy vấn sẽ được trình duyệt của bạn gọi <strong>trực tiếp tới Google</strong>, giải quyết triệt để lỗi chặn vị trí địa lý <code>User location is not supported</code> từ máy chủ Cloudflare. Khóa được lưu an toàn trên máy bạn.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        placeholder="Nhập khóa API Key (AIzaSy...)"
+                        value={userApiKey}
+                        onChange={(e) => setUserApiKey(e.target.value)}
+                        className="w-full p-2 border border-win-dark bg-white font-mono text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveApiKey(userApiKey)}
+                        className="win95-btn py-1.5 px-4 font-bold text-xs bg-[#05ffa1] text-black border border-black shrink-0"
+                      >
+                        💾 Lưu
+                      </button>
+                      {userApiKey && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveApiKey("")}
+                          className="win95-btn py-1.5 px-3 font-bold text-xs bg-red-100 text-red-700 shrink-0"
+                        >
+                          Xóa
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-mono">
+                      {userApiKey ? (
+                        <span className="text-green-700 font-bold">● Đang kích hoạt chế độ Gọi Trực Tiếp Từ Trình Duyệt (Bypass 100% Chặn IP)</span>
+                      ) : (
+                        <span className="text-win-dark font-bold">● Đang dùng kết nối mặc định qua Máy chủ Cloudflare</span>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Model Choice */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 pt-2">
                     <label className="font-bold uppercase tracking-wide block">
-                      ⚡ Model Google AI Studio:
+                      ⚡ Lựa chọn Model Google AI Studio:
                     </label>
                     <select
                       value={selectedModel}
@@ -983,9 +1257,6 @@ export const AiChatStation: React.FC = () => {
                         Tự động chuyển tiếp (Fallback) sang Model khác nếu Model được chọn bị lỗi Quota / quá tải
                       </span>
                     </label>
-                    <p className="text-[10px] text-win-dark">
-                      * Nếu tắt tùy chọn này, hệ thống sẽ CHỈ gọi đúng Model bạn đã chọn và báo lỗi trực tiếp nếu Model đó vượt hạn mức Quota.
-                    </p>
                   </div>
 
                   {/* Temperature */}
@@ -1048,7 +1319,9 @@ export const AiChatStation: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-win-dark font-mono">Google AI Studio Core 1995-2026</span>
+            <span className="text-win-dark font-mono">
+              {userApiKey ? "Client-Side Direct Mode" : "Cloudflare Edge Engine"}
+            </span>
             <span className="win95-statusbar-panel font-mono font-bold text-win-titlebar">READY</span>
           </div>
         </div>

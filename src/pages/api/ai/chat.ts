@@ -9,14 +9,13 @@ export const FALLBACK_MODEL_ORDER = [
   "gemini-pro-latest",
   "gemini-2.5-pro",
   "gemini-3.1-pro-preview",
-  // Các model Gemini tiêu chuẩn luôn khả dụng trên Google AI Studio Free Tier
   "gemini-2.0-flash",
   "gemini-1.5-flash",
   "gemini-1.5-flash-8b",
   "gemini-1.5-pro",
 ] as const;
 
-const PERSONA_INSTRUCTIONS: Record<string, string> = {
+export const PERSONA_INSTRUCTIONS: Record<string, string> = {
   cybercat: `Bạn là "Mèo Vàng Cybernetic" (CAT_AI.EXE v1995) - linh vật và trợ lý trí tuệ nhân tạo của Tạp chí Nghệ thuật Số Hoài Cổ "Lovely Yellow Cat" (A Cybernetic Oasis 1995-2026).
 Tính cách & Phong cách:
 1. Thân thiện, vui vẻ, hóm hỉnh, am hiểu sâu sắc về văn hóa số thập niên 90, thẩm mỹ Vaporwave, Synthwave, Cyberpunk, Windows 95, City Pop, Pixel Art, và nghệ thuật máy tính cổ điển.
@@ -51,14 +50,22 @@ export const POST: APIRoute = async ({ request }) => {
     import.meta.env.AI_API_KEY ||
     process.env.GEMINI_API_KEY;
 
+  const baseUrl =
+    (env as any)?.GEMINI_BASE_URL ||
+    (env as any)?.AI_GATEWAY_URL ||
+    import.meta.env.GEMINI_BASE_URL ||
+    process.env.GEMINI_BASE_URL ||
+    "https://generativelanguage.googleapis.com";
+
   if (!apiKey) {
     return new Response(
       JSON.stringify({
         success: false,
+        isMissingKey: true,
         error: "Chưa cấu hình GEMINI_API_KEY trong hệ thống.",
         reply:
-          "Meow~! Hệ thống chưa tìm thấy khóa `GEMINI_API_KEY`. Bạn hãy lấy API Key miễn phí tại https://aistudio.google.com/ và thêm vào file cấu hình (.dev.vars hoặc Cloudflare Environment) nhé! 🐱🔑",
-        errorDetail: "[CONFIG_ERROR] Chưa tìm thấy biến môi trường GEMINI_API_KEY trong .dev.vars (chạy dev) hoặc Cloudflare Dashboard Environment Variables (trên production). Vui lòng kiểm tra lại cấu hình!",
+          "Meow~! Hệ thống chưa tìm thấy khóa `GEMINI_API_KEY`. Bạn hãy dán API Key cá nhân miễn phí từ https://aistudio.google.com/ vào bên dưới để trò chuyện ngay nhé! 🐱🔑",
+        errorDetail: "[CONFIG_ERROR] Chưa tìm thấy biến môi trường GEMINI_API_KEY trong hệ thống.",
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -89,17 +96,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (preferredModel && preferredModel !== "auto") {
       if (allowFallback) {
-        // Ưu tiên model được chọn, nếu lỗi mới fallback các model khác
         modelsToTry = [
           preferredModel,
           ...FALLBACK_MODEL_ORDER.filter(m => m !== preferredModel)
         ];
       } else {
-        // Chỉ dùng duy nhất model được chọn
         modelsToTry = [preferredModel];
       }
     } else {
-      // Chế độ Auto Fallback: duyệt qua toàn bộ danh sách
       modelsToTry = [...FALLBACK_MODEL_ORDER];
     }
 
@@ -117,7 +121,8 @@ export const POST: APIRoute = async ({ request }) => {
     // Duyệt qua danh sách Model theo thứ tự
     for (const model of modelsToTry) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
+        const url = `${cleanBaseUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
           method: "POST",
@@ -142,12 +147,12 @@ export const POST: APIRoute = async ({ request }) => {
           if (candidateText) {
             successfulReply = candidateText;
             modelUsed = model;
-            break; // Thành công, kết thúc vòng lặp
+            break; // Thành công
           } else {
             attemptLogs.push({
               model,
               status: response.status,
-              error: "API trả về 200 OK nhưng không có nội dung văn bản (candidates rỗng)."
+              error: "API trả về 200 OK nhưng không có nội dung văn bản."
             });
           }
         } else {
@@ -158,7 +163,6 @@ export const POST: APIRoute = async ({ request }) => {
             status: response.status,
             error: errMsg
           });
-          console.warn(`[GEMINI ATTEMPT] Model ${model} thất bại (${response.status}):`, errMsg);
         }
       } catch (err: any) {
         attemptLogs.push({
@@ -166,7 +170,6 @@ export const POST: APIRoute = async ({ request }) => {
           status: 0,
           error: err?.message || String(err)
         });
-        console.warn(`[GEMINI ATTEMPT] Model ${model} exception:`, err?.message || err);
       }
     }
 
@@ -184,7 +187,11 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Nếu tất cả model đều không thành công, tạo báo cáo chi tiết cho từng model
+    // Kiểm tra xem có phải do chặn vị trí địa lý của Cloudflare egress IP không
+    const isLocationBlocked = attemptLogs.some(
+      att => att.error?.toLowerCase().includes("user location is not supported")
+    );
+
     const logDetails = attemptLogs
       .map((att, idx) => `${idx + 1}. [${att.model}] (HTTP ${att.status}): ${att.error}`)
       .join("\n");
@@ -192,15 +199,22 @@ export const POST: APIRoute = async ({ request }) => {
     const formattedErrorDetail = 
       `[TỔNG HỢP KẾT QUẢ THỬ NGHIỆM MODEL]\n` +
       `Model ưu tiên ban đầu: ${preferredModel || "auto"}\n` +
-      `Cho phép Fallback: ${allowFallback ? "BẬT" : "TẮT"}\n\n` +
+      `Cho phép Fallback: ${allowFallback ? "BẬT" : "TẮT"}\n` +
+      `Phát hiện chặn IP Edge Cloudflare: ${isLocationBlocked ? "CÓ (User location not supported)" : "KHÔNG"}\n\n` +
       `Chi tiết từng model:\n${logDetails}`;
+
+    let userFriendlyReply = "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng hoặc hạn mức model đã hết. Bạn hãy thử chọn model khác hoặc mở chi tiết lỗi nhé! 🐱💾";
+
+    if (isLocationBlocked) {
+      userFriendlyReply = "Meow~! Google AI Studio đang chặn dải địa chỉ IP máy chủ Edge của Cloudflare tại khu vực này (`User location is not supported`).\n\n👉 **Giải pháp:** Bạn chỉ cần dán **API Key Google AI Studio cá nhân** vào khung bên dưới để chuyển sang chế độ **Gọi Trực Tiếp Từ Trình Duyệt** (hoạt động 100% không bao giờ bị chặn IP)! 🐱🔑✨";
+    }
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Tất cả các Model AI được thử nghiệm đều không phản hồi.",
-        reply:
-          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng hoặc model bạn chọn đang bị giới hạn hạn mức (Quota). Bạn hãy mở chi tiết lỗi bên dưới hoặc chọn Model khác (như Gemini 2.0 Flash / 1.5 Flash) nhé! 🐱💾",
+        isLocationBlocked,
+        error: isLocationBlocked ? "Google AI Studio chặn IP máy chủ Cloudflare (User location not supported)." : "Tất cả các Model AI đều không phản hồi.",
+        reply: userFriendlyReply,
         errorDetail: formattedErrorDetail,
         attemptLogs,
       }),
@@ -213,7 +227,7 @@ export const POST: APIRoute = async ({ request }) => {
         success: false,
         error: error.message || "Lỗi máy chủ nội bộ khi xử lý hội thoại.",
         reply:
-          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp sự cố nội bộ. Bạn hãy mở chi tiết lỗi bên dưới để báo cho Dev nhé! 🐱💾",
+          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp sự cố nội bộ. Bạn hãy mở chi tiết lỗi bên dưới để xem nhé! 🐱💾",
         errorDetail: `[INTERNAL_SERVER_ERROR]: ${error.stack || error.message || error}`,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
