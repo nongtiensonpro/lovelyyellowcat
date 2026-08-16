@@ -38,9 +38,19 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
     title: string;
     message: string;
     type: "success" | "error" | "info";
+    redirectUrl?: string | null;
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const closeAlertBox = () => {
+    if (!alertBox) return;
+    const targetUrl = alertBox.redirectUrl;
+    setAlertBox(null);
+    if (targetUrl) {
+      window.location.href = targetUrl;
+    }
+  };
 
   // Xử lý upload ảnh bìa (Banner) lên Cloudinary
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,7 +69,8 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
         show: true,
         title: "SYSTEM_ERROR.ERR",
         message: "Không tìm thấy cấu hình lưu trữ Cloudinary trong hệ thống.",
-        type: "error"
+        type: "error",
+        redirectUrl: null
       });
       setIsUploading(false);
       setLocalPreview(null);
@@ -87,13 +98,15 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
 
       const responseData = await response.json();
       setBannerUrl(responseData.secure_url);
+      setLocalPreview(responseData.secure_url);
       setUploadProgress(100);
       
       setAlertBox({
         show: true,
         title: "EXPLORER.EXE",
-        message: "Tải lên ảnh bìa (Banner) thành công! Hãy nhấn nút Lưu để lưu lại cấu hình.",
-        type: "success"
+        message: "Tải lên ảnh bìa (Banner) thành công! Hãy nhấn nút \"💾 Lưu Thay Đổi\" ở dưới để hoàn tất lưu cấu hình.",
+        type: "info",
+        redirectUrl: null
       });
     } catch (err: any) {
       console.error(err);
@@ -101,11 +114,15 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
         show: true,
         title: "UPLOAD_FAILURE.ERR",
         message: "Gặp sự cố khi truyền tải ảnh bìa lên Cloudinary: " + err.message,
-        type: "error"
+        type: "error",
+        redirectUrl: null
       });
       setLocalPreview(null);
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -138,7 +155,8 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
         show: true,
         title: "SYSTEM_SAVE.EXE",
         message: "Hồ sơ cá nhân của bạn đã được cập nhật thành công!",
-        type: "success"
+        type: "success",
+        redirectUrl: `/profile/${profile.id}`
       });
     } catch (err: any) {
       console.error(err);
@@ -146,7 +164,8 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
         show: true,
         title: "SAVE_ERROR.ERR",
         message: err.message || "Không thể cập nhật hồ sơ cá nhân.",
-        type: "error"
+        type: "error",
+        redirectUrl: null
       });
     } finally {
       setIsSaving(false);
@@ -351,12 +370,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
               <span>{alertBox.title}</span>
               <button 
                 type="button" 
-                onClick={() => {
-                  setAlertBox(null);
-                  if (alertBox.type === "success") {
-                    window.location.href = `/profile/${profile.id}`;
-                  }
-                }}
+                onClick={closeAlertBox}
                 className="win95-btn py-0 px-1"
               >
                 X
@@ -375,12 +389,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => {
-                    setAlertBox(null);
-                    if (alertBox.type === "success") {
-                      window.location.href = `/profile/${profile.id}`;
-                    }
-                  }}
+                  onClick={closeAlertBox}
                   className="win95-btn font-bold px-6 py-1.5 text-xs inline-block"
                 >
                   OK
