@@ -404,7 +404,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                 <h3 className="text-xs sm:text-sm font-extrabold text-black leading-tight border-b-2 border-dashed border-[#e6e6e6] pb-1 uppercase">
                   {activeSubmission.title}
                 </h3>
-                <p className="text-[9px] text-win-dark">{formattedDate}</p>
+                <p className="text-[9px] text-win-dark font-mono" suppressHydrationWarning>{formattedDate}</p>
                 <p className="text-[11px] text-black/90 leading-relaxed font-sans mt-2 break-words">
                   {activeSubmission.description || "Tác phẩm mang phong cách thẩm mỹ hoài cổ kỹ thuật số, tái hiện hoàn hảo thời kỳ đầu của nghệ thuật đồ họa vi tính."}
                 </p>

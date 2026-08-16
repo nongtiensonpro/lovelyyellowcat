@@ -225,7 +225,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
                         </button>
                       )}
                     </div>
-                    <span className="text-[8px] text-win-dark mt-1 font-mono self-end">
+                    <span className="text-[8px] text-win-dark mt-1 font-mono self-end" suppressHydrationWarning>
                       {new Date(notif.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>

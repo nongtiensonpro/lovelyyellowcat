@@ -207,7 +207,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
                   profile.full_name
                 )}
               </span>
-              <span className="text-win-dark font-normal">
+              <span className="text-win-dark font-normal font-mono" suppressHydrationWarning>
                 {new Date(comment.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
