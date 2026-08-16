@@ -1,0 +1,950 @@
+import React, { useState, useRef, useEffect } from "react";
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "model";
+  content: string;
+  timestamp: string;
+  modelName?: string;
+  durationMs?: number;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  persona: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+// 4 Nhân cách AI độc đáo
+export const PERSONAS = [
+  {
+    id: "cybercat",
+    name: "Mèo Vàng Cybernetic",
+    role: "Linh vật Tạp chí & Hướng dẫn",
+    icon: "🐱",
+    avatarBg: "from-[#fffb96] to-[#ff9a3c]",
+    desc: "Thân thiện, hóm hỉnh, am hiểu sâu sắc về văn hóa Vaporwave, Synthwave và hướng dẫn sử dụng website.",
+    defaultGreeting: "Meow~! Chào mừng bạn đến với Trạm Trí Tuệ Nhân Tạo **Lovely Yellow Cat** 🐱💾! Tôi là Mèo Vàng Cybernetic (CAT_AI.EXE v1995). Tôi có thể giúp gì cho bạn hôm nay?",
+    badgeColor: "bg-vapor-yellow text-black",
+  },
+  {
+    id: "art_critic",
+    name: "Giáo Sư V.A.P.O.R",
+    role: "Nhà Giám Định Mỹ Thuật 1995",
+    icon: "🎨",
+    avatarBg: "from-[#b967ff] to-[#ff71ce]",
+    desc: "Uyên bác, phân tích chuyên sâu về mỹ thuật thị giác, bảng màu neon pastel, bố cục retro và kỹ thuật đổ bóng dither.",
+    defaultGreeting: "Kính chào quý bạn yêu nghệ thuật! Tôi là Giáo sư V.A.P.O.R 🎨🏛️. Rất hân hạnh được đồng hành cùng bạn mổ xẻ các kiệt tác và trào lưu thị giác hoài niệm.",
+    badgeColor: "bg-vapor-purple text-white",
+  },
+  {
+    id: "hacker",
+    name: "CYBER_GHOST_95",
+    role: "Hacker Y2K & Retro Computing",
+    icon: "💾",
+    avatarBg: "from-[#05ffa1] to-[#01cdfe]",
+    desc: "Chuyên gia kiến trúc máy tính x86 cổ điển, MS-DOS, Windows 95, mạng BBS Dial-up và lập trình hoài niệm.",
+    defaultGreeting: "CONNECT 19200/ARQ... Tín hiệu kết nối Terminal đã thông suốt 💾⚡. Nhập lệnh truy vấn hoặc câu hỏi kỹ thuật của bạn.",
+    badgeColor: "bg-vapor-green text-black",
+  },
+  {
+    id: "synth_dj",
+    name: "DJ NEON PULSE",
+    role: "Synthwave DJ & Lo-Fi Poet",
+    icon: "📼",
+    avatarBg: "from-[#ff71ce] to-[#01cdfe]",
+    desc: "Lãng mạn, du dương, gợi ý những giai điệu analog synth huyền ảo, viết thơ phong cách hoài cổ và văn hóa City Pop.",
+    defaultGreeting: "Chào buổi tối từ phòng thu Neon Pulse 📼🎷🌃. Bạn cần một playlist nhạc chill thư giãn hay muốn cùng tôi viết nên những vần thơ dưới ánh đèn đêm?",
+    badgeColor: "bg-vapor-pink text-black",
+  }
+];
+
+// Danh sách các Model Gemini hỗ trợ
+export const MODEL_OPTIONS = [
+  { id: "auto", name: "⚡ Tự Động Fallback (Khuyên dùng)" },
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Siêu nhanh)" },
+  { id: "gemini-flash-latest", name: "Gemini Flash Latest" },
+  { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
+  { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite" },
+  { id: "gemini-pro-latest", name: "Gemini Pro Latest" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Tư duy sâu)" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
+];
+
+// Thư viện đề tài gợi ý chuyên sâu
+export const TOPIC_CATEGORIES = [
+  {
+    category: "🎨 Thẩm Mỹ Vaporwave",
+    topics: [
+      "Vaporwave là gì và cội nguồn triết lý của nó?",
+      "Tại sao tượng cổ Hy Lạp lại xuất hiện trong tranh Vaporwave?",
+      "Phân biệt giữa Vaporwave, Synthwave và Cyberpunk",
+      "Bảng màu Neon Pastel gồm những sắc độ kinh điển nào?"
+    ]
+  },
+  {
+    category: "💾 Kỹ Thuật Số & Hoài Niệm 90s",
+    topics: [
+      "Vẻ đẹp giao diện xám 3D của Windows 95",
+      "Kỷ nguyên Internet Dial-up 56k và tiếng rè kết nối modem",
+      "Màn hình CRT Sony Trinitron và hiện tượng quét scanline",
+      "Nghệ thuật Pixel Art 16-bit thời hoàng kim arcade"
+    ]
+  },
+  {
+    category: "📼 Âm Nhạc & City Pop",
+    topics: [
+      "Gợi ý 5 album Synthwave / Retrowave huyền thoại",
+      "Tại sao âm nhạc City Pop Nhật Bản thập niên 80 lại gây sốt?",
+      "Album Floral Shoppe của Macintosh Plus có gì đặc biệt?",
+      "Viết cho tôi một bài thơ ngắn ngập tràn ánh đèn neon và hoàng hôn tím"
+    ]
+  },
+  {
+    category: "🖼️ Tạp Chí & Triển Lãm",
+    topics: [
+      "Hướng dẫn cách đăng tải tác phẩm lên phòng tranh cộng đồng",
+      "Hệ thống điểm tích lũy XP và huy chương hoạt động như thế nào?",
+      "Làm sao để liên hệ ban biên tập và góp ý nội dung bài viết?"
+    ]
+  }
+];
+
+const STORAGE_KEY = "vapor_ai_chat_sessions_v2";
+
+// Phát âm thanh retro 8-bit đơn giản qua Web Audio API
+function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.08) {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch {
+    // Ignore audio errors if blocked by browser policy
+  }
+}
+
+export const AiChatStation: React.FC = () => {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string>("");
+  const [inputVal, setInputVal] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [selectedPersonaId, setSelectedPersonaId] = useState("cybercat");
+  const [selectedModel, setSelectedModel] = useState("auto");
+  const [temperature, setTemperature] = useState(0.7);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"chat" | "topics" | "settings">("chat");
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Tạo phiên mặc định ban đầu
+  const createNewSession = (personaId = "cybercat") => {
+    const persona = PERSONAS.find(p => p.id === personaId) || PERSONAS[0];
+    const newSession: ChatSession = {
+      id: `session-${Date.now()}`,
+      title: `Hội thoại cùng ${persona.name}`,
+      persona: persona.id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messages: [
+        {
+          id: `msg-welcome-1`,
+          role: "model",
+          content: persona.defaultGreeting,
+          timestamp: "1995-INIT",
+        }
+      ]
+    };
+
+    setSessions(prev => [newSession, ...prev]);
+    setActiveSessionId(newSession.id);
+    setSelectedPersonaId(persona.id);
+    return newSession;
+  };
+
+  // Nạp lịch sử từ LocalStorage khi khởi động
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed: ChatSession[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSessions(parsed);
+          setActiveSessionId(parsed[0].id);
+          setSelectedPersonaId(parsed[0].persona || "cybercat");
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Không thể nạp lịch sử chat từ localStorage:", e);
+    }
+    createNewSession("cybercat");
+  }, []);
+
+  // Tự động lưu sessions vào LocalStorage
+  useEffect(() => {
+    if (sessions.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+      } catch (e) {
+        console.warn("Không thể lưu sessions vào localStorage:", e);
+      }
+    }
+  }, [sessions]);
+
+  // Lấy phiên chat hiện tại
+  const currentSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [currentSession?.messages, isTyping]);
+
+  // Xử lý gửi tin nhắn
+  const handleSendMessage = async (textToSend?: string) => {
+    const content = (textToSend || inputVal).trim();
+    if (!content || isTyping || !currentSession) return;
+
+    if (soundEnabled) playRetroBeep(587.33, "sine", 0.06); // D5 note
+
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content,
+      timestamp: timeStr,
+    };
+
+    const updatedMessages = [...currentSession.messages, userMsg];
+
+    // Cập nhật title của phiên nếu là tin nhắn đầu của user
+    const userMessageCount = updatedMessages.filter(m => m.role === "user").length;
+    let newTitle = currentSession.title;
+    if (userMessageCount === 1) {
+      newTitle = content.length > 30 ? content.substring(0, 30) + "..." : content;
+    }
+
+    setSessions(prev =>
+      prev.map(s =>
+        s.id === currentSession.id
+          ? { ...s, messages: updatedMessages, title: newTitle, updatedAt: Date.now() }
+          : s
+      )
+    );
+
+    setInputVal("");
+    setIsTyping(true);
+
+    try {
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          persona: currentSession.persona,
+          preferredModel: selectedModel === "auto" ? undefined : selectedModel,
+          temperature,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (soundEnabled) playRetroBeep(880, "triangle", 0.09); // A5 note
+
+      if (data.reply) {
+        const modelMsg: ChatMessage = {
+          id: `model-${Date.now()}`,
+          role: "model",
+          content: data.reply,
+          timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
+          modelName: data.model,
+          durationMs: data.durationMs,
+        };
+
+        setSessions(prev =>
+          prev.map(s =>
+            s.id === currentSession.id
+              ? { ...s, messages: [...updatedMessages, modelMsg], updatedAt: Date.now() }
+              : s
+          )
+        );
+      } else {
+        throw new Error(data.error || "Không nhận được phản hồi từ AI.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      const errMsg: ChatMessage = {
+        id: `err-${Date.now()}`,
+        role: "model",
+        content: "Meow~! Mạng nơ-ron đang bị nhiễu sóng tạm thời. Bạn hãy thử nhấn nút 'Tạo lại' hoặc gửi lại nhé! 🐱💾",
+        timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
+      };
+      setSessions(prev =>
+        prev.map(s =>
+          s.id === currentSession.id
+            ? { ...s, messages: [...updatedMessages, errMsg], updatedAt: Date.now() }
+            : s
+        )
+      );
+    } finally {
+      setIsTyping(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  // Đổi Persona cho phiên hiện tại
+  const handleSwitchPersona = (newPersonaId: string) => {
+    setSelectedPersonaId(newPersonaId);
+    if (!currentSession) return;
+
+    const persona = PERSONAS.find(p => p.id === newPersonaId) || PERSONAS[0];
+    const switchNoticeMsg: ChatMessage = {
+      id: `sys-${Date.now()}`,
+      role: "model",
+      content: `*Đã chuyển đổi sang nhân cách **${persona.name}** (${persona.role}).*\n\n${persona.defaultGreeting}`,
+      timestamp: "SWITCH",
+    };
+
+    setSessions(prev =>
+      prev.map(s =>
+        s.id === currentSession.id
+          ? {
+              ...s,
+              persona: newPersonaId,
+              messages: [...s.messages, switchNoticeMsg],
+              updatedAt: Date.now()
+            }
+          : s
+      )
+    );
+  };
+
+  // Xóa một phiên hội thoại
+  const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (sessions.length <= 1) {
+      // Nếu chỉ còn 1 phiên, xóa và tạo mới
+      localStorage.removeItem(STORAGE_KEY);
+      createNewSession(selectedPersonaId);
+      return;
+    }
+
+    const filtered = sessions.filter(s => s.id !== sessionId);
+    setSessions(filtered);
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(filtered[0].id);
+      setSelectedPersonaId(filtered[0].persona || "cybercat");
+    }
+  };
+
+  // Sao chép tin nhắn
+  const handleCopyText = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    if (soundEnabled) playRetroBeep(659.25, "sine", 0.05);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Đọc to tin nhắn (Text to Speech)
+  const handleSpeakText = (id: string, text: string) => {
+    if (!('speechSynthesis' in window)) {
+      alert("Trình duyệt của bạn không hỗ trợ Speech Synthesis API.");
+      return;
+    }
+
+    if (speakingId === id) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*_#`~]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = "vi-VN";
+    utterance.rate = 1.0;
+
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+
+    setSpeakingId(id);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Xuất file Transcript
+  const handleExportChat = (format: "txt" | "json") => {
+    if (!currentSession) return;
+    let content = "";
+    let mimeType = "text/plain";
+    let fileName = `vapor_chat_${currentSession.id}.${format}`;
+
+    if (format === "json") {
+      content = JSON.stringify(currentSession, null, 2);
+      mimeType = "application/json";
+    } else {
+      content = `====================================================\n` +
+        `💾 LOVELY YELLOW CAT // CYBER AI CHAT TRANSCRIPT\n` +
+        `🏷️ Phiên: ${currentSession.title}\n` +
+        `👤 Nhân cách: ${currentSession.persona}\n` +
+        `📅 Thời gian: ${new Date(currentSession.createdAt).toLocaleString("vi-VN")}\n` +
+        `====================================================\n\n` +
+        currentSession.messages.map(m => `[${m.timestamp}] ${m.role === 'user' ? 'BẠN' : 'AI'}:\n${m.content}\n`).join("\n---\n\n");
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Format inline Markdown
+  const formatMarkdown = (text: string) => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code class="bg-black/10 px-1 py-0.5 rounded text-[11px] font-mono text-vapor-pink">$1</code>');
+  };
+
+  const activePersonaObj = PERSONAS.find(p => p.id === (currentSession?.persona || selectedPersonaId)) || PERSONAS[0];
+
+  return (
+    <div className="font-retro text-black select-none max-w-7xl mx-auto my-4 space-y-4">
+      {/* 3D Main Workstation Window */}
+      <div className="win95-container bg-win-gray shadow-2xl flex flex-col min-h-[680px]">
+        {/* Main Title bar */}
+        <div className="win95-header py-1.5 px-3 bg-gradient-to-r from-win-titlebar via-[#6a26a4] to-[#1084d0] text-white flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🐱</span>
+            <span className="font-bold text-xs sm:text-sm tracking-wider uppercase">
+              CYBER_CAT_AI.EXE // TRẠM TRÍ TUỆ NHÂN TẠO 1995-2026
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] font-mono">
+            <span className="bg-black text-vapor-green px-2 py-0.5 font-bold">
+              GOOGLE AI STUDIO // READY
+            </span>
+          </div>
+        </div>
+
+        {/* Top Menubar Strip */}
+        <div className="win95-menubar justify-between bg-win-gray px-3 py-1 text-xs border-b border-win-dark">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("chat")}
+              className={`font-bold hover:underline ${activeTab === 'chat' ? 'text-vapor-purple underline font-black' : 'text-black'}`}
+            >
+              💬 Phòng Hội Thoại
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("topics")}
+              className={`font-bold hover:underline ${activeTab === 'topics' ? 'text-vapor-purple underline font-black' : 'text-black'}`}
+            >
+              📚 Kho Đề Tài Gợi Ý
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("settings")}
+              className={`font-bold hover:underline ${activeTab === 'settings' ? 'text-vapor-purple underline font-black' : 'text-black'}`}
+            >
+              ⚙️ Cấu Hình & Model
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="win95-btn py-0 px-2 text-[10px] font-mono flex items-center gap-1"
+              title="Bật/Tắt âm thanh hiệu ứng retro"
+            >
+              <span>{soundEnabled ? "🔊 Âm Thanh: BẬT" : "🔇 Âm Thanh: TẮT"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportChat("txt")}
+              className="win95-btn py-0 px-2 text-[10px] font-mono flex items-center gap-1"
+              title="Xuất nhật ký trò chuyện"
+            >
+              <span>💾 Xuất File</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Body Workspace Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 flex-1 bg-[#d4d4d4]">
+          {/* LEFT SIDEBAR PANEL (4 cols on desktop) */}
+          <div className="lg:col-span-4 border-r border-win-dark p-3 space-y-4 bg-win-gray flex flex-col justify-between">
+            <div className="space-y-4">
+              {/* Session Controls */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-win-darkest">
+                    🗂️ CÁC PHIÊN HỘI THOẠI
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => createNewSession(selectedPersonaId)}
+                    className="win95-btn py-1 px-2 text-[10px] font-bold text-vapor-purple bg-[#fffb96]/30 flex items-center gap-1"
+                    style={{ minHeight: "24px" }}
+                  >
+                    <span>+ Cuộc Trò Chuyện Mới</span>
+                  </button>
+                </div>
+
+                {/* Session List */}
+                <div className="win95-sunken bg-white p-1 max-h-44 overflow-y-auto space-y-1">
+                  {sessions.map(s => {
+                    const pObj = PERSONAS.find(p => p.id === s.persona) || PERSONAS[0];
+                    const isActive = s.id === (currentSession?.id || activeSessionId);
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          setActiveSessionId(s.id);
+                          setSelectedPersonaId(s.persona || "cybercat");
+                          setActiveTab("chat");
+                        }}
+                        className={`p-1.5 flex justify-between items-center text-xs cursor-pointer border ${
+                          isActive
+                            ? "bg-win-titlebar text-white font-bold border-black"
+                            : "hover:bg-win-light text-black border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <span>{pObj.icon}</span>
+                          <span className="truncate text-[11px]">{s.title}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSession(s.id, e)}
+                          className={`px-1 py-0 text-[9px] font-mono hover:bg-red-700 hover:text-white ${
+                            isActive ? "text-white" : "text-win-dark"
+                          }`}
+                          title="Xóa phiên này"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Persona Selector Strip */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-win-darkest block">
+                  🎭 CHỌN NHÂN CÁCH AI
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {PERSONAS.map(p => {
+                    const isSelected = p.id === (currentSession?.persona || selectedPersonaId);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleSwitchPersona(p.id)}
+                        className={`win95-btn p-2 text-left flex flex-col gap-1 ${
+                          isSelected ? "win95-sunken bg-vapor-pink/20 font-bold border-2 border-black" : "bg-win-gray"
+                        }`}
+                        style={{ minHeight: "68px" }}
+                      >
+                        <div className="flex items-center gap-1 text-xs">
+                          <span>{p.icon}</span>
+                          <span className="font-bold text-[11px] truncate">{p.name}</span>
+                        </div>
+                        <span className="text-[9px] text-win-darkest leading-tight line-clamp-2">
+                          {p.role}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Active Persona Banner Card */}
+              <div className="win95-sunken bg-white p-3 space-y-2 border border-win-dark">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-sm bg-gradient-to-br ${activePersonaObj.avatarBg} border border-black flex items-center justify-center text-base shrink-0 shadow-sm`}>
+                    {activePersonaObj.icon}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs leading-none">{activePersonaObj.name}</h4>
+                    <span className="text-[9px] font-mono text-win-dark">{activePersonaObj.role}</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-win-darkest font-body leading-relaxed">
+                  {activePersonaObj.desc}
+                </p>
+              </div>
+            </div>
+
+            {/* Diagnostics box */}
+            <div className="p-2 bg-[#c0c0c0] border border-win-dark text-[10px] font-mono space-y-1">
+              <div className="flex justify-between">
+                <span>Model hiện tại:</span>
+                <span className="font-bold text-vapor-purple truncate max-w-[120px]">
+                  {selectedModel === 'auto' ? 'Auto-Fallback' : selectedModel}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Số tin nhắn:</span>
+                <span className="font-bold">{currentSession?.messages.length || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Trạng thái máy chủ:</span>
+                <span className="text-vapor-green font-bold">ONLINE 100%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT MAIN TERMINAL (8 cols on desktop) */}
+          <div className="lg:col-span-8 p-3 flex flex-col justify-between bg-[#f0f0f0]">
+            {activeTab === "chat" && (
+              <>
+                {/* Chat Stream Window */}
+                <div className="win95-sunken bg-[#120024] p-3 h-[420px] overflow-y-auto space-y-3.5 shadow-inner border-2 border-win-dark">
+                  {/* Terminal ASCII Art Header */}
+                  <div className="text-center pb-2 border-b border-vapor-purple/30 text-vapor-blue font-mono text-[9px] select-none">
+                    <pre className="inline-block text-vapor-pink leading-tight">
+{`   /\\_/\\  
+  ( o.o )  CYBER_CAT AI v1995 // READY
+   > ^ <   Google AI Studio Connected`}
+                    </pre>
+                    <p className="mt-1 text-text-muted">
+                      // BẢO MẬT PHIÊN HỘI THOẠI 100% TRÊN TRÌNH DUYỆT //
+                    </p>
+                  </div>
+
+                  {/* Message Bubbles */}
+                  {currentSession?.messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      {msg.role === "model" && (
+                        <div className={`w-8 h-8 rounded-sm bg-gradient-to-br ${activePersonaObj.avatarBg} border border-black flex items-center justify-center text-sm shrink-0 shadow-md`}>
+                          {activePersonaObj.icon}
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[85%] sm:max-w-[78%] p-3 text-xs shadow-md ${
+                          msg.role === "user"
+                            ? "bg-gradient-to-br from-[#2a0040] to-[#1a0030] text-white border border-vapor-pink rounded-tl-sm rounded-bl-sm"
+                            : "bg-[#e8e8e8] text-black border-2 border-win-light win95-raised"
+                        }`}
+                      >
+                        {/* Header of message */}
+                        <div className="flex items-center justify-between text-[9px] font-mono border-b pb-1 mb-1.5 border-black/10">
+                          <span className="font-bold flex items-center gap-1 text-vapor-purple">
+                            {msg.role === "user" ? "👤 BẠN" : `${activePersonaObj.icon} ${activePersonaObj.name.toUpperCase()}`}
+                          </span>
+                          <div className="flex items-center gap-2 text-win-dark font-normal">
+                            {msg.durationMs && <span>⚡ {msg.durationMs}ms</span>}
+                            <span>{msg.timestamp}</span>
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="text-xs sm:text-[13px] leading-relaxed font-body whitespace-pre-wrap">
+                          {msg.content.split("\n").map((line, lIdx) => (
+                            <p
+                              key={lIdx}
+                              className={line.trim() === "" ? "h-2" : "my-0.5"}
+                              dangerouslySetInnerHTML={{ __html: formatMarkdown(line) }}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Action buttons on message bubble */}
+                        <div className="flex justify-end items-center gap-2 pt-2 mt-1.5 border-t border-black/10 text-[9px] font-mono">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(msg.id, msg.content)}
+                            className="hover:underline text-win-darkest flex items-center gap-0.5"
+                            title="Sao chép nội dung"
+                          >
+                            <span>{copiedId === msg.id ? "✓ Đã Chép!" : "📋 Sao chép"}</span>
+                          </button>
+                          {msg.role === "model" && (
+                            <button
+                              type="button"
+                              onClick={() => handleSpeakText(msg.id, msg.content)}
+                              className={`hover:underline flex items-center gap-0.5 ${
+                                speakingId === msg.id ? "text-vapor-pink font-bold" : "text-win-darkest"
+                              }`}
+                              title="Đọc to bằng giọng nói"
+                            >
+                              <span>{speakingId === msg.id ? "⏹️ Đang Đọc..." : "🔊 Đọc to"}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {msg.role === "user" && (
+                        <div className="w-8 h-8 rounded-sm bg-win-gray border border-black flex items-center justify-center text-xs shrink-0 shadow-md font-bold">
+                          👤
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Typing animation */}
+                  {isTyping && (
+                    <div className="flex gap-2.5 items-center justify-start">
+                      <div className={`w-8 h-8 rounded-sm bg-gradient-to-br ${activePersonaObj.avatarBg} border border-black flex items-center justify-center text-sm shrink-0 shadow-md animate-pulse`}>
+                        {activePersonaObj.icon}
+                      </div>
+                      <div className="bg-[#e8e8e8] border border-win-dark p-2.5 win95-sunken flex items-center gap-2 text-xs font-mono text-black">
+                        <span>{activePersonaObj.name} đang suy nghĩ</span>
+                        <span className="inline-flex gap-1">
+                          <span className="w-2 h-2 rounded-full bg-vapor-pink animate-bounce"></span>
+                          <span className="w-2 h-2 rounded-full bg-vapor-purple animate-bounce [animation-delay:0.2s]"></span>
+                          <span className="w-2 h-2 rounded-full bg-vapor-blue animate-bounce [animation-delay:0.4s]"></span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Quick Prompts Chip Carousel */}
+                <div className="py-2 overflow-x-auto whitespace-nowrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-win-darkest uppercase shrink-0 font-mono">
+                      💡 GỢI Ý NHANH:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Vaporwave là gì và bắt nguồn từ đâu?")}
+                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-mono shrink-0 hover:bg-vapor-yellow/30"
+                    >
+                      🎨 Vaporwave là gì?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Gợi ý 5 album nhạc Synthwave huyền thoại")}
+                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-mono shrink-0 hover:bg-vapor-yellow/30"
+                    >
+                      📼 5 Album Synthwave
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Hướng dẫn tôi cách gửi tác phẩm lên triển lãm")}
+                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-mono shrink-0 hover:bg-vapor-yellow/30"
+                    >
+                      🖼️ Hướng dẫn gửi tranh
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage("Kể cho tôi nghe về vẻ đẹp của Windows 95")}
+                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-mono shrink-0 hover:bg-vapor-yellow/30"
+                    >
+                      🕹️ Windows 95
+                    </button>
+                  </div>
+                </div>
+
+                {/* Input Form Terminal */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                  className="space-y-2 pt-1"
+                >
+                  <div className="win95-sunken bg-white p-2 flex items-end gap-2 border-2 border-win-dark">
+                    <textarea
+                      ref={inputRef}
+                      rows={2}
+                      value={inputVal}
+                      onChange={(e) => setInputVal(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      placeholder={`Trò chuyện cùng ${activePersonaObj.name}... (Nhấn Enter để gửi, Shift+Enter để xuống dòng)`}
+                      disabled={isTyping}
+                      className="w-full bg-transparent border-none outline-none text-xs sm:text-sm text-black font-body resize-none"
+                      maxLength={1000}
+                    />
+                    <button
+                      type="submit"
+                      disabled={isTyping || !inputVal.trim()}
+                      className="win95-btn font-extrabold text-xs sm:text-sm px-5 py-2 text-vapor-purple bg-[#fffb96]/40 border-2 border-black disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                      style={{ minHeight: "38px" }}
+                    >
+                      <span>{isTyping ? "..." : "GỬI"}</span>
+                      <span className="font-mono text-xs">&gt;&gt;</span>
+                    </button>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-mono text-win-dark">
+                    <span>💡 Nhấn Enter để gửi tin nhắn ngay</span>
+                    <span>{inputVal.length} / 1000 ký tự</span>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {/* TAB: Kho Đề Tài Gợi Ý */}
+            {activeTab === "topics" && (
+              <div className="space-y-4 p-2 h-[550px] overflow-y-auto">
+                <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+                  <span>📚 KHO ĐỀ TÀI GỢI Ý ĐÀM ĐẠO CÙNG AI</span>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {TOPIC_CATEGORIES.map((cat, idx) => (
+                    <div key={idx} className="win95-container bg-white p-3 space-y-2">
+                      <h4 className="font-bold text-xs uppercase text-vapor-purple border-b border-win-dark pb-1">
+                        {cat.category}
+                      </h4>
+                      <div className="space-y-1.5">
+                        {cat.topics.map((t, tIdx) => (
+                          <button
+                            key={tIdx}
+                            type="button"
+                            onClick={() => {
+                              setActiveTab("chat");
+                              handleSendMessage(t);
+                            }}
+                            className="win95-btn w-full text-left p-1.5 text-[11px] hover:bg-vapor-yellow/20 flex items-start gap-1.5"
+                          >
+                            <span className="text-vapor-pink font-bold">»</span>
+                            <span className="leading-snug">{t}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB: Cấu Hình & Model */}
+            {activeTab === "settings" && (
+              <div className="space-y-4 p-3 h-[550px] overflow-y-auto">
+                <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+                  <span>⚙️ TÙY CHỈNH THÔNG SỐ AI & MODEL</span>
+                </div>
+
+                <div className="win95-container bg-white p-4 space-y-4 text-xs">
+                  {/* Model Choice */}
+                  <div className="space-y-1.5">
+                    <label className="font-bold uppercase tracking-wide block">
+                      ⚡ Model Google AI Studio:
+                    </label>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="w-full p-2 border border-win-dark bg-win-light font-mono text-xs"
+                    >
+                      {MODEL_OPTIONS.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-win-dark">
+                      * Chế độ tự động sẽ duyệt lần lượt qua danh sách Fallback Model nếu có model bị quá tải.
+                    </p>
+                  </div>
+
+                  {/* Temperature */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center font-bold">
+                      <span>🌡️ Nhiệt độ sáng tạo (Temperature):</span>
+                      <span className="font-mono text-vapor-purple">{temperature}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="1.0"
+                      step="0.1"
+                      value={temperature}
+                      onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                      className="w-full cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[9px] text-win-dark font-mono">
+                      <span>0.2 (Chính xác / Logic)</span>
+                      <span>0.7 (Cân bằng chuẩn)</span>
+                      <span>1.0 (Sáng tạo / Thơ ca)</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t border-win-dark flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleExportChat("json")}
+                      className="win95-btn py-1.5 px-4 font-bold text-xs"
+                    >
+                      📥 Sao Lưu Dữ Liệu (.JSON)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?")) {
+                          localStorage.removeItem(STORAGE_KEY);
+                          createNewSession(selectedPersonaId);
+                          setActiveTab("chat");
+                        }
+                      }}
+                      className="win95-btn py-1.5 px-4 font-bold text-xs bg-red-100 text-red-700 hover:bg-red-200"
+                    >
+                      🗑️ Xóa Toàn Bộ Lịch Sử
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Global Bottom Statusbar */}
+        <div className="win95-statusbar justify-between text-[10px] bg-win-gray px-3 py-1 border-t border-win-dark">
+          <div className="flex items-center gap-3">
+            <span>● Status: Sẵn sàng tương tác</span>
+            <span className="win95-statusbar-panel font-mono text-vapor-green font-bold">
+              {activePersonaObj.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-win-dark font-mono">Google AI Studio Core 1995-2026</span>
+            <span className="win95-statusbar-panel font-mono font-bold text-win-titlebar">READY</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

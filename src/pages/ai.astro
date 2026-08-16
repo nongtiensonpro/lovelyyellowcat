@@ -1,0 +1,54 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
+import { AiChatStation } from "../components/AiChatStation";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy thông tin phiên người dùng hiện tại
+const userProfile = await getCurrentUserProfile(supabase);
+---
+
+<BaseLayout
+  title="CYBER_CAT_AI.EXE // TRẠM TRÍ TUỆ NHÂN TẠO // VAPOR MAGAZINE"
+  description="Trạm trí tuệ nhân tạo hoài cổ tương tác trực tiếp với Mèo Vàng Cybernetic và các chuyên gia nghệ thuật số thập niên 90 qua Google AI Studio."
+  userProfile={userProfile}
+>
+  <!-- Hero Section -->
+  <div class="text-center py-6">
+    <h1 class="hero-title text-glitch-soft">
+      Cyber Cat AI
+    </h1>
+    <p class="text-[9px] sm:text-xs tracking-[0.2em] text-vapor-yellow mt-3 font-mono uppercase">
+      // 1995 NEURAL TERMINAL // POWERED BY GOOGLE AI STUDIO (GEMINI) //
+    </p>
+  </div>
+
+  <!-- Intro Callout Box -->
+  <div class="win95-sunken bg-white p-3 mb-6 font-retro text-xs text-black flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border border-win-dark max-w-7xl mx-auto shadow-sm">
+    <div class="space-y-1">
+      <p class="font-bold text-vapor-purple text-xs sm:text-sm">
+        🐱 Chào mừng bạn đến với Trạm Trí Tuệ Nhân Tạo Nghệ Thuật Số!
+      </p>
+      <p class="text-[11px] text-win-darkest leading-relaxed">
+        Tương tác trực tiếp cùng <strong>4 nhân cách AI độc đáo</strong> (Mèo Vàng Linh Vật, Nhà Phê Bình Nghệ Thuật 1995, Hacker Y2K, Synthwave DJ) với động cơ <strong>Google Gemini</strong> và cơ chế tự động Fallback siêu mượt.
+      </p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <a href="/gallery" class="win95-btn py-1.5 px-3 text-black font-bold text-xs no-underline" style="min-height: 30px;">
+        🖼️ Xem Triển Lãm
+      </a>
+      <a href="/submit" class="win95-btn py-1.5 px-3 bg-[#05ffa1]/25 border border-black text-black font-bold text-xs no-underline" style="min-height: 30px;">
+        🎨 Đăng Tải Tranh
+      </a>
+    </div>
+  </div>
+
+  {/* Main AI Chat Workstation Component */}
+  <div class="w-full">
+    <AiChatStation client:load />
+  </div>
+</BaseLayout>

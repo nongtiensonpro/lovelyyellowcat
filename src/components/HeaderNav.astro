@@ -66,6 +66,13 @@ const currentPath = Astro.url.pathname;
         >
           <span>👥</span> Nghệ Sĩ
         </a>
+        <a
+          href="/ai"
+          class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/ai') ? 'win95-sunken bg-vapor-yellow/30 text-black font-extrabold border-2 border-black' : ''}`}
+          style="min-height: 32px;"
+        >
+          <span>🐱</span> Mèo Vàng AI
+        </a>
         {userProfile && (
           <a
             href="/favorites"
@@ -207,6 +214,9 @@ const currentPath = Astro.url.pathname;
         </a>
         <a href="/artists" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/artists') ? 'bg-vapor-green/20 border-vapor-green text-white font-extrabold' : 'bg-win-gray text-black'}`}>
           👥 DANH SÁCH NGHỆ SĨ
+        </a>
+        <a href="/ai" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/ai') ? 'bg-vapor-yellow/40 border-2 border-black text-black font-extrabold' : 'bg-win-gray text-black'}`}>
+          🐱 TRẠM AI MÈO VÀNG (1995)
         </a>
         {userProfile && (
           <a href="/favorites" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/favorites') ? 'bg-vapor-purple/20 border-vapor-purple text-white font-extrabold' : 'bg-win-gray text-black'}`}>
