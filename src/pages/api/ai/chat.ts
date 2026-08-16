@@ -53,6 +53,7 @@ export const POST: APIRoute = async ({ request }) => {
         error: "Chưa cấu hình GEMINI_API_KEY trong hệ thống.",
         reply:
           "Meow~! Hệ thống chưa tìm thấy khóa `GEMINI_API_KEY`. Bạn hãy lấy API Key miễn phí tại https://aistudio.google.com/ và thêm vào file cấu hình (.dev.vars hoặc Cloudflare Environment) nhé! 🐱🔑",
+        errorDetail: "[CONFIG_ERROR] Chưa tìm thấy biến môi trường GEMINI_API_KEY trong .dev.vars (chạy dev) hoặc Cloudflare Dashboard Environment Variables (trên production). Vui lòng kiểm tra lại cấu hình!",
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -145,12 +146,28 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Nếu tất cả model trong danh sách fallback đều gặp sự cố
+    let formattedErrorDetail = "";
+    if (lastError) {
+      if (typeof lastError === "string") {
+        formattedErrorDetail = lastError;
+      } else if (lastError.error) {
+        formattedErrorDetail = `[GOOGLE_AI_ERROR ${lastError.error.code || 'N/A'}] ${lastError.error.message || JSON.stringify(lastError.error)} (Status: ${lastError.error.status || 'FAILED'})`;
+      } else {
+        formattedErrorDetail = JSON.stringify(lastError, null, 2);
+      }
+    } else {
+      formattedErrorDetail = "Không nhận được phản hồi hợp lệ từ máy chủ Google AI Studio.";
+    }
+
+    formattedErrorDetail += `\n[Models Attempted]: ${modelsToTry.join(" -> ")}`;
+
     return new Response(
       JSON.stringify({
         success: false,
         error: lastError?.error?.message || "Tất cả các Model AI đều không phản hồi.",
         reply:
           "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
+        errorDetail: formattedErrorDetail,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -158,9 +175,13 @@ export const POST: APIRoute = async ({ request }) => {
     console.error("[AI CHAT API ERROR]:", error);
     return new Response(
       JSON.stringify({
+        success: false,
         error: error.message || "Lỗi máy chủ nội bộ khi xử lý hội thoại.",
+        reply:
+          "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
+        errorDetail: `[INTERNAL_SERVER_ERROR]: ${error.stack || error.message || error}`,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   }
 };

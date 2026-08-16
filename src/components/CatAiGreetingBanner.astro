@@ -1,0 +1,109 @@
+---
+/**
+ * CatAiGreetingBanner.astro
+ * ────────────────────────────────────────────────────────────
+ * Banner lời chào ngẫu nhiên từ Mèo Vàng Cybernetic AI
+ * Hiển thị 1 trong 10 lời chào mặc định sẵn có trên đầu cột phải trang chủ.
+ * Cung cấp nút điều hướng sang trang trò chuyện độc lập /ai.
+ */
+
+const GREETINGS = [
+  "Meow~! Chào mừng bạn đến với ốc đảo nghệ thuật số Vaporwave 💾! Chúc bạn có những phút giây thư thái ngắm tranh và đọc báo nhé!",
+  "Hôm nay bạn muốn đắm chìm trong giai điệu Synthwave hay ngắm nhìn những kiệt tác Windows 95 cổ điển? Hãy ghé Trạm AI để cùng tôi đàm đạo nha! 🐱✨",
+  "Tín hiệu đường truyền Dial-up 56k đã kết nối thành công! Đừng quên ghé thăm Phòng Triển Lãm để thả tim cho những bức tranh tuyệt đẹp nhé! 💜📼",
+  "Meow~ Bạn có biết phong cách Vaporwave bắt nguồn từ sự hoài niệm công nghệ thập niên 80-90 không? Hãy ghé Trạm AI để nghe tôi kể thêm nhé! 🌸",
+  "Mèo Vàng đang thưởng thức một tách trà xanh bên màn hình CRT Trinitron 75Hz. Cùng tôi khám phá thế giới nghệ thuật retro ngay nào! 🍵🖥️",
+  "Ánh hoàng hôn tím neon và những tòa nhà chọc trời City Pop đang chờ đón bạn. Bạn đã sẵn sàng du hành về năm 1995 chưa? 🌆🎷",
+  "Chào mừng nhà sáng tạo số! Bạn đã có tác phẩm retro nào chưa? Đừng ngần ngại đăng tải lên để ghi danh trên bảng vàng nghệ sĩ nhé! 🎨👑",
+  "Meow~! Một ngày tuyệt vời để lắng nghe những bản Lo-Fi Chillwave và chiêm ngưỡng đồ họa pixel art 16-bit hoài niệm! 🕹️🎧",
+  "Hệ thống máy chủ Lovely Yellow Cat đang hoạt động hoàn hảo 100%. Nếu bạn cần giải đáp bất kỳ điều gì, Trạm AI luôn sẵn sàng 24/7! ⚡🤖",
+  "Tiếng rít đĩa mềm 3.5 inch và những sắc màu pastel dịu êm... Chúc bạn tìm thấy thật nhiều cảm hứng sáng tạo tại đây hôm nay! 💾🌸"
+];
+
+// Chọn ngẫu nhiên 1 lời chào ban đầu cho SSR
+const initialGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+---
+
+<div class="win95-window mb-6 font-retro text-black shadow-md border-2 border-black" id="cat-ai-greeting-window">
+  <!-- Title bar Windows 95 -->
+  <div class="win95-header py-1 px-2.5 bg-gradient-to-r from-[#b967ff] via-win-titlebar to-[#01cdfe] text-white flex justify-between items-center">
+    <div class="flex items-center gap-1.5">
+      <span class="text-sm">🐱</span>
+      <span class="font-bold text-xs tracking-wider uppercase">
+        CAT_AI_GREETING.EXE // LỜI CHÀO TỪ MÈO VÀNG CYBERNETIC
+      </span>
+    </div>
+    <div class="flex items-center gap-1">
+      <span class="bg-black text-vapor-green px-1.5 py-0.5 text-[9px] font-mono font-bold">
+        AI v1995
+      </span>
+    </div>
+  </div>
+
+  <!-- Body Content -->
+  <div class="p-3.5 bg-win-gray space-y-3">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <!-- Cyber Cat Avatar -->
+      <div class="w-12 h-12 rounded-sm bg-gradient-to-br from-[#fffb96] via-[#ff9a3c] to-[#ff71ce] border-2 border-black flex items-center justify-center text-2xl shrink-0 shadow-md">
+        🐱
+      </div>
+
+      <!-- Speech Bubble -->
+      <div class="win95-sunken bg-white p-3 flex-1 border border-win-dark relative">
+        <div class="flex items-center justify-between text-[9px] font-mono font-bold text-vapor-purple border-b border-win-light/60 pb-1 mb-1.5">
+          <span class="flex items-center gap-1">
+            <span>●</span> MÈO VÀNG CYBERNETIC (GOOGLE AI STUDIO)
+          </span>
+          <span class="text-win-dark font-normal">TIN NHẮN HỆ THỐNG</span>
+        </div>
+        <p id="cat-ai-greeting-text" class="text-xs sm:text-[13px] text-black font-body leading-relaxed">
+          {initialGreeting}
+        </p>
+      </div>
+    </div>
+
+    <!-- Action Bar: Switch Quote & Go to Full AI Chat Page -->
+    <div class="flex flex-wrap justify-between items-center gap-2 pt-1 border-t border-win-dark">
+      <button
+        id="randomize-greeting-btn"
+        type="button"
+        class="win95-btn py-1.5 px-3 text-black text-xs font-bold flex items-center gap-1.5 hover:bg-vapor-yellow/30"
+        style="min-height: 30px;"
+        title="Đổi lời chào ngẫu nhiên khác"
+      >
+        <span>🎲</span>
+        <span>Lời Chào Khác</span>
+      </button>
+
+      <a
+        href="/ai"
+        class="win95-btn py-1.5 px-4 text-black font-extrabold text-xs no-underline bg-[#fffb96]/50 border-2 border-black flex items-center gap-1.5 hover:bg-vapor-yellow hover:scale-[1.02] transition-transform"
+        style="min-height: 30px;"
+      >
+        <span>💬</span>
+        <span>VÀO TRẠM TRÒ CHUYỆN CÙNG AI ĐẦY ĐỦ</span>
+        <span class="font-mono text-vapor-purple">&gt;&gt;</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ greetings: GREETINGS }}>
+  const btn = document.getElementById("randomize-greeting-btn");
+  const textEl = document.getElementById("cat-ai-greeting-text");
+
+  if (btn && textEl) {
+    btn.addEventListener("click", () => {
+      // Chọn ngẫu nhiên lời chào khác với câu đang hiển thị
+      let currentText = textEl.textContent?.trim() || "";
+      let available = greetings.filter((g) => g !== currentText);
+      let randomPick = available[Math.floor(Math.random() * available.length)] || greetings[0];
+      
+      textEl.style.opacity = "0.3";
+      setTimeout(() => {
+        textEl.textContent = randomPick;
+        textEl.style.opacity = "1";
+      }, 100);
+    });
+  }
+</script>

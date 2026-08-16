@@ -4,7 +4,7 @@ import RibbonCard from "../components/RibbonCard.astro";
 import RetroSticker from "../components/RetroSticker.astro";
 import CrtMonitorFrame from "../components/CrtMonitorFrame.astro";
 import ServerStatusWidget from "../components/ServerStatusWidget.astro";
-import { AiChatWindow } from "../components/AiChatWindow";
+import CatAiGreetingBanner from "../components/CatAiGreetingBanner.astro";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
 const supabase = createSupabaseServerClient({
@@ -107,9 +107,6 @@ const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "per
       <!-- Server Status Monitor Widget (Live API) -->
       <ServerStatusWidget />
 
-      <!-- Mèo Vàng Cybernetic AI Assistant Chatbox -->
-      <AiChatWindow client:load />
-
       <!-- Quick Catalog Categories (Dell 1996 Style Nav Rail) -->
       <div class="win95-window">
         <div class="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
@@ -195,6 +192,9 @@ const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "per
     <!-- RIGHT COLUMN (8 / 12 cols = ~67% desktop) -->
     <main class="lg:col-span-8 space-y-8">
       
+      <!-- Top AI Greeting Message from Mèo Vàng Cybernetic -->
+      <CatAiGreetingBanner />
+
       <!-- Eyebrow Section Block: Featured Articles -->
       <div class="border-2 border-black bg-[#8e8a25] p-3 text-black font-retro shadow-[4px_4px_0_#000]">
         <div class="flex justify-between items-center">

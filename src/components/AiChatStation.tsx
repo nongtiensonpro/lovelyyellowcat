@@ -7,6 +7,8 @@ export interface ChatMessage {
   timestamp: string;
   modelName?: string;
   durationMs?: number;
+  isError?: boolean;
+  errorDetail?: string;
 }
 
 export interface ChatSession {
@@ -151,9 +153,14 @@ export const AiChatStation: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"chat" | "topics" | "settings">("chat");
+  const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const toggleExpandError = (msgId: string) => {
+    setExpandedErrors(prev => ({ ...prev, [msgId]: !prev[msgId] }));
+  };
 
   // Tạo phiên mặc định ban đầu
   const createNewSession = (personaId = "cybercat") => {
@@ -274,7 +281,24 @@ export const AiChatStation: React.FC = () => {
 
       if (soundEnabled) playRetroBeep(880, "triangle", 0.09); // A5 note
 
-      if (data.reply) {
+      if (data.success === false || data.error) {
+        const errorModelMsg: ChatMessage = {
+          id: `err-${Date.now()}`,
+          role: "model",
+          content: data.reply || "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
+          timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
+          isError: true,
+          errorDetail: data.errorDetail || data.error || "Lỗi không xác định khi kết nối với máy chủ Google AI Studio.",
+        };
+
+        setSessions(prev =>
+          prev.map(s =>
+            s.id === currentSession.id
+              ? { ...s, messages: [...updatedMessages, errorModelMsg], updatedAt: Date.now() }
+              : s
+          )
+        );
+      } else if (data.reply) {
         const modelMsg: ChatMessage = {
           id: `model-${Date.now()}`,
           role: "model",
@@ -299,8 +323,10 @@ export const AiChatStation: React.FC = () => {
       const errMsg: ChatMessage = {
         id: `err-${Date.now()}`,
         role: "model",
-        content: "Meow~! Mạng nơ-ron đang bị nhiễu sóng tạm thời. Bạn hãy thử nhấn nút 'Tạo lại' hoặc gửi lại nhé! 🐱💾",
+        content: "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
         timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
+        isError: true,
+        errorDetail: `[CLIENT_FETCH_EXCEPTION]: ${err?.message || err}`,
       };
       setSessions(prev =>
         prev.map(s =>
@@ -683,6 +709,55 @@ export const AiChatStation: React.FC = () => {
                             />
                           ))}
                         </div>
+
+                        {/* Collapsible Error Diagnostics Box */}
+                        {msg.isError && (
+                          <div className="mt-2.5 pt-2 border-t border-red-300 font-mono">
+                            <button
+                              type="button"
+                              onClick={() => toggleExpandError(msg.id)}
+                              className="text-[10px] font-bold text-red-800 hover:text-red-950 flex items-center gap-1.5 cursor-pointer bg-red-100/90 hover:bg-red-200 px-2 py-1 border border-red-300 rounded-xs shadow-xs"
+                            >
+                              <span>{expandedErrors[msg.id] ? "[-] Ẩn chi tiết kỹ thuật" : "[+] Mở rộng xem chi tiết lỗi kỹ thuật & Báo Dev"}</span>
+                            </button>
+
+                            {expandedErrors[msg.id] && (
+                              <div className="mt-2 p-2.5 bg-black text-[#05ffa1] text-[10px] rounded-xs font-mono border-2 border-win-dark space-y-2 overflow-x-auto select-text shadow-md">
+                                <div className="text-red-400 font-bold flex items-center gap-1.5 border-b border-win-dark/60 pb-1">
+                                  <span>⚠️ ERROR DIAGNOSTICS LOG // GOOGLE AI STUDIO</span>
+                                </div>
+                                <pre className="whitespace-pre-wrap leading-relaxed text-[10px] font-mono text-vapor-pink max-h-36 overflow-y-auto">
+                                  {msg.errorDetail || "Lỗi kết nối không xác định."}
+                                </pre>
+                                <div className="flex flex-wrap gap-2 pt-1.5 border-t border-win-dark/60">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(`err-detail-${msg.id}`, msg.errorDetail || "")}
+                                    className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-white hover:bg-vapor-yellow/30"
+                                  >
+                                    {copiedId === `err-detail-${msg.id}` ? "✓ Đã Chép Log!" : "📋 Sao Chép Log Lỗi"}
+                                  </button>
+                                  <a
+                                    href={`mailto:nongtiensonpro@gmail.com?subject=${encodeURIComponent("Báo lỗi AI Chat // Lovely Yellow Cat")}&body=${encodeURIComponent(`Chào Dev Nongtiensonpro,\n\nTôi gặp sự cố khi trò chuyện với AI tại website Lovely Yellow Cat:\n\n- Thời gian: ${new Date().toLocaleString("vi-VN")}\n- Phiên chat: ${currentSession?.title || "AI Chat"}\n- Nhân cách: ${currentSession?.persona || "cybercat"}\n\n[Chi tiết lỗi kỹ thuật]:\n${msg.errorDetail || "Không có log chi tiết"}\n\nNhờ dev kiểm tra và khắc phục giúp tôi nhé!`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-[#fffb96] no-underline hover:bg-yellow-300"
+                                  >
+                                    ✉️ Gửi Báo Lỗi Cho Dev (Email)
+                                  </a>
+                                  <a
+                                    href="https://github.com/nongtiensonpro/lovelyyellowcat/issues/new"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-white no-underline hover:bg-vapor-pink/20"
+                                  >
+                                    🐙 Báo Lỗi Qua GitHub Issues ↗
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Action buttons on message bubble */}
                         <div className="flex justify-end items-center gap-2 pt-2 mt-1.5 border-t border-black/10 text-[9px] font-mono">
