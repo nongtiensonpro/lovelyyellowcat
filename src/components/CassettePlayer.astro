@@ -3,168 +3,324 @@ interface Props {
   trackTitle?: string;
 }
 
-const { trackTitle = "MACINTOSH PLUS - リサフランク420 / 現代のコンピュ" } = Astro.props;
+const { trackTitle = "MACINTOSH PLUS - リサフランク420 // LO-FI VAPOR" } = Astro.props;
 ---
 
-<div id="vapor-cassette-widget" class="win95-container bg-win-gray font-retro text-black p-1 shadow-lg w-full max-w-xs transition-all duration-300">
-  <div class="win95-header py-0.5 px-1.5 flex justify-between items-center text-[10px]">
-    <div class="flex items-center gap-1">
-      <span>📼</span>
-      <span class="font-bold tracking-wider truncate">AUDIO_DECK.EXE</span>
+<!-- Mini Win95 Cassette Player (Audio Deck) -->
+<div
+  id="vapor-cassette-widget"
+  class="win95-container bg-win-gray font-retro text-black shadow-[4px_4px_0_rgba(0,0,0,0.8)] border-2 border-win-light transition-all duration-200 select-none w-[220px] sm:w-[240px]"
+>
+  <!-- Window Titlebar -->
+  <div class="win95-header py-0.5 px-1.5 flex justify-between items-center text-[9px] cursor-pointer" id="cassette-titlebar">
+    <div class="flex items-center gap-1 min-w-0 flex-1">
+      <span class="text-xs shrink-0">📼</span>
+      <span class="font-bold tracking-wider truncate font-mono">AUDIO_DECK.EXE</span>
     </div>
-    <button id="cassette-toggle-collapse" class="win95-btn py-0 px-1 text-[8px]" style="min-height: 16px;">_</button>
+    <div class="flex items-center gap-1 shrink-0 ml-1">
+      <button
+        id="cassette-toggle-collapse"
+        class="win95-btn py-0 px-1 text-[8px] font-bold"
+        style="min-height: 16px; min-width: 16px;"
+        title="Thu nhỏ / Mở rộng"
+      >
+        _
+      </button>
+    </div>
   </div>
 
-  <div id="cassette-body" class="p-2 space-y-2">
-    <!-- Cassette Tape Graphic -->
-    <div class="relative bg-gradient-to-r from-[#202020] via-[#101010] to-[#202020] p-2 rounded-sm border-2 border-win-darkest shadow-inner">
-      <!-- Tape Label Area -->
-      <div class="bg-gradient-to-r from-vapor-pink/80 via-vapor-purple/80 to-vapor-blue/80 p-1.5 rounded-sm border border-win-light/40">
-        <div class="bg-white/90 px-1.5 py-0.5 text-center text-[9px] font-bold text-black truncate font-mono">
-          {trackTitle}
+  <!-- Player Main Body -->
+  <div id="cassette-body" class="p-1.5 space-y-1.5 bg-[#c0c0c0]">
+    <!-- Compact Cassette Tape Graphic -->
+    <div class="relative bg-[#181818] p-1.5 rounded-sm border-2 border-win-darkest shadow-inner">
+      <!-- Tape Label Area with Marquee -->
+      <div class="bg-gradient-to-r from-vapor-pink via-vapor-purple to-vapor-blue p-0.5 rounded-sm border border-win-light/40">
+        <div class="bg-white/95 px-1 py-0.5 text-center text-[8px] font-bold text-black truncate font-mono shadow-inner">
+          <span id="cassette-track-label">{trackTitle}</span>
         </div>
       </div>
 
-      <!-- Tape Window with Reels -->
-      <div class="mt-2 bg-[#0b001a] border border-win-dark p-1 flex justify-around items-center h-10 relative overflow-hidden">
+      <!-- Tape Window with Rotating Spools -->
+      <div class="mt-1 bg-[#050010] border border-win-dark px-2 py-0.5 flex justify-around items-center h-7 relative overflow-hidden rounded-sm">
         <!-- Left Reel -->
-        <div class="cassette-spool relative w-7 h-7 rounded-full bg-white/20 border-2 border-dashed border-white/60 flex items-center justify-center">
-          <div class="w-2 h-2 rounded-full bg-vapor-pink"></div>
+        <div class="cassette-spool relative w-5 h-5 rounded-full bg-white/30 border border-dashed border-white/80 flex items-center justify-center">
+          <div class="w-1.5 h-1.5 rounded-full bg-vapor-pink shadow-[0_0_4px_#ff71ce]"></div>
         </div>
 
         <!-- Center Tape Bridge -->
-        <div class="h-4 w-12 bg-gradient-to-r from-vapor-purple/40 to-vapor-pink/40 border-t border-b border-win-dark flex items-center justify-center text-[8px] text-vapor-yellow font-mono">
+        <div class="h-3 px-1.5 bg-gradient-to-r from-vapor-purple/50 to-vapor-pink/50 border-t border-b border-win-dark/80 flex items-center justify-center text-[7px] text-vapor-yellow font-mono font-bold tracking-tighter">
           SIDE A
         </div>
 
         <!-- Right Reel -->
-        <div class="cassette-spool relative w-7 h-7 rounded-full bg-white/20 border-2 border-dashed border-white/60 flex items-center justify-center">
-          <div class="w-2 h-2 rounded-full bg-vapor-blue"></div>
+        <div class="cassette-spool relative w-5 h-5 rounded-full bg-white/30 border border-dashed border-white/80 flex items-center justify-center">
+          <div class="w-1.5 h-1.5 rounded-full bg-vapor-blue shadow-[0_0_4px_#01cdfe]"></div>
         </div>
       </div>
     </div>
 
-    <!-- Controls -->
-    <div class="flex items-center justify-between gap-1 pt-1">
-      <button id="cassette-play-btn" class="win95-btn flex-1 py-1 text-[10px] font-bold" style="min-height: 28px;">
-        ▶ PLAY
+    <!-- Controls Row -->
+    <div class="flex items-center gap-1 pt-0.5">
+      <button
+        id="cassette-play-btn"
+        class="win95-btn flex-1 py-0.5 px-1 text-[9px] font-bold flex items-center justify-center gap-1 text-black active:translate-y-0.5"
+        style="min-height: 24px;"
+      >
+        <span id="cassette-play-icon">▶</span>
+        <span id="cassette-play-text">PLAY</span>
       </button>
-      <button id="cassette-ambient-btn" class="win95-btn py-1 px-2 text-[10px] font-bold" style="min-height: 28px;" title="Bật/Tắt hiệu ứng âm thanh Synthesizer">
-        🔊 LO-FI
+
+      <!-- Volume / Mute Button -->
+      <button
+        id="cassette-mute-btn"
+        class="win95-btn py-0.5 px-2 text-[9px] font-bold text-black active:translate-y-0.5"
+        style="min-height: 24px;"
+        title="Bật/Tắt âm thanh"
+      >
+        🔊
       </button>
+
+      <!-- Volume Level Indicator -->
+      <div class="flex items-center win95-sunken bg-white px-1 py-0.5 text-[8px] font-mono font-bold w-10 justify-center">
+        <span id="cassette-status-text">OFF</span>
+      </div>
     </div>
   </div>
 </div>
 
+<style>
+  @keyframes spin-reel {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .cassette-spinning {
+    animation: spin-reel 2s linear infinite;
+  }
+</style>
+
 <script>
-  // Web Audio Synthwave Generator & Tape State Manager
-  let audioCtx: AudioContext | null = null;
-  let isPlaying = false;
-  let isMuted = false;
-  let synthInterval: number | null = null;
+  // Robust Vaporwave Synthwave Sound Engine using Web Audio API
+  class VaporwaveSoundEngine {
+    private ctx: AudioContext | null = null;
+    private masterGain: GainNode | null = null;
+    private isPlaying = false;
+    private isMuted = false;
+    private timerId: number | null = null;
+    private chordIndex = 0;
+    private noteIndex = 0;
 
-  const playBtn = document.getElementById("cassette-play-btn");
-  const ambientBtn = document.getElementById("cassette-ambient-btn");
-  const spools = document.querySelectorAll(".cassette-spool");
-  const collapseBtn = document.getElementById("cassette-toggle-collapse");
-  const cassetteBody = document.getElementById("cassette-body");
+    // Classic 80s/90s Synthwave Chords (Frequencies in Hz)
+    private readonly chords = [
+      [261.63, 329.63, 392.00, 493.88], // Cmaj7 (C4, E4, G4, B4)
+      [220.00, 261.63, 329.63, 392.00], // Am7   (A3, C4, E4, G4)
+      [174.61, 220.00, 261.63, 329.63], // Fmaj7 (F3, A3, C4, E4)
+      [196.00, 246.94, 293.66, 349.23], // G7    (G3, B3, D4, F4)
+      [220.00, 277.18, 329.63, 415.30], // Amaj7 (A3, C#4, E4, G#4)
+      [146.83, 220.00, 261.63, 329.63], // Dm7   (D3, A3, C4, E4)
+    ];
 
-  // Retro Vaporwave Chords (Frequencies in Hz)
-  const vaporChords = [
-    [261.63, 329.63, 392.00, 493.88], // Cmaj7
-    [220.00, 261.63, 329.63, 392.00], // Am7
-    [174.61, 220.00, 261.63, 329.63], // Fmaj7
-    [196.00, 246.94, 293.66, 349.23], // G7
-  ];
-  let chordIndex = 0;
+    // Dreamy Melody Lead Notes (Hz)
+    private readonly melodyNotes = [523.25, 659.25, 587.33, 783.99, 659.25, 523.25, 493.88, 587.33];
 
-  function playVaporSynthChord() {
-    if (!audioCtx || !isPlaying || isMuted) return;
-    try {
-      const chord = vaporChords[chordIndex % vaporChords.length];
-      chordIndex++;
+    private initContext() {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          this.ctx = new AudioCtx();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.setValueAtTime(0.20, this.ctx.currentTime); // Crisp, audible, warm volume
+          this.masterGain.connect(this.ctx.destination);
+        }
+      }
+      if (this.ctx && this.ctx.state === "suspended") {
+        this.ctx.resume();
+      }
+    }
 
-      chord.forEach((freq) => {
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        const filter = audioCtx.createBiquadFilter();
+    public playChordAndMelody() {
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.isMuted) return;
 
-        // Warm analog synth filter
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(800, audioCtx.currentTime);
-        filter.Q.setValueAtTime(4, audioCtx.currentTime);
+      const now = this.ctx.currentTime;
+      const chord = this.chords[this.chordIndex % this.chords.length];
+      this.chordIndex++;
 
-        // Soft dream wave
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq * 0.5, audioCtx.currentTime);
+      // 1. Warm Synth Pad Chords (Dual-Oscillator: Sine + Warm Triangle)
+      chord.forEach((freq, idx) => {
+        if (!this.ctx || !this.masterGain) return;
 
-        gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.04, audioCtx.currentTime + 0.6);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3.8);
+        // Osc 1: Warm Sine Base
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        const filter1 = this.ctx.createBiquadFilter();
 
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(audioCtx.destination);
+        filter1.type = "lowpass";
+        filter1.frequency.setValueAtTime(1200, now);
+        filter1.Q.setValueAtTime(2, now);
 
-        osc.start();
-        osc.stop(audioCtx.currentTime + 4.0);
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(freq, now);
+
+        gain1.gain.setValueAtTime(0.001, now);
+        gain1.gain.linearRampToValueAtTime(0.06, now + 0.4);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 3.6);
+
+        osc1.connect(filter1);
+        filter1.connect(gain1);
+        gain1.connect(this.masterGain);
+
+        osc1.start(now);
+        osc1.stop(now + 3.8);
+
+        // Osc 2: Detuned Triangle for Chorus Depth
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = "triangle";
+        osc2.frequency.setValueAtTime(freq * 1.004, now); // subtle detune +4 cents
+
+        gain2.gain.setValueAtTime(0.001, now);
+        gain2.gain.linearRampToValueAtTime(0.03, now + 0.5);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 3.6);
+
+        osc2.connect(filter1);
+        osc2.start(now);
+        osc2.stop(now + 3.8);
       });
-    } catch (e) {
-      console.warn("Audio playback notice:", e);
+
+      // 2. Soft Chill Melody Bell/Note on Top
+      const leadFreq = this.melodyNotes[this.noteIndex % this.melodyNotes.length];
+      this.noteIndex++;
+
+      const leadOsc = this.ctx.createOscillator();
+      const leadGain = this.ctx.createGain();
+      const leadFilter = this.ctx.createBiquadFilter();
+
+      leadFilter.type = "bandpass";
+      leadFilter.frequency.setValueAtTime(1800, now);
+
+      leadOsc.type = "sine";
+      leadOsc.frequency.setValueAtTime(leadFreq, now + 0.3);
+
+      leadGain.gain.setValueAtTime(0.0001, now);
+      leadGain.gain.setValueAtTime(0.0001, now + 0.3);
+      leadGain.gain.linearRampToValueAtTime(0.08, now + 0.45);
+      leadGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+
+      leadOsc.connect(leadFilter);
+      leadFilter.connect(leadGain);
+      leadGain.connect(this.masterGain);
+
+      leadOsc.start(now + 0.3);
+      leadOsc.stop(now + 2.3);
+    }
+
+    public togglePlay(): boolean {
+      this.initContext();
+      this.isPlaying = !this.isPlaying;
+
+      if (this.isPlaying) {
+        this.playChordAndMelody();
+        this.timerId = window.setInterval(() => {
+          this.playChordAndMelody();
+        }, 3200);
+      } else {
+        if (this.timerId) {
+          clearInterval(this.timerId);
+          this.timerId = null;
+        }
+      }
+      return this.isPlaying;
+    }
+
+    public toggleMute(): boolean {
+      this.isMuted = !this.isMuted;
+      if (this.masterGain && this.ctx) {
+        this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.20, this.ctx.currentTime);
+      }
+      return this.isMuted;
+    }
+
+    public getPlaying() {
+      return this.isPlaying;
     }
   }
 
-  function togglePlay() {
-    if (!audioCtx) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) audioCtx = new AudioContextClass();
-    }
-    if (audioCtx && audioCtx.state === "suspended") {
-      audioCtx.resume();
-    }
+  // Setup DOM Events
+  const engine = new VaporwaveSoundEngine();
+  const playBtn = document.getElementById("cassette-play-btn");
+  const playIcon = document.getElementById("cassette-play-icon");
+  const playText = document.getElementById("cassette-play-text");
+  const muteBtn = document.getElementById("cassette-mute-btn");
+  const statusText = document.getElementById("cassette-status-text");
+  const spools = document.querySelectorAll(".cassette-spool");
+  const collapseBtn = document.getElementById("cassette-toggle-collapse");
+  const cassetteBody = document.getElementById("cassette-body");
+  const titlebar = document.getElementById("cassette-titlebar");
 
-    isPlaying = !isPlaying;
-    if (playBtn) {
-      playBtn.textContent = isPlaying ? "⏸ PAUSE" : "▶ PLAY";
-      if (isPlaying) {
-        playBtn.classList.add("active");
-      } else {
-        playBtn.classList.remove("active");
-      }
+  function handlePlayToggle() {
+    const isNowPlaying = engine.togglePlay();
+
+    if (playIcon) playIcon.textContent = isNowPlaying ? "⏸" : "▶";
+    if (playText) playText.textContent = isNowPlaying ? "PAUSE" : "PLAY";
+    if (statusText) statusText.textContent = isNowPlaying ? "ON" : "OFF";
+    if (statusText) {
+      statusText.className = isNowPlaying
+        ? "text-vapor-pink font-bold animate-pulse"
+        : "text-win-dark";
     }
 
     spools.forEach((spool) => {
-      if (isPlaying) {
-        spool.classList.add("animate-cassette-spin");
+      if (isNowPlaying) {
+        spool.classList.add("cassette-spinning");
       } else {
-        spool.classList.remove("animate-cassette-spin");
+        spool.classList.remove("cassette-spinning");
       }
     });
 
-    if (isPlaying) {
-      playVaporSynthChord();
-      synthInterval = window.setInterval(playVaporSynthChord, 4000);
-    } else if (synthInterval) {
-      clearInterval(synthInterval);
-      synthInterval = null;
+    if (playBtn) {
+      if (isNowPlaying) {
+        playBtn.classList.add("win95-sunken", "bg-[#fffb96]/40");
+      } else {
+        playBtn.classList.remove("win95-sunken", "bg-[#fffb96]/40");
+      }
     }
   }
 
   if (playBtn) {
-    playBtn.addEventListener("click", togglePlay);
+    playBtn.addEventListener("click", handlePlayToggle);
   }
 
-  if (ambientBtn) {
-    ambientBtn.addEventListener("click", () => {
-      isMuted = !isMuted;
-      ambientBtn.textContent = isMuted ? "🔇 MUTE" : "🔊 LO-FI";
+  if (muteBtn) {
+    muteBtn.addEventListener("click", () => {
+      const isMuted = engine.toggleMute();
+      muteBtn.textContent = isMuted ? "🔇" : "🔊";
+      if (statusText && engine.getPlaying()) {
+        statusText.textContent = isMuted ? "MUTED" : "ON";
+      }
     });
   }
 
-  if (collapseBtn && cassetteBody) {
-    collapseBtn.addEventListener("click", () => {
-      cassetteBody.classList.toggle("hidden");
+  let isCollapsed = false;
+  function toggleCollapse() {
+    isCollapsed = !isCollapsed;
+    if (cassetteBody && collapseBtn) {
+      if (isCollapsed) {
+        cassetteBody.classList.add("hidden");
+        collapseBtn.textContent = "□";
+      } else {
+        cassetteBody.classList.remove("hidden");
+        collapseBtn.textContent = "_";
+      }
+    }
+  }
+
+  if (collapseBtn) {
+    collapseBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleCollapse();
     });
+  }
+
+  if (titlebar) {
+    titlebar.addEventListener("dblclick", toggleCollapse);
   }
 </script>

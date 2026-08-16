@@ -270,7 +270,7 @@ const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "per
         </div>
 
         {dbSpotlights && dbSpotlights.length > 0 ? (
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {dbSpotlights.map((item: any) => (
               <CrtMonitorFrame title={item.title}>
                 <a href={`/gallery`} class="block relative aspect-video bg-black group overflow-hidden">
@@ -280,7 +280,7 @@ const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "per
                     class="w-full h-full object-cover filter saturate-125 contrast-105 group-hover:scale-110 transition-transform duration-300"
                     loading="lazy"
                   />
-                  <div class="absolute bottom-0 inset-x-0 bg-black/80 p-1.5 text-center font-retro text-[10px] text-white truncate">
+                  <div class="absolute bottom-0 inset-x-0 bg-black/85 px-2 py-1 text-center font-retro text-[10px] text-white truncate border-t border-win-dark">
                     {item.title}
                   </div>
                 </a>
