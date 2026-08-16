@@ -13,12 +13,35 @@ const currentPath = Astro.url.pathname;
 <header class="win95-container w-full mb-6 font-retro site-header relative z-50 select-none">
   <!-- Desktop & Base Header (Win95 Taskbar & Menu) -->
   <div class="flex justify-between items-center bg-win-gray p-1 gap-2 min-h-[44px]">
-    <!-- Left Navigation Group -->
-    <div class="flex gap-2 items-center">
+    <!-- Left Navigation Group with Website Logo -->
+    <div class="flex gap-1.5 sm:gap-2 items-center">
+      <!-- Website Brand Logo -->
+      <a
+        href="/"
+        class="flex items-center gap-1.5 px-1.5 py-0.5 no-underline group hover:opacity-95 shrink-0"
+        title="Lovely Yellow Cat // Vaporwave Art Journal"
+      >
+        <img
+          src="/logo.svg"
+          alt="Lovely Yellow Cat Logo"
+          class="w-7 h-7 sm:w-8 sm:h-8 object-contain filter drop-shadow-[0_0_6px_rgba(255,113,206,0.6)] group-hover:scale-105 transition-transform"
+        />
+        <div class="hidden sm:flex flex-col leading-none font-retro">
+          <span class="font-black text-xs text-black tracking-wider uppercase group-hover:text-vapor-pink transition-colors">
+            YELLOW CAT
+          </span>
+          <span class="text-[8px] font-mono text-win-darkest font-bold tracking-tighter">
+            VAPOR_JOURNAL
+          </span>
+        </div>
+      </a>
+
+      <div class="border-l border-win-darkest border-r border-r-win-light h-6 my-auto mx-0.5"></div>
+
       <!-- Start Button with active press state -->
       <a
         href="/"
-        class={`win95-btn font-bold px-3 py-1 flex items-center gap-1.5 text-black no-underline ${currentPath === '/' ? 'win95-sunken bg-white/60' : ''}`}
+        class={`win95-btn font-bold px-2.5 py-1 flex items-center gap-1.5 text-black no-underline ${currentPath === '/' ? 'win95-sunken bg-white/60' : ''}`}
         style="min-height: 32px;"
       >
         <span class="w-3.5 h-3.5 flex items-center justify-center font-mono text-xs">💾</span>
@@ -156,12 +179,24 @@ const currentPath = Astro.url.pathname;
   >
     <!-- Thanh tiêu đề cửa sổ Win95 của Menu di động -->
     <div class="win95-header bg-gradient-to-r from-vapor-pink to-vapor-purple mb-2">
-      <span class="flex items-center gap-1.5 font-bold">🗂️ SYSTEM_MENU.EXE</span>
+      <span class="flex items-center gap-1.5 font-bold">
+        <img src="/logo.svg" alt="Logo" class="w-4 h-4 object-contain" />
+        LOVELY_YELLOW_CAT.EXE
+      </span>
       <button id="close-menu-btn" class="win95-btn py-0 px-1.5 font-bold" style="min-height: 20px; font-size: 10px;" aria-label="Đóng thực đơn">✕</button>
     </div>
 
     <!-- Nội dung Menu điều hướng bên trong cửa sổ sunken -->
     <div class="win95-sunken bg-cosmic-black text-white p-3 space-y-4 max-h-[70vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+      <!-- Brand Header inside Mobile Menu -->
+      <div class="flex items-center gap-2 p-2 bg-win-gray text-black win95-raised">
+        <img src="/logo.svg" alt="Yellow Cat Logo" class="w-8 h-8 object-contain" />
+        <div>
+          <h4 class="text-xs font-black uppercase leading-tight font-retro">LOVELY YELLOW CAT</h4>
+          <p class="text-[8px] text-win-darkest font-mono font-bold">// VAPORWAVE ART JOURNAL //</p>
+        </div>
+      </div>
+
       <!-- Menu Links -->
       <div class="space-y-2">
         <a href="/" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath === '/' ? 'bg-vapor-pink/20 border-vapor-pink text-white font-extrabold' : 'bg-win-gray text-black'}`}>
