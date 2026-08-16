@@ -25,11 +25,13 @@ interface GalleryGridProps {
   currentUser: {
     id: string;
   } | null;
+  isFavoritesOnly?: boolean;
 }
 
 export const GalleryGrid: React.FC<GalleryGridProps> = ({
   initialSubmissions,
-  currentUser
+  currentUser,
+  isFavoritesOnly = false
 }) => {
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [reactionsMap, setReactionsMap] = useState<Record<string, number>>({});
@@ -58,17 +60,43 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     }
   };
 
-  // 2. Fetch danh sách submissions mới nhất từ database
+  // 2. Fetch danh sách submissions từ database
   const fetchSubmissions = async () => {
     setLoading(true);
-    const { data, error } = await supabaseClient
-      .from("submissions")
-      .select("*, profiles:profiles!author_id(full_name, avatar_url)")
-      .eq("status", "approved")
-      .order("created_at", { ascending: false });
+    if (isFavoritesOnly) {
+      if (!currentUser?.id) {
+        setSubmissions([]);
+        setLoading(false);
+        return;
+      }
+      const { data, error } = await supabaseClient
+        .from("favorites")
+        .select(`
+          saved_at,
+          submissions:submissions!submission_id(
+            *,
+            profiles:profiles!author_id(full_name, avatar_url)
+          )
+        `)
+        .eq("profile_id", currentUser.id)
+        .order("saved_at", { ascending: false });
 
-    if (!error && data) {
-      setSubmissions(data as Submission[]);
+      if (!error && data) {
+        const mapped = data
+          .map((f: any) => f.submissions)
+          .filter((s: any) => s !== null && s.status === "approved");
+        setSubmissions(mapped as Submission[]);
+      }
+    } else {
+      const { data, error } = await supabaseClient
+        .from("submissions")
+        .select("*, profiles:profiles!author_id(full_name, avatar_url)")
+        .eq("status", "approved")
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setSubmissions(data as Submission[]);
+      }
     }
     setLoading(false);
   };
@@ -77,16 +105,27 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     fetchSubmissions();
     fetchAllReactions();
 
+    const channelName = isFavoritesOnly 
+      ? `favorites-realtime-${currentUser?.id || "guest"}` 
+      : "gallery-realtime-sync";
+
     const channel = supabaseClient
-      .channel("gallery-realtime-sync")
+      .channel(channelName)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "submissions",
-          filter: "status=eq.approved"
-        },
+        isFavoritesOnly
+          ? {
+              event: "*",
+              schema: "public",
+              table: "favorites",
+              filter: `profile_id=eq.${currentUser?.id || ""}`
+            }
+          : {
+              event: "*",
+              schema: "public",
+              table: "submissions",
+              filter: "status=eq.approved"
+            },
         () => {
           fetchSubmissions();
         }
@@ -107,7 +146,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     return () => {
       supabaseClient.removeChannel(channel);
     };
-  }, []);
+  }, [isFavoritesOnly, currentUser?.id]);
 
   // 3. Đọc tham số URL ?view=id
   useEffect(() => {
@@ -203,7 +242,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
           <div className="flex items-center gap-1.5 w-full sm:w-auto flex-1">
             <span className="text-[10px] font-bold text-win-darkest uppercase shrink-0">📍 VỊ TRÍ:</span>
             <div className="win95-sunken bg-white px-2 py-1 flex items-center gap-1 text-xs w-full sm:max-w-md font-mono">
-              <span className="text-win-darkest">C:\VAPOR_OS\GALLERY\</span>
+              <span className="text-win-darkest">{isFavoritesOnly ? "C:\\VAPOR_OS\\FAVORITES\\" : "C:\\VAPOR_OS\\GALLERY\\"}</span>
               <input
                 type="text"
                 value={searchQuery}
@@ -309,11 +348,22 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
               <span className="animate-spin inline-block text-2xl">💾</span>
               <p className="text-xs uppercase font-mono">ĐANG ĐỒNG BỘ CSDL TRIỂN LÃM...</p>
             </div>
+          ) : isFavoritesOnly && !searchQuery.trim() && selectedTag === "Tất Cả" ? (
+            <div className="py-4 space-y-3">
+              <p className="text-4xl">🤍</p>
+              <p className="text-xs uppercase font-bold text-black font-mono not-italic">KỆ LƯU TRỮ ĐANG TRỐNG</p>
+              <p className="text-[10px] text-win-darkest max-w-sm mx-auto not-italic font-normal">
+                Bạn chưa lưu tác phẩm nào. Hãy ghé thăm phòng triển lãm và nhấn biểu tượng 💜 để lưu các kiệt tác yêu thích vào kệ này!
+              </p>
+              <a href="/gallery" className="win95-btn inline-block mt-2 px-6 py-2 no-underline text-black font-bold uppercase not-italic" style={{ minHeight: "36px" }}>
+                🌐 Đến Phòng Triển Lãm
+              </a>
+            </div>
           ) : (
             <div className="py-4 space-y-2">
               <p className="text-3xl">📭</p>
-              <p className="text-xs uppercase font-bold text-black">KHÔNG TÌM THẤY TÁC PHẨM PHÙ HỢP</p>
-              <p className="text-[10px] text-win-darkest">Hãy thử đổi từ khóa tìm kiếm hoặc chọn nhãn khác.</p>
+              <p className="text-xs uppercase font-bold text-black not-italic">KHÔNG TÌM THẤY TÁC PHẨM PHÙ HỢP</p>
+              <p className="text-[10px] text-win-darkest not-italic font-normal">Hãy thử đổi từ khóa tìm kiếm hoặc chọn nhãn khác.</p>
             </div>
           )}
         </div>
