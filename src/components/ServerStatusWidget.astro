@@ -2,132 +2,427 @@
 /**
  * ServerStatusWidget.astro
  * ────────────────────────────────────────────────────
- * Widget giám sát trạng thái máy chủ thời gian thực.
+ * Widget giám sát trạng thái máy chủ và hạ tầng thời gian thực.
  * Fetch trạng thái từ Supabase, Cloudflare, Cloudinary qua Atlassian Statuspage API v2.
- * Google OAuth hiển thị link tĩnh (không có public JSON API).
+ * Google OAuth hiển thị link kiểm tra chính thức từ Google Workspace Status.
  *
- * Phong cách: Cửa sổ Windows 95 + Neon Vaporwave
- * Auto-refresh: 5 phút | Manual refresh: nút bấm
+ * Tính năng tương tác đầy đủ:
+ * - 3 Tab chức năng: [📊 Status (Trạng thái)], [🌐 Network (Hạ tầng)], [❓ Help (Trợ giúp)]
+ * - Nút [?] mở cửa sổ Trợ giúp Windows 95 (SERVER_HELP.HLP) giải thích chi tiết
+ * - Mở rộng xem công dụng từng dịch vụ trong website (Supabase, Cloudflare, Cloudinary, Google)
+ * - Nút Refresh thủ công & Auto-refresh mỗi 30 phút
+ * - Link trực tiếp đến Status Page chính thức của từng nhà cung cấp
  */
 ---
 
-<div class="win95-window" id="server-status-widget">
+<div class="win95-window shadow-md" id="server-status-widget">
   <!-- Title bar -->
-  <div class="win95-header py-1 px-2">
-    <div class="flex items-center gap-1.5">
-      <span>📡</span>
-      <span class="font-bold text-xs">SERVER_MONITOR.EXE</span>
+  <div class="win95-header py-1 px-2 flex justify-between items-center select-none bg-gradient-to-r from-win-titlebar via-[#1084d0] to-[#6a26a4] text-white">
+    <div class="flex items-center gap-1.5 min-w-0">
+      <span class="text-sm">📡</span>
+      <span class="font-bold text-xs tracking-wider truncate">SERVER_MONITOR.EXE</span>
     </div>
-    <button class="win95-btn py-0 px-1 text-[9px]" style="min-height: 16px;">?</button>
-  </div>
-
-  <!-- Menu bar -->
-  <div class="win95-menubar">
-    <span>Status</span>
-    <span>Network</span>
-    <span>Help</span>
-  </div>
-
-  <!-- Service status list -->
-  <div class="p-2.5 bg-white text-black font-retro text-xs space-y-0" id="status-list">
-
-    <!-- Supabase Database -->
-    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="supabase-db">
-      <div class="flex items-center gap-1.5 min-w-0">
-        <span class="text-[11px] flex-shrink-0">🗄️</span>
-        <span class="font-bold text-[10px] truncate">Supabase DB <span class="text-win-dark font-normal">(SEA-1)</span></span>
-      </div>
-      <div class="flex items-center gap-1 flex-shrink-0">
-        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
-        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
-      </div>
-    </div>
-
-    <!-- Supabase Auth -->
-    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="supabase-auth">
-      <div class="flex items-center gap-1.5 min-w-0">
-        <span class="text-[11px] flex-shrink-0">🔐</span>
-        <span class="font-bold text-[10px] truncate">Supabase Auth <span class="text-win-dark font-normal">(SEA-1)</span></span>
-      </div>
-      <div class="flex items-center gap-1 flex-shrink-0">
-        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
-        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
-      </div>
-    </div>
-
-    <!-- Cloudflare Workers -->
-    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="cloudflare-workers">
-      <div class="flex items-center gap-1.5 min-w-0">
-        <span class="text-[11px] flex-shrink-0">⚡</span>
-        <span class="font-bold text-[10px] truncate">Cloudflare Workers</span>
-      </div>
-      <div class="flex items-center gap-1 flex-shrink-0">
-        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
-        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
-      </div>
-    </div>
-
-    <!-- Cloudinary CDN -->
-    <div class="flex items-center justify-between py-1.5 border-b border-win-dark/50 status-row" data-service="cloudinary-cdn">
-      <div class="flex items-center gap-1.5 min-w-0">
-        <span class="text-[11px] flex-shrink-0">☁️</span>
-        <span class="font-bold text-[10px] truncate">Cloudinary CDN</span>
-      </div>
-      <div class="flex items-center gap-1 flex-shrink-0">
-        <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
-        <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
-      </div>
-    </div>
-
-    <!-- Google OAuth (Static link) -->
-    <div class="flex items-center justify-between py-1.5 status-row" data-service="google-oauth">
-      <div class="flex items-center gap-1.5 min-w-0">
-        <span class="text-[11px] flex-shrink-0">🔑</span>
-        <span class="font-bold text-[10px] truncate">Google OAuth</span>
-      </div>
-      <a
-        href="https://www.google.com/appsstatus/dashboard/"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="flex items-center gap-1 flex-shrink-0 no-underline hover:opacity-80 transition-opacity"
-        title="Kiểm tra trạng thái Google tại trang chính thức"
-      >
-        <span class="status-dot w-2 h-2 rounded-full bg-[#4285f4]"></span>
-        <span class="status-label text-[9px] font-mono font-bold text-[#4285f4] tracking-wide">EXT ↗</span>
-      </a>
-    </div>
-
-    <!-- Timestamp & refresh -->
-    <div class="pt-2 mt-1 border-t border-win-dark flex items-center justify-between gap-2">
-      <span class="text-[9px] font-mono text-win-dark leading-tight" id="status-timestamp">
-        Đang kiểm tra...
-      </span>
+    <div class="flex items-center gap-1 shrink-0">
       <button
-        id="status-refresh-btn"
-        class="win95-btn py-0.5 px-2 text-[9px] font-bold flex-shrink-0 flex items-center gap-1"
+        id="widget-help-btn"
+        type="button"
+        class="win95-btn py-0 px-1.5 text-[10px] font-bold text-black bg-white hover:bg-vapor-yellow"
         style="min-height: 18px;"
-        title="Kiểm tra lại ngay"
+        title="Bấm để xem hướng dẫn và giải thích về Bảng Giám Sát Máy Chủ"
       >
-        <span id="refresh-icon">↻</span> Refresh
+        ?
       </button>
     </div>
   </div>
 
-  <!-- Status bar -->
-  <div class="win95-statusbar justify-between text-[10px]">
-    <span id="status-summary">■ 5 dịch vụ │ Đang kết nối...</span>
-    <span class="win95-statusbar-panel font-bold" id="status-overall-badge">
+  <!-- Interactive Menubar -->
+  <div class="win95-menubar bg-win-gray px-2 py-1 text-xs border-b border-win-dark flex items-center justify-between select-none">
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="server-tab-btn px-2 py-0.5 text-[10px] font-bold text-black border border-transparent hover:border-win-dark hover:bg-win-light active:bg-win-darkest active:text-white"
+        data-tab="status"
+        id="tab-btn-status"
+        title="Xem trạng thái trực tiếp của 5 hệ thống máy chủ"
+      >
+        📊 Trạng Thái
+      </button>
+      <button
+        type="button"
+        class="server-tab-btn px-2 py-0.5 text-[10px] font-bold text-black border border-transparent hover:border-win-dark hover:bg-win-light active:bg-win-darkest active:text-white"
+        data-tab="network"
+        id="tab-btn-network"
+        title="Xem sơ đồ vai trò hạ tầng trong website Lovely Yellow Cat"
+      >
+        🌐 Hạ Tầng
+      </button>
+      <button
+        type="button"
+        class="server-tab-btn px-2 py-0.5 text-[10px] font-bold text-black border border-transparent hover:border-win-dark hover:bg-win-light active:bg-win-darkest active:text-white"
+        data-tab="help"
+        id="tab-btn-help"
+        title="Xem bảng giải thích ý nghĩa các dịch vụ và cách xử lý sự cố"
+      >
+        ❓ Hướng Dẫn
+      </button>
+    </div>
+    <span class="text-[9px] font-mono text-win-dark hidden sm:inline">v2.5 // LIVE</span>
+  </div>
+
+  <!-- TAB 1: SERVICE STATUS LIST -->
+  <div id="tab-content-status" class="server-tab-content p-2.5 bg-white text-black font-retro text-xs space-y-1">
+    <div class="bg-[#fffb96]/40 p-1.5 border border-win-dark text-[10px] text-win-darkest flex items-center justify-between mb-1.5">
+      <span class="flex items-center gap-1">
+        <span>💡</span> <span>Nhấn vào từng dịch vụ để xem vai trò và trang trạng thái gốc.</span>
+      </span>
+    </div>
+
+    <!-- Supabase Database -->
+    <div class="border-b border-win-dark/40 pb-1 status-group">
+      <div
+        class="flex items-center justify-between py-1 px-1 cursor-pointer hover:bg-win-gray/60 transition-colors status-row"
+        data-service="supabase-db"
+        title="Bấm để xem/ẩn chi tiết vai trò của Supabase Database"
+      >
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="text-[11px] shrink-0">🗄️</span>
+          <span class="font-bold text-[11px] truncate text-black">Supabase DB <span class="text-win-dark font-normal text-[9px]">(SEA-1)</span></span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+          <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+          <span class="expand-icon text-[9px] text-win-dark font-mono">▼</span>
+        </div>
+      </div>
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+        <p class="text-win-darkest leading-snug">
+          <strong>Nhiệm vụ:</strong> Lưu trữ bài viết, bình luận realtime, hồ sơ người dùng, điểm XP và danh sách tranh yêu thích.
+        </p>
+        <div class="flex justify-between items-center pt-1 border-t border-win-dark/20 text-[9px] font-mono">
+          <span class="text-win-dark">Khu vực: Singapore (ap-southeast-1)</span>
+          <a href="https://status.supabase.com" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-bold underline hover:text-blue-900">
+            Trang gốc ↗
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supabase Auth -->
+    <div class="border-b border-win-dark/40 pb-1 status-group">
+      <div
+        class="flex items-center justify-between py-1 px-1 cursor-pointer hover:bg-win-gray/60 transition-colors status-row"
+        data-service="supabase-auth"
+        title="Bấm để xem/ẩn chi tiết vai trò của Supabase Auth"
+      >
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="text-[11px] shrink-0">🔐</span>
+          <span class="font-bold text-[11px] truncate text-black">Supabase Auth <span class="text-win-dark font-normal text-[9px]">(SEA-1)</span></span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+          <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+          <span class="expand-icon text-[9px] text-win-dark font-mono">▼</span>
+        </div>
+      </div>
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+        <p class="text-win-darkest leading-snug">
+          <strong>Nhiệm vụ:</strong> Xác thực danh tính người dùng, cấp Token bảo mật và quản lý phiên đăng nhập qua Cookie HttpOnly.
+        </p>
+        <div class="flex justify-between items-center pt-1 border-t border-win-dark/20 text-[9px] font-mono">
+          <span class="text-win-dark">Cơ chế: JWT Session Security</span>
+          <a href="https://status.supabase.com" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-bold underline hover:text-blue-900">
+            Trang gốc ↗
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cloudflare Workers -->
+    <div class="border-b border-win-dark/40 pb-1 status-group">
+      <div
+        class="flex items-center justify-between py-1 px-1 cursor-pointer hover:bg-win-gray/60 transition-colors status-row"
+        data-service="cloudflare-workers"
+        title="Bấm để xem/ẩn chi tiết vai trò của Cloudflare Workers"
+      >
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="text-[11px] shrink-0">⚡</span>
+          <span class="font-bold text-[11px] truncate text-black">Cloudflare Workers</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+          <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+          <span class="expand-icon text-[9px] text-win-dark font-mono">▼</span>
+        </div>
+      </div>
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+        <p class="text-win-darkest leading-snug">
+          <strong>Nhiệm vụ:</strong> Máy chủ biên Serverless chạy toàn bộ mã nguồn Astro SSR, phân phối trang web tại hơn 300+ Edge Datacenter toàn cầu.
+        </p>
+        <div class="flex justify-between items-center pt-1 border-t border-win-dark/20 text-[9px] font-mono">
+          <span class="text-win-dark">Mạng lưới: 300+ PoPs Toàn Cầu</span>
+          <a href="https://www.cloudflarestatus.com" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-bold underline hover:text-blue-900">
+            Trang gốc ↗
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cloudinary CDN -->
+    <div class="border-b border-win-dark/40 pb-1 status-group">
+      <div
+        class="flex items-center justify-between py-1 px-1 cursor-pointer hover:bg-win-gray/60 transition-colors status-row"
+        data-service="cloudinary-cdn"
+        title="Bấm để xem/ẩn chi tiết vai trò của Cloudinary CDN"
+      >
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="text-[11px] shrink-0">☁️</span>
+          <span class="font-bold text-[11px] truncate text-black">Cloudinary CDN</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="status-dot w-2 h-2 rounded-full bg-win-dark animate-pulse"></span>
+          <span class="status-label text-[9px] font-mono font-bold text-win-dark tracking-wide">CHECK...</span>
+          <span class="expand-icon text-[9px] text-win-dark font-mono">▼</span>
+        </div>
+      </div>
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+        <p class="text-win-darkest leading-snug">
+          <strong>Nhiệm vụ:</strong> Lưu trữ đám mây, nén ảnh thông minh sang WebP/AVIF và phân phối tranh nghệ thuật tốc độ cao.
+        </p>
+        <div class="flex justify-between items-center pt-1 border-t border-win-dark/20 text-[9px] font-mono">
+          <span class="text-win-dark">Định dạng: Auto WebP / AVIF CDN</span>
+          <a href="https://status.cloudinary.com" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-bold underline hover:text-blue-900">
+            Trang gốc ↗
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google OAuth -->
+    <div class="border-b border-win-dark/40 pb-1 status-group">
+      <div
+        class="flex items-center justify-between py-1 px-1 cursor-pointer hover:bg-win-gray/60 transition-colors status-row"
+        data-service="google-oauth"
+        title="Bấm để xem/ẩn chi tiết vai trò của Google OAuth"
+      >
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="text-[11px] shrink-0">🔑</span>
+          <span class="font-bold text-[11px] truncate text-black">Google OAuth</span>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span class="status-dot w-2 h-2 rounded-full bg-[#4285f4]"></span>
+          <span class="status-label text-[9px] font-mono font-bold text-[#4285f4] tracking-wide">EXT ↗</span>
+          <span class="expand-icon text-[9px] text-win-dark font-mono">▼</span>
+        </div>
+      </div>
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+        <p class="text-win-darkest leading-snug">
+          <strong>Nhiệm vụ:</strong> Cổng đăng nhập 1-chạm an toàn bằng tài khoản Google dành cho bạn đọc và nghệ sĩ.
+        </p>
+        <div class="flex justify-between items-center pt-1 border-t border-win-dark/20 text-[9px] font-mono">
+          <span class="text-win-dark">Bảo mật: Google Identity Protocol</span>
+          <a href="https://www.google.com/appsstatus/dashboard/" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-bold underline hover:text-blue-900">
+            Bảng điều khiển Google ↗
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timestamp & Action Controls -->
+    <div class="pt-2 mt-1 border-t border-win-dark flex items-center justify-between gap-2 flex-wrap">
+      <span class="text-[9px] font-mono text-win-dark leading-tight" id="status-timestamp">
+        Đang khởi tạo kết nối...
+      </span>
+      <div class="flex items-center gap-1.5">
+        <button
+          id="status-refresh-btn"
+          type="button"
+          class="win95-btn py-0.5 px-2 text-[9px] font-bold flex items-center gap-1 text-black bg-white hover:bg-vapor-yellow"
+          style="min-height: 20px;"
+          title="Gửi yêu cầu quét lại trạng thái của toàn bộ máy chủ ngay lập tức"
+        >
+          <span id="refresh-icon">↻</span> Quét Lại
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: NETWORK ARCHITECTURE OVERVIEW -->
+  <div id="tab-content-network" class="server-tab-content hidden p-3 bg-white text-black font-retro text-xs space-y-2.5 max-h-[360px] overflow-y-auto">
+    <div class="win95-header py-0.5 px-1.5 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-white">
+      <span class="text-[10px] font-bold">🌐 SƠ ĐỒ HẠ TẦNG LOVELY YELLOW CAT</span>
+    </div>
+
+    <p class="text-[11px] text-win-darkest leading-relaxed">
+      Trang web được vận hành trên mô hình phân tán hiện đại, kết hợp 4 nền tảng điện toán đám mây quốc tế:
+    </p>
+
+    <div class="space-y-1.5 font-mono text-[10px]">
+      <div class="p-1.5 bg-win-gray border border-win-dark">
+        <span class="font-bold text-vapor-purple">1. Cloudflare Workers (Edge):</span>
+        <p class="text-[9px] font-sans text-black mt-0.5">Tiếp nhận request từ người dùng tại trạm gần nhất, thực hiện render Astro SSR và bảo mật chống DDoS.</p>
+      </div>
+
+      <div class="p-1.5 bg-win-gray border border-win-dark">
+        <span class="font-bold text-[#006241]">2. Supabase DB & Storage:</span>
+        <p class="text-[9px] font-sans text-black mt-0.5">Lưu trữ dữ liệu relational Postgres, bảng xếp hạng nghệ sĩ, quản lý bình luận phân cấp và điểm thưởng XP.</p>
+      </div>
+
+      <div class="p-1.5 bg-win-gray border border-win-dark">
+        <span class="font-bold text-[#0072ce]">3. Cloudinary Global CDN:</span>
+        <p class="text-[9px] font-sans text-black mt-0.5">Xử lý đồ họa nặng, tự động nén dung lượng mà không làm giảm chất lượng tác phẩm mỹ thuật số.</p>
+      </div>
+
+      <div class="p-1.5 bg-win-gray border border-win-dark">
+        <span class="font-bold text-[#d93025]">4. Google AI Studio & OAuth:</span>
+        <p class="text-[9px] font-sans text-black mt-0.5">Cung cấp mạng nơ-ron Gemini AI cho trạm trò chuyện (/ai) và xác thực đăng nhập bảo mật.</p>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="win95-btn w-full py-1 text-center font-bold text-xs text-vapor-purple bg-[#fffb96]/40 border border-black hover:bg-vapor-yellow"
+      id="switch-to-status-from-net"
+    >
+      &lt;&lt; Quay Lại Danh Sách Giám Sát Live
+    </button>
+  </div>
+
+  <!-- TAB 3: HELP & USER GUIDE -->
+  <div id="tab-content-help" class="server-tab-content hidden p-3 bg-white text-black font-retro text-xs space-y-2.5 max-h-[360px] overflow-y-auto">
+    <div class="win95-header py-0.5 px-1.5 bg-gradient-to-r from-[#b967ff] to-vapor-pink text-white">
+      <span class="text-[10px] font-bold">📖 HƯỚNG DẪN & Ý NGHĨA BẢNG GIÁM SÁT</span>
+    </div>
+
+    <div class="space-y-2 text-[11px] leading-relaxed">
+      <div>
+        <h5 class="font-bold text-vapor-purple uppercase">❓ Bảng SERVER_MONITOR để làm gì?</h5>
+        <p class="text-black text-[10px] mt-0.5">
+          Giúp bạn theo dõi trực tiếp xem các hệ thống máy chủ vận hành website có đang hoạt động tốt hay không. Nếu bạn gặp lỗi khi tải ảnh hay đăng nhập, bảng này sẽ cho biết ngay dịch vụ nào đang gặp sự cố.
+        </p>
+      </div>
+
+      <div>
+        <h5 class="font-bold text-vapor-purple uppercase">🚦 Ý nghĩa các mã trạng thái:</h5>
+        <div class="grid grid-cols-2 gap-1.5 mt-1 text-[9px] font-mono">
+          <div class="p-1 bg-[#05ffa1]/20 border border-green-600">
+            <span class="font-bold text-green-800">● ONLINE:</span> Hoạt động hoàn hảo 100%.
+          </div>
+          <div class="p-1 bg-[#fffb96]/40 border border-yellow-600">
+            <span class="font-bold text-yellow-900">● DEGRADED:</span> Phản hồi hơi chậm.
+          </div>
+          <div class="p-1 bg-[#ff9a3c]/30 border border-orange-600">
+            <span class="font-bold text-orange-900">● PARTIAL:</span> Gián đoạn 1 vài tính năng.
+          </div>
+          <div class="p-1 bg-red-100 border border-red-600">
+            <span class="font-bold text-red-800">● OFFLINE:</span> Tạm dừng do sự cố nhà cung cấp.
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-1">
+        <h5 class="font-bold text-vapor-purple uppercase">🔄 Tần suất cập nhật:</h5>
+        <p class="text-black text-[10px] mt-0.5">
+          Hệ thống tự động đồng bộ mỗi <strong>30 phút</strong> từ các API chính thức (Atlassian Statuspage v2). Bạn cũng có thể bấm nút <strong>Quét Lại</strong> bất cứ khi nào muốn kiểm tra mới nhất.
+        </p>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="win95-btn w-full py-1 text-center font-bold text-xs text-black bg-win-gray border border-black hover:bg-[#e0e0e0]"
+      id="switch-to-status-from-help"
+    >
+      &lt;&lt; Đóng Hướng Dẫn & Xem Trạng Thái
+    </button>
+  </div>
+
+  <!-- Global Status bar -->
+  <div class="win95-statusbar justify-between text-[10px] bg-win-gray px-2 py-1 border-t border-win-dark select-none">
+    <span id="status-summary" class="truncate pr-1">■ 5 dịch vụ │ Đang kết nối...</span>
+    <span class="win95-statusbar-panel font-bold font-mono shrink-0" id="status-overall-badge">
       <span class="inline-block w-1.5 h-1.5 rounded-full bg-win-dark animate-pulse mr-1"></span>INIT
     </span>
   </div>
 </div>
 
+<!-- WIN95 HELP DIALOG MODAL (SERVER_HELP.HLP) -->
+<div id="server-help-modal" class="fixed inset-0 bg-black/60 z-[99999] flex items-center justify-center p-3 hidden backdrop-blur-[2px] font-retro text-black select-none">
+  <div class="win95-container max-w-md w-full bg-win-gray shadow-2xl animate-[fadeIn_0.15s_ease-out]">
+    <!-- Modal Titlebar -->
+    <div class="win95-header py-1 px-2 flex justify-between items-center bg-gradient-to-r from-win-titlebar via-[#1084d0] to-[#6a26a4] text-white">
+      <div class="flex items-center gap-1.5">
+        <span>📖</span>
+        <span class="font-bold text-xs">WINHELP32.EXE - [SERVER_MONITOR.HLP]</span>
+      </div>
+      <button
+        type="button"
+        id="close-help-modal-btn"
+        class="win95-btn py-0 px-1.5 text-[9px] font-bold text-black bg-white hover:bg-red-200"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Modal Menubar -->
+    <div class="win95-menubar bg-win-gray px-2 py-0.5 text-[10px] border-b border-win-dark flex gap-3 text-win-darkest">
+      <span>File</span>
+      <span>Edit</span>
+      <span>Bookmark</span>
+      <span>Options</span>
+      <span>Help</span>
+    </div>
+
+    <!-- Modal Body Content -->
+    <div class="p-3.5 bg-white space-y-3 text-xs leading-relaxed max-h-[75vh] overflow-y-auto border-2 border-win-darkest m-1">
+      <div class="flex items-start gap-3 border-b border-win-dark/30 pb-2.5">
+        <span class="text-3xl">📡</span>
+        <div>
+          <h4 class="font-bold text-xs uppercase text-vapor-purple">
+            TRUNG TÂM GIÁM SÁT MÁY CHỦ THỜI GIAN THỰC
+          </h4>
+          <p class="text-[10px] text-win-dark">
+            Lovely Yellow Cat // Realtime System Diagnostics Engine
+          </p>
+        </div>
+      </div>
+
+      <div class="space-y-2 text-[11px] font-body">
+        <p>
+          <strong>SERVER_MONITOR.EXE</strong> là công cụ hiển thị tình trạng hoạt động thực tế 24/7 của các dịch vụ hạ tầng đám mây đang phục vụ website của bạn:
+        </p>
+
+        <ul class="list-disc pl-4 space-y-1 text-[10px]">
+          <li><strong>Supabase Database:</strong> Nơi lưu trữ toàn bộ nội dung bài báo, bình luận, điểm số XP nghệ sĩ.</li>
+          <li><strong>Supabase Auth:</strong> Quản lý bảo mật phiên đăng nhập của tài khoản người dùng.</li>
+          <li><strong>Cloudflare Workers:</strong> Mạng lưới máy chủ biên Edge giúp website tải tức thì từ mọi nơi.</li>
+          <li><strong>Cloudinary CDN:</strong> Hệ thống lưu trữ và tối ưu hóa hình ảnh nghệ thuật dung lượng cao.</li>
+          <li><strong>Google OAuth:</strong> Cổng xác thực tài khoản Google an toàn 1-chạm.</li>
+        </ul>
+
+        <div class="p-2 bg-[#fffb96]/40 border border-win-dark text-[10px]">
+          <strong>💡 Mẹo:</strong> Bạn có thể nhấn trực tiếp vào từng dòng dịch vụ trên bảng để xem chi tiết hoặc bấm nút <strong>Quét Lại</strong> để cập nhật dữ liệu mới nhất bất kỳ lúc nào.
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2 border-t border-win-dark">
+        <button
+          type="button"
+          id="close-help-modal-ok-btn"
+          class="win95-btn px-4 py-1 font-bold text-xs bg-white text-black border border-black hover:bg-vapor-yellow"
+          style="min-height: 28px;"
+        >
+          Đã Hiểu (OK)
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   /**
-   * Server Status Monitor - Client-side Engine
-   * ─────────────────────────────────────────────
-   * Fetches status from 3 Atlassian Statuspage APIs in parallel.
-   * Auto-refreshes every 5 minutes.
+   * Server Status Monitor - Client-side Interactive Engine
+   * ───────────────────────────────────────────────────────
+   * Hỗ trợ Tabs, Accordion chi tiết dịch vụ, Modal Help Win95 và Live Fetch.
    */
 
   const STATUS_CONFIG = {
@@ -139,7 +434,6 @@
             const lower = name.toLowerCase();
             return lower.includes('database') && lower.includes('ap-southeast-1');
           },
-          // Fallback: nếu không tìm thấy DB riêng, lấy region group
           fallbackMatch: (name: string) => {
             const lower = name.toLowerCase();
             return (lower.includes('ap-southeast-1') || lower.includes('singapore'))
@@ -153,7 +447,7 @@
           },
           fallbackMatch: (name: string) => {
             const lower = name.toLowerCase();
-            return lower.includes('auth') && !lower.includes('ap-') || false;
+            return (lower.includes('auth') && !lower.includes('ap-')) || false;
           }
         }
       }
@@ -188,10 +482,9 @@
     }
   };
 
-  // Status → UI mapping
   const STATUS_MAP: Record<string, { dot: string; label: string; color: string }> = {
     'operational':          { dot: '#05ffa1', label: 'ONLINE',   color: '#05ffa1' },
-    'degraded_performance': { dot: '#fffb96', label: 'DEGRADED', color: '#fffb96' },
+    'degraded_performance': { dot: '#fffb96', label: 'DEGRADED', color: '#b3a000' },
     'partial_outage':       { dot: '#ff9a3c', label: 'PARTIAL',  color: '#ff9a3c' },
     'major_outage':         { dot: '#ff4444', label: 'OFFLINE',  color: '#ff4444' },
     'under_maintenance':    { dot: '#01cdfe', label: 'MAINT',    color: '#01cdfe' },
@@ -233,19 +526,14 @@
     matchFn: (name: string) => boolean,
     fallbackFn?: (name: string) => boolean
   ): string {
-    // Bỏ qua group headers
     const nonGroupComponents = components.filter(c => !c.group);
-
-    // Thử match chính xác trước
     const primary = nonGroupComponents.find(c => matchFn(c.name));
     if (primary) return primary.status;
 
-    // Thử fallback
     if (fallbackFn) {
       const fallback = nonGroupComponents.find(c => fallbackFn(c.name));
       if (fallback) return fallback.status;
     }
-
     return 'unknown';
   }
 
@@ -268,7 +556,6 @@
       const data = await res.json();
       const components: StatusComponent[] = data.components || [];
 
-      // Cập nhật từng dịch vụ thuộc provider này
       for (const [serviceKey, svcConfig] of Object.entries(config.services)) {
         const status = findComponentStatus(
           components,
@@ -278,7 +565,6 @@
         updateServiceRow(serviceKey, status);
       }
     } catch (err) {
-      // Nếu fetch lỗi, đánh dấu tất cả service của provider là error
       for (const serviceKey of Object.keys(config.services)) {
         updateServiceRow(serviceKey, 'error');
       }
@@ -289,7 +575,7 @@
     const el = document.getElementById('status-timestamp');
     if (el) {
       const now = new Date();
-      el.textContent = `Cập nhật: ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} ${now.toLocaleDateString('vi-VN')}`;
+      el.textContent = `Cập nhật: ${now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} (${now.toLocaleDateString('vi-VN')})`;
     }
   }
 
@@ -307,7 +593,7 @@
       const label = row.querySelector('.status-label');
       if (!label) return;
       const text = label.textContent?.trim();
-      if (text === 'CHECK...' || text === 'N/A') return;
+      if (text === 'CHECK...' || text === 'N/A' || text === 'EXT ↗') return;
       if (text !== 'ONLINE') allOnline = false;
       if (text === 'ERROR') anyError = true;
       if (text === 'OFFLINE') anyOffline = true;
@@ -320,15 +606,15 @@
     } else if (anyError) {
       badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#b967ff] animate-pulse mr-1"></span>WARN';
       badge.style.color = '#b967ff';
-      summary.textContent = '■ 5 dịch vụ │ Không thể kiểm tra';
+      summary.textContent = '■ 5 dịch vụ │ Kiểm tra mạng';
     } else if (allOnline) {
       badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#05ffa1] mr-1"></span>ALL OK';
-      badge.style.color = '#05ffa1';
-      summary.textContent = '■ 5 dịch vụ │ Hoạt động bình thường';
+      badge.style.color = '#008f58';
+      summary.textContent = '■ 5 dịch vụ │ Hoạt động tốt';
     } else {
       badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#fffb96] animate-pulse mr-1"></span>DEGRADED';
-      badge.style.color = '#fffb96';
-      summary.textContent = '■ 5 dịch vụ │ Có dịch vụ chậm';
+      badge.style.color = '#8a7c00';
+      summary.textContent = '■ 5 dịch vụ │ Phản hồi chậm';
     }
   }
 
@@ -338,7 +624,6 @@
     if (btn) btn.disabled = true;
     if (icon) icon.style.animation = 'spin 0.6s linear infinite';
 
-    // Fetch tất cả 3 providers song song
     await Promise.allSettled([
       fetchProviderStatus('supabase', STATUS_CONFIG.supabase),
       fetchProviderStatus('cloudflare', STATUS_CONFIG.cloudflare),
@@ -352,28 +637,123 @@
     if (btn) btn.disabled = false;
   }
 
-  // Init: chạy ngay khi DOM ready
-  document.addEventListener('DOMContentLoaded', () => {
-    refreshAllStatuses();
+  // Quản lý Tabs trong Widget
+  function setupTabs() {
+    const tabButtons = document.querySelectorAll('.server-tab-btn');
+    const tabContents = document.querySelectorAll('.server-tab-content');
 
-    // Auto-refresh mỗi 5 phút
-    setInterval(refreshAllStatuses, 30 * 60 * 1000);
+    function setActiveTab(tabId: string) {
+      tabButtons.forEach(btn => {
+        const isTarget = btn.getAttribute('data-tab') === tabId;
+        if (isTarget) {
+          btn.classList.add('win95-sunken', 'bg-white', 'font-black', 'text-vapor-purple');
+          btn.classList.remove('border-transparent');
+        } else {
+          btn.classList.remove('win95-sunken', 'bg-white', 'font-black', 'text-vapor-purple');
+          btn.classList.add('border-transparent');
+        }
+      });
 
-    // Nút refresh thủ công
-    const btn = document.getElementById('status-refresh-btn');
-    if (btn) {
-      btn.addEventListener('click', () => {
-        refreshAllStatuses();
+      tabContents.forEach(content => {
+        if (content.id === `tab-content-${tabId}`) {
+          content.classList.remove('hidden');
+        } else {
+          content.classList.add('hidden');
+        }
       });
     }
-  });
 
-  // Fallback nếu DOMContentLoaded đã fire
-  if (document.readyState !== 'loading') {
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.getAttribute('data-tab');
+        if (tabId) setActiveTab(tabId);
+      });
+    });
+
+    // Các nút chuyển tab từ nội dung
+    const switchFromNet = document.getElementById('switch-to-status-from-net');
+    if (switchFromNet) {
+      switchFromNet.addEventListener('click', () => setActiveTab('status'));
+    }
+    const switchFromHelp = document.getElementById('switch-to-status-from-help');
+    if (switchFromHelp) {
+      switchFromHelp.addEventListener('click', () => setActiveTab('status'));
+    }
+
+    // Mặc định tab status
+    setActiveTab('status');
+  }
+
+  // Quản lý Accordion chi tiết từng dịch vụ
+  function setupAccordion() {
+    const rows = document.querySelectorAll('.status-group');
+    rows.forEach(group => {
+      const trigger = group.querySelector('.status-row');
+      const panel = group.querySelector('.service-detail-panel');
+      const icon = group.querySelector('.expand-icon');
+
+      if (trigger && panel) {
+        trigger.addEventListener('click', () => {
+          const isHidden = panel.classList.contains('hidden');
+          // Đóng các panel khác
+          document.querySelectorAll('.service-detail-panel').forEach(p => {
+            if (p !== panel) p.classList.add('hidden');
+          });
+          document.querySelectorAll('.expand-icon').forEach(i => {
+            if (i !== icon) i.textContent = '▼';
+          });
+
+          if (isHidden) {
+            panel.classList.remove('hidden');
+            if (icon) icon.textContent = '▲';
+          } else {
+            panel.classList.add('hidden');
+            if (icon) icon.textContent = '▼';
+          }
+        });
+      }
+    });
+  }
+
+  // Quản lý Help Modal Win95
+  function setupHelpModal() {
+    const helpBtn = document.getElementById('widget-help-btn');
+    const modal = document.getElementById('server-help-modal');
+    const closeBtn = document.getElementById('close-help-modal-btn');
+    const okBtn = document.getElementById('close-help-modal-ok-btn');
+
+    const openModal = () => modal?.classList.remove('hidden');
+    const closeModal = () => modal?.classList.add('hidden');
+
+    helpBtn?.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    okBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  // Khởi động toàn bộ tương tác
+  function init() {
+    setupTabs();
+    setupAccordion();
+    setupHelpModal();
     refreshAllStatuses();
+
+    // Auto-refresh mỗi 30 phút
     setInterval(refreshAllStatuses, 30 * 60 * 1000);
+
     const btn = document.getElementById('status-refresh-btn');
-    if (btn) btn.addEventListener('click', () => refreshAllStatuses());
+    if (btn) {
+      btn.addEventListener('click', () => refreshAllStatuses());
+    }
+  }
+
+  if (document.readyState !== 'loading') {
+    init();
+  } else {
+    document.addEventListener('DOMContentLoaded', init);
   }
 </script>
 
@@ -388,12 +768,5 @@
   #status-refresh-btn:disabled {
     opacity: 0.6;
     cursor: wait;
-  }
-  /* Subtle hover highlight for status rows */
-  .status-row {
-    transition: background-color 0.15s ease;
-  }
-  .status-row:hover {
-    background-color: #e8e8e8;
   }
 </style>

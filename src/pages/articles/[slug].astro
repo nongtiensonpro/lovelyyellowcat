@@ -195,7 +195,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
       </div>
     </div>
 
-    <!-- WordPad Menubar & Toolbar -->
+    <!-- WordPad Menubar -->
     <div class="win95-menubar">
       <span>File</span>
       <span>Edit</span>
@@ -205,15 +205,173 @@ if (dbArticle && relatedData && relatedData.length > 0) {
       <span>Help</span>
     </div>
 
-    <div class="bg-win-gray border-b border-win-dark p-1 flex items-center gap-2 text-xs select-none">
-      <span class="font-mono bg-white px-2 py-0.5 border border-win-dark">Courier New (12pt)</span>
-      <span class="font-bold border border-win-dark px-1.5 bg-win-light">B</span>
-      <span class="italic border border-win-dark px-1.5 bg-win-light">I</span>
-      <span class="underline border border-win-dark px-1.5 bg-win-light">U</span>
+    <!-- Interactive WordPad Toolbar -->
+    <div class="bg-win-gray border-b border-win-dark p-1.5 flex flex-wrap items-center gap-1.5 text-xs select-none" id="wordpad-toolbar">
+      <!-- Font Family Selector -->
+      <div class="relative">
+        <select
+          id="wp-font-select"
+          class="font-mono bg-white px-1.5 py-0.5 border border-win-dark text-[10px] text-black cursor-pointer outline-none appearance-none pr-4"
+          title="Chọn kiểu chữ hiển thị bài viết"
+          style="min-width: 115px;"
+        >
+          <option value="'Outfit', sans-serif">Outfit (Mặc định)</option>
+          <option value="'VT323', monospace">VT323 (Retro)</option>
+          <option value="'Share Tech Mono', monospace">Share Tech Mono</option>
+          <option value="'Press Start 2P', cursive">Press Start 2P</option>
+          <option value="Georgia, serif">Georgia (Serif)</option>
+          <option value="'Courier New', monospace">Courier New</option>
+          <option value="'Times New Roman', serif">Times New Roman</option>
+          <option value="Verdana, sans-serif">Verdana</option>
+          <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+        </select>
+        <span class="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-win-dark pointer-events-none">▼</span>
+      </div>
+
+      <!-- Font Size Selector -->
+      <select
+        id="wp-size-select"
+        class="font-mono bg-white px-1 py-0.5 border border-win-dark text-[10px] text-black cursor-pointer outline-none"
+        title="Chọn cỡ chữ (pt)"
+        style="min-width: 48px;"
+      >
+        <option value="11">11</option>
+        <option value="12">12</option>
+        <option value="14" selected>14</option>
+        <option value="16">16</option>
+        <option value="18">18</option>
+        <option value="20">20</option>
+        <option value="24">24</option>
+      </select>
+
+      <!-- Separator -->
+      <div class="h-5 border-l border-win-dark mx-0.5"></div>
+
+      <!-- Format Buttons: Bold, Italic, Underline, Strikethrough -->
+      <button
+        type="button"
+        id="wp-btn-bold"
+        class="wp-format-btn win95-btn py-0 px-1.5 font-bold text-black"
+        title="In đậm nội dung bài viết (B)"
+        style="min-height: 22px; min-width: 22px;"
+      >B</button>
+      <button
+        type="button"
+        id="wp-btn-italic"
+        class="wp-format-btn win95-btn py-0 px-1.5 italic text-black"
+        title="In nghiêng nội dung bài viết (I)"
+        style="min-height: 22px; min-width: 22px;"
+      >I</button>
+      <button
+        type="button"
+        id="wp-btn-underline"
+        class="wp-format-btn win95-btn py-0 px-1.5 underline text-black"
+        title="Gạch chân nội dung bài viết (U)"
+        style="min-height: 22px; min-width: 22px;"
+      >U</button>
+      <button
+        type="button"
+        id="wp-btn-strike"
+        class="wp-format-btn win95-btn py-0 px-1.5 line-through text-black"
+        title="Gạch ngang nội dung bài viết (S)"
+        style="min-height: 22px; min-width: 22px;"
+      >S</button>
+
+      <!-- Separator -->
+      <div class="h-5 border-l border-win-dark mx-0.5"></div>
+
+      <!-- Text Alignment -->
+      <button
+        type="button"
+        id="wp-btn-align-left"
+        class="wp-align-btn win95-btn py-0 px-1.5 text-[10px] text-black win95-sunken"
+        title="Căn lề trái"
+        data-align="left"
+        style="min-height: 22px;"
+      >☰ᐊ</button>
+      <button
+        type="button"
+        id="wp-btn-align-center"
+        class="wp-align-btn win95-btn py-0 px-1.5 text-[10px] text-black"
+        title="Căn giữa"
+        data-align="center"
+        style="min-height: 22px;"
+      >☰</button>
+      <button
+        type="button"
+        id="wp-btn-align-right"
+        class="wp-align-btn win95-btn py-0 px-1.5 text-[10px] text-black"
+        title="Căn lề phải"
+        data-align="right"
+        style="min-height: 22px;"
+      >ᐅ☰</button>
+      <button
+        type="button"
+        id="wp-btn-align-justify"
+        class="wp-align-btn win95-btn py-0 px-1.5 text-[10px] text-black"
+        title="Căn đều 2 bên (Justify)"
+        data-align="justify"
+        style="min-height: 22px;"
+      >☰☰</button>
+
+      <!-- Separator -->
+      <div class="h-5 border-l border-win-dark mx-0.5"></div>
+
+      <!-- Line Height -->
+      <select
+        id="wp-line-height"
+        class="font-mono bg-white px-1 py-0.5 border border-win-dark text-[10px] text-black cursor-pointer outline-none"
+        title="Giãn dòng"
+        style="min-width: 40px;"
+      >
+        <option value="1.4">1.4</option>
+        <option value="1.6">1.6</option>
+        <option value="1.8" selected>1.8</option>
+        <option value="2.0">2.0</option>
+        <option value="2.4">2.4</option>
+      </select>
+
+      <!-- Separator -->
+      <div class="h-5 border-l border-win-dark mx-0.5"></div>
+
+      <!-- Night Mode -->
+      <button
+        type="button"
+        id="wp-btn-nightmode"
+        class="win95-btn py-0 px-1.5 text-[10px] text-black flex items-center gap-0.5"
+        title="Chế độ đọc ban đêm (tối giản, dễ đọc trong tối)"
+        style="min-height: 22px;"
+      >🌙</button>
+
+      <!-- Zoom Controls -->
+      <button
+        type="button"
+        id="wp-btn-zoom-out"
+        class="win95-btn py-0 px-1 text-[10px] text-black font-bold"
+        title="Thu nhỏ nội dung"
+        style="min-height: 22px;"
+      >−</button>
+      <span id="wp-zoom-level" class="text-[9px] font-mono font-bold text-win-darkest w-7 text-center">100%</span>
+      <button
+        type="button"
+        id="wp-btn-zoom-in"
+        class="win95-btn py-0 px-1 text-[10px] text-black font-bold"
+        title="Phóng to nội dung"
+        style="min-height: 22px;"
+      >+</button>
+
+      <!-- Reset All -->
+      <button
+        type="button"
+        id="wp-btn-reset"
+        class="win95-btn py-0 px-1.5 text-[9px] text-black font-bold"
+        title="Khôi phục toàn bộ về mặc định"
+        style="min-height: 22px;"
+      >↺ Reset</button>
     </div>
 
     <!-- Document Content Area (Sunken White Page) -->
-    <div class="p-4 sm:p-8 bg-white border-2 border-win-darkest shadow-inner my-2 mx-1 sm:mx-2">
+    <div id="wordpad-document" class="p-4 sm:p-8 bg-white border-2 border-win-darkest shadow-inner my-2 mx-1 sm:mx-2 transition-all duration-200">
       
       <!-- Article Cover Image -->
       {article.cover && (
@@ -269,15 +427,18 @@ if (dbArticle && relatedData && relatedData.length > 0) {
       )}
 
       <!-- Main Body Markdown -->
-      <div class="prose prose-neutral max-w-none font-body text-black text-sm sm:text-base leading-relaxed space-y-4">
+      <div id="wordpad-body-content" class="prose prose-neutral max-w-none font-body text-black text-sm sm:text-base leading-relaxed space-y-4 transition-all duration-200">
         <div set:html={parseMarkdownToHtml(article.content)} />
       </div>
     </div>
 
     <!-- WordPad Statusbar -->
     <div class="win95-statusbar justify-between text-[10px]">
-      <span>Document loaded successfully. Ready.</span>
-      <span class="win95-statusbar-panel font-mono">LN: 1, COL: 1</span>
+      <span id="wp-statusbar-text">Document loaded successfully. Ready.</span>
+      <div class="flex items-center gap-2">
+        <span id="wp-word-count" class="win95-statusbar-panel font-mono text-win-dark"></span>
+        <span class="win95-statusbar-panel font-mono" id="wp-format-info">Định dạng: Mặc định</span>
+      </div>
     </div>
   </article>
 
@@ -332,7 +493,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
 </BaseLayout>
 
 <script>
-  // Reading Progress Bar calculation
+  // ─── Reading Progress Bar ───
   window.addEventListener("scroll", () => {
     const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
     if (totalHeight > 0) {
@@ -342,7 +503,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     }
   });
 
-  // Share Article Button (Copy Link)
+  // ─── Share Article Button (Copy Link) ───
   const shareBtn = document.getElementById("share-article-btn");
   if (shareBtn) {
     shareBtn.addEventListener("click", async () => {
@@ -358,4 +519,323 @@ if (dbArticle && relatedData && relatedData.length > 0) {
       }
     });
   }
+
+  // ─── WordPad Interactive Toolbar Engine ───
+  (function initWordPadToolbar() {
+    const doc = document.getElementById("wordpad-document");
+    const body = document.getElementById("wordpad-body-content");
+    const statusText = document.getElementById("wp-statusbar-text");
+    const formatInfo = document.getElementById("wp-format-info");
+    const wordCountEl = document.getElementById("wp-word-count");
+    const zoomLabel = document.getElementById("wp-zoom-level");
+
+    if (!doc || !body) return;
+
+    // ─ State ─
+    let isNightMode = false;
+    let isBold = false;
+    let isItalic = false;
+    let isUnderline = false;
+    let isStrike = false;
+    let currentAlign = "left";
+    let zoomLevel = 100;
+
+    // ─ Đếm chữ ─
+    function updateWordCount() {
+      if (!wordCountEl) return;
+      const text = body.textContent || "";
+      const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+      wordCountEl.textContent = `${words.toLocaleString("vi-VN")} từ`;
+    }
+    updateWordCount();
+
+    // ─ Status Bar cập nhật ─
+    function updateFormatStatus() {
+      if (!formatInfo) return;
+      const parts = [];
+      if (isBold) parts.push("Đậm");
+      if (isItalic) parts.push("Nghiêng");
+      if (isUnderline) parts.push("Gạch chân");
+      if (isStrike) parts.push("Gạch ngang");
+      if (isNightMode) parts.push("🌙 Đêm");
+
+      const alignMap: Record<string, string> = { left: "Trái", center: "Giữa", right: "Phải", justify: "Đều" };
+      if (currentAlign !== "left") parts.push(`Căn: ${alignMap[currentAlign] || currentAlign}`);
+      if (zoomLevel !== 100) parts.push(`${zoomLevel}%`);
+
+      formatInfo.textContent = parts.length > 0 ? parts.join(" · ") : "Định dạng: Mặc định";
+    }
+
+    function flashStatus(msg: string) {
+      if (!statusText) return;
+      statusText.textContent = msg;
+      setTimeout(() => {
+        statusText.textContent = "Document loaded successfully. Ready.";
+      }, 2000);
+    }
+
+    // ─ Toggle Active Visual cho nút ─
+    function toggleBtnActive(id: string, active: boolean) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      if (active) {
+        btn.classList.add("win95-sunken", "bg-white");
+      } else {
+        btn.classList.remove("win95-sunken", "bg-white");
+      }
+    }
+
+    // ═══ FONT FAMILY ═══
+    const fontSelect = document.getElementById("wp-font-select") as HTMLSelectElement;
+    if (fontSelect) {
+      fontSelect.addEventListener("change", () => {
+        body.style.fontFamily = fontSelect.value;
+        const label = fontSelect.options[fontSelect.selectedIndex].text;
+        flashStatus(`Kiểu chữ: ${label}`);
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ FONT SIZE ═══
+    const sizeSelect = document.getElementById("wp-size-select") as HTMLSelectElement;
+    if (sizeSelect) {
+      sizeSelect.addEventListener("change", () => {
+        body.style.fontSize = `${sizeSelect.value}px`;
+        flashStatus(`Cỡ chữ: ${sizeSelect.value}pt`);
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ BOLD ═══
+    const boldBtn = document.getElementById("wp-btn-bold");
+    if (boldBtn) {
+      boldBtn.addEventListener("click", () => {
+        isBold = !isBold;
+        body.style.fontWeight = isBold ? "bold" : "";
+        toggleBtnActive("wp-btn-bold", isBold);
+        flashStatus(isBold ? "In đậm: BẬT" : "In đậm: TẮT");
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ ITALIC ═══
+    const italicBtn = document.getElementById("wp-btn-italic");
+    if (italicBtn) {
+      italicBtn.addEventListener("click", () => {
+        isItalic = !isItalic;
+        body.style.fontStyle = isItalic ? "italic" : "";
+        toggleBtnActive("wp-btn-italic", isItalic);
+        flashStatus(isItalic ? "In nghiêng: BẬT" : "In nghiêng: TẮT");
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ UNDERLINE ═══
+    const underlineBtn = document.getElementById("wp-btn-underline");
+    if (underlineBtn) {
+      underlineBtn.addEventListener("click", () => {
+        isUnderline = !isUnderline;
+        body.style.textDecoration = isUnderline && isStrike ? "underline line-through" : isUnderline ? "underline" : isStrike ? "line-through" : "";
+        toggleBtnActive("wp-btn-underline", isUnderline);
+        flashStatus(isUnderline ? "Gạch chân: BẬT" : "Gạch chân: TẮT");
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ STRIKETHROUGH ═══
+    const strikeBtn = document.getElementById("wp-btn-strike");
+    if (strikeBtn) {
+      strikeBtn.addEventListener("click", () => {
+        isStrike = !isStrike;
+        body.style.textDecoration = isUnderline && isStrike ? "underline line-through" : isUnderline ? "underline" : isStrike ? "line-through" : "";
+        toggleBtnActive("wp-btn-strike", isStrike);
+        flashStatus(isStrike ? "Gạch ngang: BẬT" : "Gạch ngang: TẮT");
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ TEXT ALIGNMENT ═══
+    const alignBtns = document.querySelectorAll(".wp-align-btn");
+    alignBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const align = btn.getAttribute("data-align") || "left";
+        currentAlign = align;
+        body.style.textAlign = align;
+
+        // Toggle visual active
+        alignBtns.forEach(b => b.classList.remove("win95-sunken"));
+        btn.classList.add("win95-sunken");
+
+        const names: Record<string, string> = { left: "Trái", center: "Giữa", right: "Phải", justify: "Đều 2 bên" };
+        flashStatus(`Căn lề: ${names[align] || align}`);
+        updateFormatStatus();
+      });
+    });
+
+    // ═══ LINE HEIGHT ═══
+    const lineHeightSelect = document.getElementById("wp-line-height") as HTMLSelectElement;
+    if (lineHeightSelect) {
+      lineHeightSelect.addEventListener("change", () => {
+        body.style.lineHeight = lineHeightSelect.value;
+        flashStatus(`Giãn dòng: ${lineHeightSelect.value}`);
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ NIGHT MODE ═══
+    const nightBtn = document.getElementById("wp-btn-nightmode");
+    if (nightBtn) {
+      nightBtn.addEventListener("click", () => {
+        isNightMode = !isNightMode;
+        if (isNightMode) {
+          doc.style.backgroundColor = "#1a1a2e";
+          doc.style.color = "#e0e0e0";
+          doc.style.borderColor = "#333";
+          body.style.color = "#d4d4d4";
+          // Tìm tất cả các phần tử văn bản bên trong và chuyển sang màu sáng
+          body.querySelectorAll("p, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, div").forEach(el => {
+            (el as HTMLElement).style.color = "#d4d4d4";
+          });
+          body.querySelectorAll("a").forEach(el => {
+            (el as HTMLElement).style.color = "#71bfff";
+          });
+          body.querySelectorAll("pre, code").forEach(el => {
+            (el as HTMLElement).style.backgroundColor = "#0d0d1a";
+          });
+          nightBtn.textContent = "☀️";
+          toggleBtnActive("wp-btn-nightmode", true);
+        } else {
+          doc.style.backgroundColor = "";
+          doc.style.color = "";
+          doc.style.borderColor = "";
+          body.style.color = "";
+          body.querySelectorAll("p, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, div").forEach(el => {
+            (el as HTMLElement).style.color = "";
+          });
+          body.querySelectorAll("a").forEach(el => {
+            (el as HTMLElement).style.color = "";
+          });
+          body.querySelectorAll("pre, code").forEach(el => {
+            (el as HTMLElement).style.backgroundColor = "";
+          });
+          nightBtn.textContent = "🌙";
+          toggleBtnActive("wp-btn-nightmode", false);
+        }
+        flashStatus(isNightMode ? "Chế độ ban đêm: BẬT" : "Chế độ ban ngày: BẬT");
+        updateFormatStatus();
+      });
+    }
+
+    // ═══ ZOOM ═══
+    const zoomInBtn = document.getElementById("wp-btn-zoom-in");
+    const zoomOutBtn = document.getElementById("wp-btn-zoom-out");
+
+    function applyZoom() {
+      doc.style.transform = `scale(${zoomLevel / 100})`;
+      doc.style.transformOrigin = "top left";
+      doc.style.width = `${10000 / zoomLevel}%`;
+      if (zoomLabel) zoomLabel.textContent = `${zoomLevel}%`;
+      flashStatus(`Thu phóng: ${zoomLevel}%`);
+      updateFormatStatus();
+    }
+
+    if (zoomInBtn) {
+      zoomInBtn.addEventListener("click", () => {
+        if (zoomLevel < 150) {
+          zoomLevel += 10;
+          applyZoom();
+        }
+      });
+    }
+    if (zoomOutBtn) {
+      zoomOutBtn.addEventListener("click", () => {
+        if (zoomLevel > 70) {
+          zoomLevel -= 10;
+          applyZoom();
+        }
+      });
+    }
+
+    // ═══ RESET ALL ═══
+    const resetBtn = document.getElementById("wp-btn-reset");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        // Reset state
+        isBold = false; isItalic = false; isUnderline = false; isStrike = false;
+        isNightMode = false; currentAlign = "left"; zoomLevel = 100;
+
+        // Reset body styles
+        body.style.fontFamily = "";
+        body.style.fontSize = "";
+        body.style.fontWeight = "";
+        body.style.fontStyle = "";
+        body.style.textDecoration = "";
+        body.style.textAlign = "";
+        body.style.lineHeight = "";
+        body.style.color = "";
+
+        // Reset doc styles (night mode)
+        doc.style.backgroundColor = "";
+        doc.style.color = "";
+        doc.style.borderColor = "";
+        doc.style.transform = "";
+        doc.style.transformOrigin = "";
+        doc.style.width = "";
+
+        // Reset night mode colors
+        body.querySelectorAll("p, span, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, div, a, pre, code").forEach(el => {
+          (el as HTMLElement).style.color = "";
+          (el as HTMLElement).style.backgroundColor = "";
+        });
+
+        // Reset selects
+        if (fontSelect) fontSelect.selectedIndex = 0;
+        if (sizeSelect) sizeSelect.value = "14";
+        if (lineHeightSelect) lineHeightSelect.value = "1.8";
+        if (zoomLabel) zoomLabel.textContent = "100%";
+
+        // Reset button visuals
+        ["wp-btn-bold", "wp-btn-italic", "wp-btn-underline", "wp-btn-strike", "wp-btn-nightmode"].forEach(id => {
+          toggleBtnActive(id, false);
+        });
+        const nightBtnEl = document.getElementById("wp-btn-nightmode");
+        if (nightBtnEl) nightBtnEl.textContent = "🌙";
+
+        alignBtns.forEach(b => b.classList.remove("win95-sunken"));
+        const leftBtn = document.getElementById("wp-btn-align-left");
+        if (leftBtn) leftBtn.classList.add("win95-sunken");
+
+        flashStatus("✓ Đã khôi phục toàn bộ về mặc định.");
+        updateFormatStatus();
+      });
+    }
+
+    // ─── Keyboard Shortcuts ───
+    document.addEventListener("keydown", (e) => {
+      // Chỉ kích hoạt khi không đang nhập liệu
+      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "b" || e.key === "B") {
+          e.preventDefault();
+          boldBtn?.click();
+        } else if (e.key === "i" || e.key === "I") {
+          e.preventDefault();
+          italicBtn?.click();
+        } else if (e.key === "u" || e.key === "U") {
+          e.preventDefault();
+          underlineBtn?.click();
+        } else if (e.key === "=" || e.key === "+") {
+          e.preventDefault();
+          zoomInBtn?.click();
+        } else if (e.key === "-") {
+          e.preventDefault();
+          zoomOutBtn?.click();
+        } else if (e.key === "0") {
+          e.preventDefault();
+          resetBtn?.click();
+        }
+      }
+    });
+  })();
 </script>
