@@ -1,0 +1,488 @@
+---
+/**
+ * PixelText.astro — Randomized Pixel Reveal Text Effect
+ *
+ * Hiệu ứng chữ dạng bitmap pixel: toàn bộ dòng chữ xuất hiện đồng thời
+ * theo thứ tự ngẫu nhiên từ digital noise → chữ hoàn chỉnh → tan rã.
+ *
+ * Sử dụng HTML Canvas thuần, không phụ thuộc React/Vue/framework.
+ * Hỗ trợ HiDPI/Retina, responsive, auto-cleanup.
+ */
+interface Props {
+  text?: string;
+  pixelSize?: number;
+  revealDuration?: number;
+  holdDuration?: number;
+  dissolveDuration?: number;
+  fontWeight?: number;
+  fontFamily?: string;
+  /** CSS class thêm vào wrapper */
+  class?: string;
+}
+
+const {
+  text = "Vapor Journal,...",
+  pixelSize = 3,
+  revealDuration = 3500,
+  holdDuration = 1200,
+  dissolveDuration = 2800,
+  fontWeight = 700,
+  fontFamily = "'VT323', 'Press Start 2P', monospace",
+  class: className = "",
+} = Astro.props;
+---
+
+<div
+  class:list={["pixel-text-wrapper", className]}
+  data-text={text}
+  data-pixel-size={pixelSize}
+  data-reveal-duration={revealDuration}
+  data-hold-duration={holdDuration}
+  data-dissolve-duration={dissolveDuration}
+  data-font-weight={fontWeight}
+  data-font-family={fontFamily}
+>
+  <canvas class="pixel-text-canvas"></canvas>
+  <!-- Screen-reader accessible fallback -->
+  <span class="sr-only">{text}</span>
+</div>
+
+<style>
+  .pixel-text-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Chiều cao tối thiểu = khoảng bằng font-size hero + padding */
+    min-height: clamp(3rem, 8vw, 5.5rem);
+  }
+  .pixel-text-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Canvas tự quản lý resolution qua JS */
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+
+<script>
+  /**
+   * PixelText Engine — Canvas-based Randomized Pixel Reveal
+   *
+   * State Machine: REVEAL → HOLD → DISSOLVE → (loop)
+   * Mỗi "particle" là một ô vuông nhỏ (pixelSize × pixelSize) được
+   * trích xuất từ bitmap offscreen của dòng chữ.
+   */
+
+  // ═══════════════════════════════════════════
+  //  EASING FUNCTIONS
+  // ═══════════════════════════════════════════
+
+  function easeOutCubic(t: number): number {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function easeInOutQuad(t: number): number {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  }
+
+  // ═══════════════════════════════════════════
+  //  PARTICLE DEFINITION
+  // ═══════════════════════════════════════════
+
+  interface Particle {
+    /** Vị trí đích cuối cùng (pixel logic trên canvas) */
+    x: number;
+    y: number;
+    /** Màu RGBA gốc từ bitmap */
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+    /** Thời điểm bắt đầu reveal (0–1 normalized) */
+    revealDelay: number;
+    /** Thời điểm bắt đầu dissolve (0–1 normalized) */
+    dissolveDelay: number;
+    /** Offset ban đầu khi reveal (drift nhẹ) */
+    offsetX: number;
+    offsetY: number;
+  }
+
+  // ═══════════════════════════════════════════
+  //  MAIN ENGINE
+  // ═══════════════════════════════════════════
+
+  type Phase = "REVEAL" | "HOLD" | "DISSOLVE";
+
+  function initPixelText(wrapper: HTMLElement) {
+    const canvas = wrapper.querySelector(".pixel-text-canvas") as HTMLCanvasElement;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) return;
+
+    // ─ Đọc config từ data attributes ─
+    const text = wrapper.dataset.text || "Vapor Journal,...";
+    const pixelSize = parseInt(wrapper.dataset.pixelSize || "3", 10);
+    const revealDuration = parseInt(wrapper.dataset.revealDuration || "3500", 10);
+    const holdDuration = parseInt(wrapper.dataset.holdDuration || "1200", 10);
+    const dissolveDuration = parseInt(wrapper.dataset.dissolveDuration || "2800", 10);
+    const fontWeight = parseInt(wrapper.dataset.fontWeight || "700", 10);
+    const fontFamily = wrapper.dataset.fontFamily || "'VT323', 'Press Start 2P', monospace";
+
+    // ─ HiDPI handling (giới hạn DPR ≤ 2) ─
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    // ─ Particle pool ─
+    let particles: Particle[] = [];
+    let phase: Phase = "REVEAL";
+    let phaseStartTime = 0;
+    let animFrameId = 0;
+    let isDestroyed = false;
+
+    // ─── Fisher-Yates Shuffle ───
+    function shuffle(arr: any[]) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    //  BITMAP EXTRACTION
+    // ═══════════════════════════════════════════
+
+    /**
+     * Tạo offscreen canvas, render text, và trích xuất tọa độ các pixel
+     * thuộc vùng chữ (alpha > threshold) thành Particle[].
+     */
+    function buildParticles() {
+      const rect = wrapper.getBoundingClientRect();
+      const cssW = rect.width;
+      const cssH = rect.height;
+
+      // Cập nhật kích thước display canvas
+      canvas.style.width = cssW + "px";
+      canvas.style.height = cssH + "px";
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+
+      // ─ Tính font-size responsive (giống --text-hero CSS) ─
+      // clamp(2.2rem, 6vw, 4rem)
+      const vw = window.innerWidth;
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const minFs = 2.2 * remPx;
+      const maxFs = 4 * remPx;
+      const vwFs = vw * 0.06;
+      const fontSize = Math.max(minFs, Math.min(vwFs, maxFs));
+
+      // ─ Offscreen canvas để render bitmap ─
+      const offscreen = document.createElement("canvas");
+      const offW = Math.round(cssW * dpr);
+      const offH = Math.round(cssH * dpr);
+      offscreen.width = offW;
+      offscreen.height = offH;
+      const offCtx = offscreen.getContext("2d", { willReadFrequently: true });
+      if (!offCtx) return;
+
+      // Render text vào offscreen canvas
+      const scaledFontSize = fontSize * dpr;
+      offCtx.clearRect(0, 0, offW, offH);
+      offCtx.textAlign = "center";
+      offCtx.textBaseline = "middle";
+      offCtx.font = `${fontWeight} ${scaledFontSize}px ${fontFamily}`;
+      offCtx.letterSpacing = "0.05em";
+
+      // Gradient giống hero-title CSS: trắng → vapor-pink → vapor-purple
+      const gradient = offCtx.createLinearGradient(0, offH * 0.15, 0, offH * 0.85);
+      gradient.addColorStop(0, "#ffffff");
+      gradient.addColorStop(0.6, "#ff71ce");
+      gradient.addColorStop(1, "#b967ff");
+      offCtx.fillStyle = gradient;
+
+      // Vẽ text uppercase căn giữa
+      offCtx.fillText(text.toUpperCase(), offW / 2, offH / 2);
+
+      // ─ Đọc ImageData ─
+      const imageData = offCtx.getImageData(0, 0, offW, offH);
+      const data = imageData.data;
+
+      // ─ Gom pixel thành ô vuông (pixelSize * dpr) ─
+      const scaledPixelSize = Math.max(1, Math.round(pixelSize * dpr));
+      const newParticles: Particle[] = [];
+
+      for (let y = 0; y < offH; y += scaledPixelSize) {
+        for (let x = 0; x < offW; x += scaledPixelSize) {
+          // Lấy mẫu pixel ở tâm của ô vuông
+          const sampleX = Math.min(x + Math.floor(scaledPixelSize / 2), offW - 1);
+          const sampleY = Math.min(y + Math.floor(scaledPixelSize / 2), offH - 1);
+          const idx = (sampleY * offW + sampleX) * 4;
+          const alpha = data[idx + 3];
+
+          // Chỉ tạo particle nếu alpha đủ cao (vùng chữ)
+          if (alpha > 30) {
+            newParticles.push({
+              x,
+              y,
+              r: data[idx],
+              g: data[idx + 1],
+              b: data[idx + 2],
+              a: alpha / 255,
+              revealDelay: 0,     // sẽ randomize bên dưới
+              dissolveDelay: 0,
+              offsetX: (Math.random() - 0.5) * 12 * dpr,
+              offsetY: (Math.random() - 0.5) * 8 * dpr,
+            });
+          }
+        }
+      }
+
+      // ─ Randomize reveal order ─
+      // Tạo mảng index, shuffle, gán delay dựa trên vị trí shuffle
+      const revealOrder = newParticles.map((_, i) => i);
+      shuffle(revealOrder);
+      const dissolveOrder = newParticles.map((_, i) => i);
+      shuffle(dissolveOrder);
+
+      for (let rank = 0; rank < revealOrder.length; rank++) {
+        const pi = revealOrder[rank];
+        // Phân bố delay 0–0.7 (để particle cuối vẫn kịp hoàn thành trong duration)
+        newParticles[pi].revealDelay = (rank / revealOrder.length) * 0.7;
+      }
+      for (let rank = 0; rank < dissolveOrder.length; rank++) {
+        const pi = dissolveOrder[rank];
+        newParticles[pi].dissolveDelay = (rank / dissolveOrder.length) * 0.7;
+      }
+
+      particles = newParticles;
+    }
+
+    // ═══════════════════════════════════════════
+    //  RENDER LOOP
+    // ═══════════════════════════════════════════
+
+    function resetPhase(newPhase: Phase) {
+      phase = newPhase;
+      phaseStartTime = performance.now();
+
+      // Mỗi chu kỳ mới → tạo random order mới
+      if (newPhase === "REVEAL") {
+        const revealOrder = particles.map((_, i) => i);
+        shuffle(revealOrder);
+        const dissolveOrder = particles.map((_, i) => i);
+        shuffle(dissolveOrder);
+
+        for (let rank = 0; rank < revealOrder.length; rank++) {
+          const pi = revealOrder[rank];
+          particles[pi].revealDelay = (rank / revealOrder.length) * 0.7;
+          // Tạo offset drift mới
+          particles[pi].offsetX = (Math.random() - 0.5) * 12 * dpr;
+          particles[pi].offsetY = (Math.random() - 0.5) * 8 * dpr;
+        }
+        for (let rank = 0; rank < dissolveOrder.length; rank++) {
+          const pi = dissolveOrder[rank];
+          particles[pi].dissolveDelay = (rank / dissolveOrder.length) * 0.7;
+        }
+      }
+    }
+
+    function render(now: number) {
+      if (isDestroyed) return;
+
+      const elapsed = now - phaseStartTime;
+      const w = canvas.width;
+      const h = canvas.height;
+      const scaledPixelSize = Math.max(1, Math.round(pixelSize * dpr));
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Xác định duration hiện tại
+      let duration: number;
+      if (phase === "REVEAL") duration = revealDuration;
+      else if (phase === "HOLD") duration = holdDuration;
+      else duration = dissolveDuration;
+
+      const progress = Math.min(elapsed / duration, 1);
+
+      // ─── REVEAL PHASE ───
+      if (phase === "REVEAL") {
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+
+          // Tiến trình riêng của particle = (progress toàn cục - delay) / (1 - 0.7)
+          const localT = Math.max(0, Math.min((progress - p.revealDelay) / 0.3, 1));
+          if (localT <= 0) continue; // chưa tới lượt
+
+          const easedT = easeOutCubic(localT);
+          const alpha = easedT * p.a;
+
+          // Drift: từ offset → vị trí đích
+          const dx = p.x + p.offsetX * (1 - easedT);
+          const dy = p.y + p.offsetY * (1 - easedT);
+
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+          ctx.fillRect(dx, dy, scaledPixelSize, scaledPixelSize);
+        }
+
+        // ── Noise particles phụ trợ trong giai đoạn đầu ──
+        if (progress < 0.5) {
+          const noiseCount = Math.floor((1 - progress * 2) * Math.min(particles.length * 0.08, 120));
+          ctx.globalAlpha = 0.15 * (1 - progress * 2);
+          for (let n = 0; n < noiseCount; n++) {
+            const nx = Math.random() * w;
+            const ny = Math.random() * h;
+            const ns = scaledPixelSize * (0.5 + Math.random());
+            // Màu noise lấy từ palette
+            const noiseColors = ["#ff71ce", "#b967ff", "#01cdfe", "#ffffff"];
+            ctx.fillStyle = noiseColors[Math.floor(Math.random() * noiseColors.length)];
+            ctx.fillRect(nx, ny, ns, ns);
+          }
+        }
+
+        ctx.globalAlpha = 1;
+
+        if (progress >= 1) resetPhase("HOLD");
+      }
+
+      // ─── HOLD PHASE ───
+      else if (phase === "HOLD") {
+        // Render tất cả particles ở trạng thái hoàn chỉnh
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.globalAlpha = p.a;
+          ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+          ctx.fillRect(p.x, p.y, scaledPixelSize, scaledPixelSize);
+        }
+        ctx.globalAlpha = 1;
+
+        if (progress >= 1) resetPhase("DISSOLVE");
+      }
+
+      // ─── DISSOLVE PHASE ───
+      else if (phase === "DISSOLVE") {
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+
+          const localT = Math.max(0, Math.min((progress - p.dissolveDelay) / 0.3, 1));
+          const easedT = easeInOutQuad(localT);
+          const alpha = (1 - easedT) * p.a;
+
+          if (alpha <= 0.01) continue; // đã biến mất
+
+          // Drift nhẹ khi tan rã
+          const dx = p.x + p.offsetX * easedT * 0.5;
+          const dy = p.y - easedT * 4 * dpr; // bay lên nhẹ
+
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+          ctx.fillRect(dx, dy, scaledPixelSize, scaledPixelSize);
+        }
+
+        // ── Noise hỗ trợ ở cuối dissolve ──
+        if (progress > 0.5) {
+          const fadeOut = (progress - 0.5) * 2;
+          const noiseCount = Math.floor(fadeOut * Math.min(particles.length * 0.06, 80));
+          ctx.globalAlpha = 0.1 * fadeOut;
+          for (let n = 0; n < noiseCount; n++) {
+            const nx = Math.random() * w;
+            const ny = Math.random() * h;
+            const ns = scaledPixelSize * (0.3 + Math.random() * 0.7);
+            const noiseColors = ["#ff71ce", "#b967ff", "#01cdfe", "#05ffa1"];
+            ctx.fillStyle = noiseColors[Math.floor(Math.random() * noiseColors.length)];
+            ctx.fillRect(nx, ny, ns, ns);
+          }
+        }
+
+        ctx.globalAlpha = 1;
+
+        if (progress >= 1) resetPhase("REVEAL");
+      }
+
+      animFrameId = requestAnimationFrame(render);
+    }
+
+    // ═══════════════════════════════════════════
+    //  RESIZE HANDLER
+    // ═══════════════════════════════════════════
+
+    let resizeTimeout: number | null = null;
+
+    function handleResize() {
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(() => {
+        buildParticles();
+        // Giữ phase hiện tại, chỉ rebuild particles
+        phaseStartTime = performance.now();
+      }, 150);
+    }
+
+    // ═══════════════════════════════════════════
+    //  INIT & CLEANUP
+    // ═══════════════════════════════════════════
+
+    buildParticles();
+    phaseStartTime = performance.now();
+    animFrameId = requestAnimationFrame(render);
+
+    window.addEventListener("resize", handleResize);
+
+    // ── Pause khi không visible (Performance) ──
+    let wasPaused = false;
+    function handleVisibility() {
+      if (document.hidden) {
+        wasPaused = true;
+        cancelAnimationFrame(animFrameId);
+      } else if (wasPaused) {
+        wasPaused = false;
+        phaseStartTime = performance.now(); // Reset timing
+        animFrameId = requestAnimationFrame(render);
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // Cleanup khi component bị hủy (Astro view transitions / SPA)
+    // @ts-ignore — Astro lifecycle
+    wrapper.__pixelTextCleanup = () => {
+      isDestroyed = true;
+      cancelAnimationFrame(animFrameId);
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+    };
+  }
+
+  // ═══════════════════════════════════════════
+  //  BOOTSTRAP
+  // ═══════════════════════════════════════════
+
+  // Khởi tạo tất cả instances trên trang
+  function bootAll() {
+    document.querySelectorAll<HTMLElement>(".pixel-text-wrapper").forEach((wrapper) => {
+      // Tránh init trùng
+      if ((wrapper as any).__pixelTextCleanup) {
+        (wrapper as any).__pixelTextCleanup();
+      }
+      initPixelText(wrapper);
+    });
+  }
+
+  // Hỗ trợ Astro View Transitions
+  document.addEventListener("astro:page-load", bootAll);
+  // Fallback cho lần load đầu tiên
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    bootAll();
+  } else {
+    document.addEventListener("DOMContentLoaded", bootAll);
+  }
+</script>
