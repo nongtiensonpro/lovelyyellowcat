@@ -1,7 +1,8 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
-import { listCloudinaryImages, type CloudinaryImageResource } from "../../lib/cloudinary";
+import { searchCloudinaryImages, deleteCloudinaryImages } from "../../lib/cloudinary";
+import { logAdminAction } from "../../lib/adminAudit";
 import { env } from "cloudflare:workers";
 
 const runtimeEnv: any = env;
@@ -26,128 +27,425 @@ if (!user || !userProfile || userProfile.role !== "admin") {
   return Astro.redirect("/admin?error=admin-only");
 }
 
+// ── Tên cloud để dựng URL delivery ──
+const cloudName: string =
+  runtimeEnv?.PUBLIC_CLOUDINARY_CLOUD_NAME
+  || import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME
+  || "";
+
+function cdnUrl(publicId: string, transform?: string): string {
+  const encoded = String(publicId).split("/").map(encodeURIComponent).join("/");
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${transform ? transform + "/" : ""}${encoded}`;
+}
+
+// ── Query params: lọc + phân trang con trỏ hai chiều ──
 const url = new URL(Astro.request.url);
-const nextCursorParam = url.searchParams.get("cursor") || undefined;
+const q = url.searchParams.get("q")?.trim() || "";
+const folder = url.searchParams.get("folder")?.trim() || "";
+const minkbRaw = parseInt(url.searchParams.get("minkb") || "");
+const minkb = isNaN(minkbRaw) || minkbRaw <= 0 ? undefined : minkbRaw;
+const from = url.searchParams.get("from")?.trim() || "";
+const sortParam = url.searchParams.get("sort") || "newest";
+const sortKey = (["newest", "oldest", "largest", "smallest", "name"].includes(sortParam) ? sortParam : "newest") as
+  | "newest" | "oldest" | "largest" | "smallest" | "name";
+const sizeParam = parseInt(url.searchParams.get("size") || "");
+const pageSize = [24, 48, 96].includes(sizeParam) ? sizeParam : 24;
 
-let resources: CloudinaryImageResource[] = [];
-let nextCursor: string | null = null;
-let listError: string | null = null;
+const cur = url.searchParams.get("cur") || "";
+const hist = (url.searchParams.get("hist") || "").split("|").filter(Boolean);
 
-try {
-  const result = await listCloudinaryImages({ maxResults: 60, nextCursor: nextCursorParam }, runtimeEnv);
-  resources = result.resources;
-  nextCursor = result.nextCursor;
-  listError = result.error || null;
-} catch (err: any) {
-  listError = err.message || String(err);
+let savedMsg = url.searchParams.get("msg");
+let savedType = url.searchParams.get("type");
+
+function buildMediaUrl(overrides: Record<string, string>) {
+  const u = new URL("/admin/media", Astro.url.origin);
+  const base: Record<string, string> = { q, folder, sort: sortKey, size: String(pageSize) };
+  if (minkb) base.minkb = String(minkb);
+  if (from) base.from = from;
+  Object.entries({ ...base, ...overrides }).forEach(([k, v]) => {
+    if (v) u.searchParams.set(k, v);
+    else u.searchParams.delete(k);
+  });
+  return u.pathname + u.search;
 }
 
-function toThumb(secureUrl: string): string {
-  if (secureUrl.includes("/image/upload/")) {
-    return secureUrl.replace("/image/upload/", "/image/upload/w_320,h_240,c_fill,q_auto,f_auto/");
+// ── Xử lý xóa hàng loạt ──
+if (Astro.request.method === "POST" && user) {
+  const formData = await Astro.request.formData();
+  const action = String(formData.get("action") || "");
+
+  if (action === "bulk_delete") {
+    const ids = Array.from(formData.getAll("selectedIds")).map(String).filter(Boolean);
+    if (ids.length === 0) {
+      return Astro.redirect(buildMediaUrl({ type: "err", msg: encodeURIComponent("Chưa tick chọn ảnh nào."), cur, hist: hist.join("|") }), 303);
+    }
+    const summary = await deleteCloudinaryImages(ids, runtimeEnv);
+    await logAdminAction(supabase, {
+      adminId: user.id,
+      action: "media_delete",
+      targetType: "profile",
+      targetId: user.id,
+      details: { attempted: summary.attempted, deleted: summary.deleted, skipped: summary.skipped },
+    });
+    const msg = `Đã xóa ${summary.deleted}/${summary.attempted} ảnh khỏi Cloudinary`
+      + (summary.skipped > 0 ? ` (bỏ qua ${summary.skipped})` : "")
+      + (summary.errors.length > 0 ? ` · lỗi đầu: ${summary.errors[0].slice(0, 90)}` : "");
+    return Astro.redirect(
+      buildMediaUrl({ type: summary.deleted > 0 ? "ok" : "err", msg: encodeURIComponent(msg.slice(0, 200)), cur, hist: hist.join("|") }),
+      303
+    );
   }
-  return secureUrl;
 }
 
-function formatBytes(bytes?: number): string {
-  if (!bytes) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
-}
+// ── Gọi Cloudinary Search API ──
+const result = await searchCloudinaryImages(
+  { q, folder, minBytes: minkb, uploadedAfter: from || undefined, sortKey, maxResults: pageSize, nextCursor: cur || undefined },
+  runtimeEnv
+);
+
+const resources = result.resources;
+const nextCursor = result.nextCursor;
+const totalCount = result.totalCount;
+
+// Trang hiện tại = số mốc con trỏ đã đi qua + 1
+const pageIndex = hist.length + 1;
+
+// URL cho nút Trang sau: đẩy cursor hiện tại vào lịch sử
+const nextUrl = nextCursor
+  ? buildMediaUrl({ cur: nextCursor, hist: [...hist, cur].filter(Boolean).join("|") })
+  : null;
+// URL cho nút Trang trước: rút lại mốc cuối của lịch sử
+const prevUrl = hist.length > 0
+  ? buildMediaUrl({ cur: hist[hist.length - 1], hist: hist.slice(0, -1).join("|") })
+  : null;
 ---
 
 <AdminLayout title="VAPORWAVE MAGAZINE // THƯ VIỆN ẢNH" userProfile={userProfile} activePath="/admin/media">
+  {(savedType || savedMsg) && (
+    <div class={`win95-container mb-5 font-retro text-xs ${savedType === "ok" ? "border-vapor-green" : "border-red-600"}`}>
+      <div class={`win95-header ${savedType === "ok" ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
+        <span>{savedType === "ok" ? "✅ MEDIA_OP.OK" : "❌ SYSTEM_ALERT.ERR"}</span>
+      </div>
+      <div class={`p-3 text-black font-bold ${savedType === "ok" ? "bg-green-100" : "bg-red-100"}`}>{decodeURIComponent(savedMsg || "")}</div>
+    </div>
+  )}
+
+  {result.error && (
+    <div class="win95-container mb-5 max-w-3xl font-retro text-xs border-red-600">
+      <div class="win95-header bg-gradient-to-r from-red-800 to-red-600"><span>❌ CLOUD_ERROR.ERR</span></div>
+      <div class="p-3 bg-red-100 text-black font-bold">{result.error}</div>
+    </div>
+  )}
+
   <div class="text-center py-4 mb-4">
     <h1 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-widest text-vapor-purple font-retro">
-      🗃️ MEDIA LIBRARY
+      🗃️ MEDIA LIBRARY EXPLORER
     </h1>
     <p class="text-[11px] tracking-wider text-text-secondary mt-1 font-retro uppercase">
-      -- KHO ẢNH CLOUDINARY · BẤM ĐỂ COPY LINK NHÚNG --
+      -- TÌM KIẾM · LỌC NÂNG CAO · PHÂN TRANG · DỌN DẸP KHO ẢNH --
     </p>
   </div>
 
-  {listError && (
-    <div class="win95-container mb-5 max-w-3xl mx-auto font-retro text-xs border-red-600">
-      <div class="win95-header bg-gradient-to-r from-red-800 to-red-600"><span>❌ CLOUD_ERROR.ERR</span></div>
-      <div class="p-3 bg-red-100 text-black font-bold">{listError}</div>
+  <!-- Thanh lọc nâng cao -->
+  <form method="GET" action="/admin/media" class="win95-container font-retro text-black mb-4">
+    <div class="win95-header">
+      <span>🔍 FIND_ALL_FILES.DLL</span>
+      <span class="text-[10px] text-vapor-yellow">{totalCount !== undefined ? `${totalCount.toLocaleString("vi-VN")} ảnh khớp` : ""}</span>
     </div>
-  )}
+    <div class="p-3 bg-win-gray grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
+      <div class="col-span-2">
+        <label for="f-q" class="block text-[10px] font-bold uppercase mb-1">Tên file chứa...</label>
+        <input id="f-q" name="q" value={q} placeholder="VD: vapor, banner, logo..."
+          class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;" />
+      </div>
+      <div class="col-span-2">
+        <label for="f-folder" class="block text-[10px] font-bold uppercase mb-1">Trong thư mục</label>
+        <input id="f-folder" name="folder" value={folder} placeholder="VD: YellowCatWeb"
+          class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;" />
+      </div>
+      <div>
+        <label for="f-minkb" class="block text-[10px] font-bold uppercase mb-1">Dung lượng ≥ KB</label>
+        <input id="f-minkb" name="minkb" type="number" min="1" value={minkb ?? ""}
+          class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;" />
+      </div>
+      <div>
+        <label for="f-from" class="block text-[10px] font-bold uppercase mb-1">Tải từ ngày</label>
+        <input id="f-from" name="from" type="date" value={from}
+          class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;" />
+      </div>
+      <div>
+        <label for="f-sort" class="block text-[10px] font-bold uppercase mb-1">Sắp xếp</label>
+        <select id="f-sort" name="sort" class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;">
+          <option value="newest" selected={sortKey === "newest"}>Mới nhất</option>
+          <option value="oldest" selected={sortKey === "oldest"}>Cũ nhất</option>
+          <option value="largest" selected={sortKey === "largest"}>Nặng nhất</option>
+          <option value="smallest" selected={sortKey === "smallest"}>Nhẹ nhất</option>
+          <option value="name" selected={sortKey === "name"}>Theo tên A→Z</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-size" class="block text-[10px] font-bold uppercase mb-1">Số ảnh/trang</label>
+        <select id="f-size" name="size" class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;">
+          {[24, 48, 96].map((n) => (
+            <option value={String(n)} selected={pageSize === n}>{n}</option>
+          ))}
+        </select>
+      </div>
+      <div class="col-span-2 md:col-span-4 lg:col-span-6 flex flex-wrap gap-2 justify-end">
+        <a href="/admin/media" class="win95-btn no-underline font-bold text-xs px-3 py-1.5">🔄 XÓA LỌC</a>
+        <button type="submit" class="win95-btn font-bold text-xs px-5 py-1.5 bg-vapor-purple/20">🔍 ÁP DỤNG BỘ LỌC</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Bulk bar + lưới ảnh -->
+  <form method="POST" action={`/admin/media${url.search}`} id="media-form">
+    <div class="flex flex-wrap items-center gap-2 mb-3 font-retro text-[11px]">
+      <label class="flex items-center gap-1.5 win95-btn font-bold cursor-pointer no-underline">
+        <input type="checkbox" id="check-all-media" class="checkbox-vapor" aria-label="Chọn tất cả" />
+        Chọn hết
+      </label>
+      <span>Đã chọn: <strong id="media-count">0</strong></span>
+      <span class="text-win-dark hidden sm:inline">· Trang {pageIndex}{nextCursor ? "+" : ""} · Hiển thị {resources.length}/{totalCount ?? resources.length} ảnh khớp bộ lọc</span>
+      <span class="ml-auto"></span>
+      <button
+        type="submit"
+        name="action"
+        value="bulk_delete"
+        disabled
+        class="win95-btn bulk-del font-bold text-[10px] py-1 px-2 btn-danger"
+      >
+        🗑 XÓA ẢNH ĐÃ CHỌN
+      </button>
+    </div>
+
+    {!result.error && resources.length === 0 ? (
+      <div class="win95-container font-retro text-black p-10 text-center mb-6">
+        <span class="text-4xl block mb-3" aria-hidden="true">🗃️</span>
+        <p class="font-bold text-sm">Không có ảnh nào khớp bộ lọc hiện tại.</p>
+        <p class="text-[10px] text-black/70 mt-1">Thử nạp lại trang đầu hoặc bấm "XÓA LỌC".</p>
+      </div>
+    ) : (
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-4">
+        {resources.map((img) => (
+          <div
+            class="win95-container font-retro text-black relative"
+            data-media-card
+            data-pid={img.public_id}
+            data-w={img.width || ""}
+            data-h={img.height || ""}
+            data-bytes={img.bytes || ""}
+            data-date={img.created_at}
+            data-fmt={img.format || ""}
+            data-folder={img.folder || ""}
+          >
+            <label class="absolute top-1 left-1 z-20 cursor-pointer" title="Chọn để xóa">
+              <input type="checkbox" name="selectedIds" value={img.public_id} class="checkbox-vapor media-check" />
+            </label>
+            <button
+              type="button"
+              class="detail-btn absolute top-1 right-1 z-20 win95-btn w-6 h-6 p-0 justify-center font-bold text-[11px]"
+              title="Xem chi tiết & copy link các loại"
+              aria-label={`Chi tiết ${img.filename || img.public_id}`}
+            >ℹ️</button>
+
+            <a
+              href={cdnUrl(img.public_id, "f_auto,q_auto,w_800")}
+              target="_blank"
+              rel="noopener"
+              class="block aspect-square overflow-hidden border-b border-win-dark bg-cosmic-black group mt-5"
+              tabindex="-1"
+            >
+              <img
+                src={cdnUrl(img.public_id, "f_auto,q_auto,w_320,h_240,c_fill")}
+                alt={img.filename || img.public_id}
+                loading="lazy"
+                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                style="filter:saturate(1.35);"
+              />
+            </a>
+
+            <div class="p-1.5 space-y-1">
+              <p class="text-[9px] font-bold truncate" title={img.filename || img.public_id}>
+                📄 {img.filename || img.public_id.split("/").pop()}
+              </p>
+              <p class="text-[8px] text-win-darkest flex justify-between">
+                <span>{img.width && img.height ? `${img.width}×${img.height}` : ""}</span>
+                <span>{formatBytes(img.bytes)}</span>
+              </p>
+              <p class="text-[8px] text-win-dark truncate" title={img.folder || ""}>📁 {img.folder || "root"}</p>
+              <div class="flex gap-1">
+                <button type="button" class="copy-url-btn win95-btn flex-1 text-[8px] py-0.5 font-bold">🔗 URL</button>
+                <button type="button" class="copy-md-btn win95-btn flex-1 text-[8px] py-0.5 font-bold">📝 MD</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <!-- Phân trang con trỏ hai chiều -->
+    <nav class="pagination-bar mb-8" aria-label="Phân trang thư viện ảnh">
+      {prevUrl ? (
+        <a href={prevUrl} class="win95-btn no-underline font-bold">◀◀ Trang trước</a>
+      ) : (
+        <span class="win95-btn text-win-dark">◀◀ Trang trước</span>
+      )}
+      <span class="page-info">Trang {pageIndex}</span>
+      {nextUrl ? (
+        <a href={nextUrl} class="win95-btn no-underline font-bold">Trang sau ▶▶</a>
+      ) : (
+        <span class="win95-btn text-win-dark">{resources.length > 0 ? "Hết kết quả" : "Trang sau ▶▶"}</span>
+      )}
+    </nav>
+  </form>
+
+  <!-- Overlay chi tiết ảnh -->
+  <div id="media-detail" hidden class="fixed inset-0 bg-black/80 z-[var(--z-modal)] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div role="dialog" aria-modal="true" aria-label="Chi tiết ảnh" class="win95-container max-w-2xl w-full font-retro text-black max-h-[92vh] overflow-y-auto">
+      <div class="win95-header">
+        <span>🖼️ FILE_PROPERTIES.EXE</span>
+        <button type="button" id="media-detail-close" class="win95-btn py-0 px-1.5 font-bold" aria-label="Đóng chi tiết">✕</button>
+      </div>
+      <div class="p-3 bg-win-gray space-y-3">
+        <img id="md-preview" src="" alt="" class="w-full max-h-72 object-contain border-2 border-win-dark bg-cosmic-black" />
+        <dl class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] border-2 border-win-dark bg-white p-2">
+          <dt class="font-bold uppercase text-[9px]">Public ID</dt><dd id="md-pid" class="break-all font-mono"></dd>
+          <dt class="font-bold uppercase text-[9px]">Tên file</dt><dd id="md-name"></dd>
+          <dt class="font-bold uppercase text-[9px]">Kích thước</dt><dd id="md-size"></dd>
+          <dt class="font-bold uppercase text-[9px]">Định dạng</dt><dd id="md-fmt"></dd>
+          <dt class="font-bold uppercase text-[9px]">Dung lượng</dt><dd id="md-bytes"></dd>
+          <dt class="font-bold uppercase text-[9px]">Ngày tải</dt><dd id="md-date"></dd>
+          <dt class="font-bold uppercase text-[9px]">Thư mục</dt><dd id="md-folder"></dd>
+        </dl>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" data-copy="full" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">🔗 COPY URL GỐC (1600px)</button>
+          <button type="button" data-copy="thumb" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">🖼️ COPY URL THUMBNAIL</button>
+          <button type="button" data-copy="md" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">📝 COPY MARKDOWN</button>
+          <button type="button" data-copy="html" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">🌐 COPY THẺ HTML</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="media-toast" hidden class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[var(--z-toast)] win95-container font-retro text-xs px-4 py-2 bg-win-gray text-black font-bold shadow-xl">
     ✅ Đã copy vào clipboard!
   </div>
 
-  {!listError && resources.length === 0 ? (
-    <div class="win95-container font-retro text-black max-w-xl mx-auto p-10 text-center">
-      <span class="text-4xl block mb-3" aria-hidden="true">🗃️</span>
-      <p class="font-bold text-sm text-black">Chưa có ảnh nào trong kho Cloudinary.</p>
-      <p class="text-[10px] text-black/70 mt-1">Ảnh tải lên qua Article Editor hoặc Submit sẽ xuất hiện tại đây.</p>
-    </div>
-  ) : (
-    <>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
-        {resources.map((img) => (
-          <div class="win95-container font-retro text-black" data-media-card data-url={img.secure_url}>
-            <div class="win95-header py-0.5 px-1.5">
-              <span class="font-mono text-[8px] truncate w-full" title={img.public_id}>{img.public_id.split("/").pop()}</span>
-            </div>
-            <a href={img.secure_url} target="_blank" rel="noopener" class="block aspect-4-3 overflow-hidden border-b border-win-dark bg-cosmic-black">
-              <img src={toThumb(img.secure_url)} alt={img.public_id} loading="lazy"
-                class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" style="filter:saturate(1.35);" />
-            </a>
-            <div class="p-1.5 space-y-1">
-              <p class="text-[8px] text-win-darkest flex justify-between">
-                <span>{formatBytes(img.bytes)}</span>
-                <span>{img.width && img.height ? `${img.width}×${img.height}` : ""}</span>
-              </p>
-              <button type="button" class="copy-url-btn win95-btn w-full text-[9px] py-1 font-bold">🔗 COPY URL</button>
-              <button type="button" class="copy-md-btn win95-btn w-full text-[9px] py-1 font-bold">📝 COPY MARKDOWN</button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {nextCursor && (
-        <div class="pagination-bar mb-10">
-          <a href={`/admin/media?cursor=${encodeURIComponent(nextCursor)}`} class="win95-btn no-underline font-bold">
-            ⏭ TRANG SAU ▶
-          </a>
-        </div>
-      )}
-    </>
-  )}
-</AdminLayout>
-
-<script is:inline>
-  (function () {
-    var toast = document.getElementById("media-toast");
-    var toastTimer = null;
-
-    function showToast() {
-      if (!toast) return;
-      toast.hidden = false;
-      if (toastTimer) clearTimeout(toastTimer);
-      toastTimer = setTimeout(function () {
-        toast.hidden = true;
-      }, 1800);
-    }
-
-    function copyText(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(showToast).catch(function () {});
+  <script is:inline define:vars={{ cloudName }}>
+    (function () {
+      var toast = document.getElementById("media-toast");
+      var toastTimer = null;
+      function showToast() {
+        if (!toast) return;
+        toast.hidden = false;
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toast.hidden = true; }, 1800);
       }
-    }
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(showToast).catch(function () {});
+        }
+      }
+      function fmtBytes(b) {
+        if (!b) return "—";
+        if (b < 1024) return b + " B";
+        if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
+        return (b / 1048576).toFixed(2) + " MB";
+      }
 
-    document.querySelectorAll("[data-media-card]").forEach(function (card) {
-      var url = card.getAttribute("data-url") || "";
-      var urlBtn = card.querySelector(".copy-url-btn");
-      var mdBtn = card.querySelector(".copy-md-btn");
+      // ── Copy nhanh trên thẻ ──
+      document.querySelectorAll("[data-media-card]").forEach(function (card) {
+        var pid = card.getAttribute("data-pid");
+        var urlBtn = card.querySelector(".copy-url-btn");
+        var mdBtn = card.querySelector(".copy-md-btn");
 
-      urlBtn && urlBtn.addEventListener("click", function () { copyText(url); });
-      mdBtn && mdBtn.addEventListener("click", function () {
-        copyText(`![Aesthetic image](${url})`);
+        function delivery(t) {
+          var enc = pid.split("/").map(encodeURIComponent).join("/");
+          return "https://res.cloudinary.com/" + cloudName + "/image/upload/" + (t ? t + "/" : "") + enc;
+        }
+
+        if (urlBtn) urlBtn.addEventListener("click", function () {
+          copyText(delivery("f_auto,q_auto,w_1200"));
+        });
+        if (mdBtn) mdBtn.addEventListener("click", function () {
+          var name = (card.querySelector("p[title]") || {}).getAttribute ? card.querySelector("p[title]").textContent.trim() : pid;
+          copyText("![" + name.replace(/[\[\]]/g, "") + "](" + delivery("f_auto,q_auto,w_1200") + ")");
+        });
+
+        // ── Overlay chi tiết ──
+        var infoBtn = card.querySelector(".detail-btn");
+        if (infoBtn) {
+          infoBtn.addEventListener("click", function () {
+            var overlay = document.getElementById("media-detail");
+            if (!overlay) return;
+            var w = card.getAttribute("data-w"), h = card.getAttribute("data-h");
+            document.getElementById("md-preview").src = delivery("f_auto,q_auto,w_900");
+            document.getElementById("md-pid").textContent = pid;
+            document.getElementById("md-name").textContent = card.getAttribute("data-fmt")
+              ? ((card.querySelector("p[title]") || { textContent: "" }).textContent.trim() + "." + card.getAttribute("data-fmt"))
+              : pid.split("/").pop();
+            document.getElementById("md-size").textContent = (w && h) ? w + " × " + h + " px" : "—";
+            document.getElementById("md-fmt").textContent = (card.getAttribute("data-fmt") || "").toUpperCase() || "—";
+            document.getElementById("md-bytes").textContent = fmtBytes(parseInt(card.getAttribute("data-bytes")));
+            var d = new Date(card.getAttribute("data-date"));
+            document.getElementById("md-date").textContent = isNaN(d.getTime()) ? "—" : d.toLocaleString("vi-VN");
+            document.getElementById("md-folder").textContent = card.getAttribute("data-folder") || "root";
+            overlay.dataset.currentPid = pid;
+            overlay.hidden = false;
+          });
+        }
       });
-    });
-  })();
-</script>
+
+      // ── Đóng overlay chi tiết ──
+      var overlay = document.getElementById("media-detail");
+      if (overlay) {
+        document.getElementById("media-detail-close")?.addEventListener("click", function () { overlay.hidden = true; });
+        overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.hidden = true; });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && !overlay.hidden) overlay.hidden = true;
+        });
+        overlay.querySelectorAll(".copy-variant").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var pid = overlay.dataset.currentPid;
+            if (!pid) return;
+            var enc = pid.split("/").map(encodeURIComponent).join("/");
+            var base = "https://res.cloudinary.com/" + cloudName + "/image/upload/";
+            var kind = btn.getAttribute("data-copy");
+            if (kind === "full") copyText(base + "f_auto,q_auto,w_1600/" + enc);
+            else if (kind === "thumb") copyText(base + "f_auto,q_auto,w_400,h_300,c_fill/" + enc);
+            else if (kind === "md") copyText("![" + pid.split("/").pop() + "](" + base + "f_auto,q_auto,w_1200/" + enc + ")");
+            else if (kind === "html") copyText('<img src="' + base + 'f_auto,q_auto,w_1200/' + enc + '" alt="' + pid.split("/").pop() + '" />');
+          });
+        });
+      }
+
+      // ── Chọn tất cả + đếm + xác nhận xóa hàng loạt ──
+      var checkAll = document.getElementById("check-all-media");
+      var countEl = document.getElementById("media-count");
+      function refreshCount() {
+        var boxes = Array.prototype.slice.call(document.querySelectorAll(".media-check"));
+        var n = boxes.filter(function (b) { return b.checked; }).length;
+        if (countEl) countEl.textContent = String(n);
+        var delBtn = document.querySelector(".bulk-del");
+        if (delBtn) delBtn.disabled = n === 0;
+      }
+      if (checkAll) {
+        checkAll.addEventListener("change", function () {
+          document.querySelectorAll(".media-check").forEach(function (b) { b.checked = checkAll.checked; });
+          refreshCount();
+        });
+      }
+      document.querySelectorAll(".media-check").forEach(function (b) {
+        b.addEventListener("change", refreshCount);
+      });
+      var delBtn = document.querySelector(".bulk-del");
+      delBtn && delBtn.addEventListener("click", function (e) {
+        if (!confirm("🗑 XÓA VĨNH VIỄN các ảnh đã chọn khỏi Cloudinary?\n\n⚠️ Lưu ý: nếu ảnh đang được dùng trong bài viết hoặc tranh đã duyệt, link hiển thị sẽ gãy!\n\n(Thao tác này không thể hoàn tác)")) {
+          e.preventDefault();
+        }
+      });
+      refreshCount();
+    })();
+  </script>
+</AdminLayout>

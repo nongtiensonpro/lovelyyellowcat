@@ -112,12 +112,130 @@ export interface CloudinaryImageResource {
   bytes?: number;
   width?: number;
   height?: number;
+  format?: string;
+  filename?: string;
+  folder?: string;
 }
 
 export interface CloudinaryListResult {
   resources: CloudinaryImageResource[];
   nextCursor: string | null;
+  totalCount?: number;
   error?: string;
+}
+
+/**
+ * Tìm kiếm nâng cao qua Cloudinary Search API (POST /resources/search).
+ * Hỗ trợ: từ khóa theo tên file/public_id, thư mục, dung lượng, ngày tải, sắp xếp,
+ * phân trang con trỏ — tất cả phía server, key/secret không bao giờ xuống client.
+ */
+export async function searchCloudinaryImages(
+  opts: {
+    q?: string;
+    folder?: string;
+    minBytes?: number;
+    uploadedAfter?: string; // "YYYY-MM-DD"
+    sortKey?: "newest" | "oldest" | "largest" | "smallest" | "name";
+    maxResults?: number;
+    nextCursor?: string;
+  },
+  runtimeEnv?: CloudinaryRuntimeEnv
+): Promise<CloudinaryListResult> {
+  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig(runtimeEnv);
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    const missing = [
+      !cloudName ? "cloud_name" : null,
+      !apiKey ? "api_key" : null,
+      !apiSecret ? "api_secret" : null,
+    ].filter(Boolean).join(", ");
+    return {
+      resources: [],
+      nextCursor: null,
+      error: `Thiếu cấu hình Cloudinary trên server: ${missing}. `
+        + `CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET phải khai báo trong Cloudflare Dashboard (Variables & Secrets của Worker).`,
+    };
+  }
+
+  const diag = `[cloud=${cloudName}, api_key=${maskKey(apiKey)}]`;
+
+  // ── Dựng biểu thức tìm kiếm (cú pháp Search API) ──
+  const clauses: string[] = [`resource_type:image`];
+  const safe = (v: string) => v.replace(/"/g, "").trim();
+
+  if (opts.q && opts.q.trim()) {
+    const kw = safe(opts.q);
+    clauses.push(`(filename:${kw}* OR public_id:${kw}*)`);
+  }
+  if (opts.folder && opts.folder.trim()) {
+    clauses.push(`folder="${safe(opts.folder)}"`);
+  }
+  if (opts.minBytes && opts.minBytes > 0) {
+    clauses.push(`bytes>=${Math.floor(opts.minBytes)}`);
+  }
+  if (opts.uploadedAfter && /^\d{4}-\d{2}-\d{2}$/.test(opts.uploadedAfter)) {
+    clauses.push(`uploaded_at>="${opts.uploadedAfter}"`);
+  }
+
+  const sortMap = {
+    newest: { created_at: "desc" },
+    oldest: { created_at: "asc" },
+    largest: { bytes: "desc" },
+    smallest: { bytes: "asc" },
+    name: { public_id: "asc" },
+  } as const;
+  const sortBy = [sortMap[opts.sortKey ?? "newest"]];
+
+  try {
+    const body: Record<string, unknown> = {
+      expression: clauses.join(" AND "),
+      max_results: Math.min(200, Math.max(1, opts.maxResults ?? 60)),
+      fields: ["public_id", "filename", "format", "bytes", "width", "height", "created_at", "folder"],
+      sort_by: sortBy,
+    };
+    if (opts.nextCursor) body.next_cursor = opts.nextCursor;
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/search`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: cloudinaryBasicAuthHeader(apiKey, apiSecret),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    const data: any = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const apiMsg = data?.error?.message || `HTTP ${response.status}`;
+      const hint = /credential|secret|auth/i.test(apiMsg)
+        ? ` → Cặp api_key ↔ api_secret không khớp với tài khoản "${cloudName}". Vào Cloudflare Dashboard → Worker lovelyyellowcat → Variables & Secrets để cập nhật.`
+        : "";
+      return { resources: [], nextCursor: null, error: `${apiMsg} ${diag}.${hint}` };
+    }
+
+    const resources: CloudinaryImageResource[] = (data.resources || []).map((r: any) => ({
+      public_id: r.public_id,
+      secure_url: r.secure_url || r.url || "",
+      created_at: r.created_at,
+      bytes: r.bytes,
+      width: r.width,
+      height: r.height,
+      format: r.format,
+      filename: r.filename,
+      folder: r.folder,
+    }));
+
+    return {
+      resources,
+      nextCursor: data.next_cursor || null,
+      totalCount: typeof data.total_count === "number" ? data.total_count : undefined,
+    };
+  } catch (error: any) {
+    return { resources: [], nextCursor: null, error: `${error.message || String(error)} ${diag}` };
+  }
 }
 
 /** Che giấu khóa: chỉ hiện 4 ký tự cuối để đối chiếu mà không lộ secret */
