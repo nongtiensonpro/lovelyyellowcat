@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>📼 BOOT SEQUENCE — LOVELYYELLOWCAT BIOS v3.0</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #000; }
+  body {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    color: #c8c8c8; padding: 4vh 5vw; font-size: clamp(12px, 1.6vw, 16px);
+    line-height: 1.55; cursor: pointer; overflow: hidden;
+  }
+  .green { color: #05ffa1; }
+  .cyan { color: #01cdfe; }
+  .pink { color: #ff71ce; }
+  .yellow { color: #fffb96; }
+  .dim { color: #604880; }
+  .white { color: #fff; font-weight: bold; }
+  #screen { white-space: pre-wrap; word-break: break-word; }
+  .cursor { display: inline-block; width: .6em; height: 1em; background: #05ffa1; vertical-align: -0.15em; animation: blink 0.9s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .scanlines {
+    position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.18) 2px 4px);
+  }
+  .flicker { position: fixed; inset: 0; pointer-events: none; background: rgba(1,205,254,0.02); animation: flick 4s infinite; }
+  @keyframes flick { 0%,92%,100%{opacity:0} 93%{opacity:1} 95%{opacity:.4} 97%{opacity:1} }
+  #enter {
+    display: none; margin-top: 3vh; padding: 14px; border: 2px dashed #05ffa1;
+    color: #05ffa1; text-align: center; font-weight: bold;
+  }
+  #enter a { color: #ff71ce; text-decoration: none; }
+  #enter a:hover { text-decoration: underline; }
+  .ascii-cat { color: #fffb96; font-size: clamp(8px, 1.3vw, 13px); line-height: 1.15; }
+</style>
+</head>
+<body>
+<div id="screen"></div>
+<div id="enter">
+  HỆ THỐNG SẴN SÀNG — NHẤN PHÍM BẤT KỲ ĐỂ VÀO <a href="/">LOVELYYELLOWCAT.MAG ↵</a>
+</div>
+<div class="scanlines"></div>
+<div class="flicker"></div>
+
+<script>
+(function () {
+  const screen = document.getElementById("screen");
+  const lines = [
+    { t: "LOVELYYELLOWCAT BIOS v3.0 — Copyright (C) 1995-2026, Cybernetic Oasis Inc.", c: "white", d: 300 },
+    { t: "", d: 60 },
+    { t: "Main Processor      : VIBECORE(tm) 9000 @ 4.77 MHz (OC)", c: "", d: 120 },
+    { t: "Memory Test         : ", c: "", d: 80, mem: 65536 },
+    { t: "Detecting IDE drives...", c: "dim", d: 260 },
+    { t: "  Drive A: 1.44M, 3.5in   [ 📼 VAPOR TAPE SYSTEM ]", c: "", d: 160 },
+    { t: "  Drive C: 25GB CLOUDINARY IMAGE VAULT ... OK", c: "green", d: 160 },
+    { t: "  Drive D: 500MB SUPABASE POSTGRES ... OK", c: "green", d: 160 },
+    { t: "  NIC   : CYBERNET ETHERNET @ LIGHTSPEED ... OK", c: "green", d: 200 },
+    { t: "", d: 80 },
+    { t: "Loading VAPORWAVE.SYS .............. [ OK ]", c: "cyan", d: 220 },
+    { t: "Loading CRT_SCANLINE.DRV ........... [ OK ]", c: "cyan", d: 180 },
+    { t: "Loading NEON_PALETTE.DAT ........... [ OK ]", c: "cyan", d: 180 },
+    { t: "Loading MEOW_ENGINE.EXE ............ [ OK ]", c: "pink", d: 240 },
+    { t: "Calibrating HOPE_LEVEL ............. [ 100% ]", c: "yellow", d: 300 },
+    { t: "", d: 120 },
+    { t: "1 ASCII CAT(ES) FOUND.", c: "yellow", d: 350 },
+  ];
+
+  const catArt = [
+    "      ／＼、",
+    "     ( ^_^ )  ＜ Meow! Hệ thống khởi động xong!",
+    "    ／      ＼",
+    "   |  |    |  |",
+    "    ＼ ＿＿ ／",
+  ];
+
+  const screenEl = document.getElementById("screen");
+  let li = 0;
+
+  function typeLine(line, done) {
+    let i = 0;
+    const span = document.createElement("span");
+    if (line.c) span.className = line.c;
+    screen.appendChild(span);
+    const memTarget = line.mem || 0;
+    const iv = setInterval(function () {
+      if (line.mem) {
+        // Đếm RAM kiểu BIOS
+        i = Math.min(memTarget, i + Math.ceil(memTarget / 24) + 137);
+        span.textContent = "Memory Test         : " + i + " KB";
+        if (i >= memTarget) {
+          span.textContent = "Memory Test         : " + memTarget + " KB " + "OK";
+          clearInterval(iv); done();
+        }
+        return;
+      }
+      span.textContent = line.t.slice(0, ++i);
+      if (i >= line.t.length) { clearInterval(iv); done(); }
+    }, line.mem ? 24 : 12);
+  }
+
+  function next() {
+    if (li < lines.length) {
+      const line = lines[li++];
+      typeLine(line, function () {
+        const br = document.createTextNode("\n");
+        screen.appendChild(br);
+        setTimeout(next, line.d);
+      });
+    } else if (li === lines.length) {
+      li++;
+      const pre = document.createElement("div");
+      pre.className = "ascii-cat";
+      pre.textContent = catArt.join("\n");
+      screen.appendChild(pre);
+      setTimeout(function () {
+        document.getElementById("enter").style.display = "block";
+        document.body.addEventListener("keydown", go);
+      }, 500);
+    }
+  }
+
+  function go() {
+    window.location.href = "/";
+  }
+  document.body.addEventListener("click", function (e) {
+    if (e.target.tagName !== "A") go();
+  });
+
+  setTimeout(next, 400);
+})();
+</script>
+</body>
+</html>

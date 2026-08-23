@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>📼 LOVELYYELLOWCAT — Canvas2D Vaporwave Hero</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #0b001a; }
+  #scene { display: block; width: 100vw; height: 100vh; }
+  .crt {
+    position: fixed; inset: 0; pointer-events: none; z-index: 5;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.14) 2px 4px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(11,0,26,.75) 100%);
+    mix-blend-mode: multiply;
+  }
+  .crt.off { display: none; }
+  .panel {
+    position: fixed; left: 12px; bottom: 12px; z-index: 10;
+    background: #c0c0c0; padding: 3px; font-family: 'MS Sans Serif', Tahoma, sans-serif;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #dfdfdf, inset -2px -2px 0 #808080, inset 2px 2px 0 #c0c0c0;
+    user-select: none;
+  }
+  .panel .bar {
+    background: linear-gradient(90deg, #000080, #1084d0); color: #fff;
+    font-size: 11px; font-weight: bold; padding: 3px 6px; display: flex; justify-content: space-between;
+  }
+  .panel .body { padding: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .w95btn {
+    background: #c0c0c0; border: none; font: bold 11px 'MS Sans Serif', Tahoma; padding: 4px 10px; cursor: pointer;
+    box-shadow: inset -1px -1px 0 #404040, inset 1px 1px 0 #fff, inset -2px -2px 0 #808080, inset 2px 2px 0 #c0c0c0;
+  }
+  .w95btn:active { box-shadow: inset 1px 1px 0 #404040, inset -1px -1px 0 #fff; }
+  input[type=range] { width: 110px; }
+  .fps { font: 11px 'Courier New'; color: #000; min-width: 60px; }
+  .hint {
+    position: fixed; right: 12px; bottom: 12px; z-index: 10; color: #a08cc0;
+    font: 11px 'Courier New'; text-align: right; opacity: .8; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="crt" class="crt"></div>
+
+<div class="panel">
+  <div class="bar"><span>🎛️ VAPOR_CONTROL.EXE</span><span>Canvas2D Demo</span></div>
+  <div class="body">
+    <button class="w95btn" id="btn-crt">📺 CRT: BẬT</button>
+    <button class="w95btn" id="btn-pause">⏸ TẠM DỪNG</button>
+    <label style="font:bold 11px 'MS Sans Serif'">TỐC ĐỘ</label>
+    <input type="range" id="rng-speed" min="0" max="300" value="100" />
+    <span class="fps" id="fps">-- FPS</span>
+  </div>
+</div>
+<div class="hint">
+  LOVELYYELLOWCAT // A CYBERNETIC OASIS<br/>
+  Toàn bộ khung hình vẽ bằng Canvas2D thuần — 0 thư viện
+</div>
+
+<script>
+(function () {
+  const cv = document.getElementById("scene");
+  const ctx = cv.getContext("2d");
+  let W = 0, H = 0, dpr = 1;
+
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    buildStars();
+  }
+  window.addEventListener("resize", resize);
+
+  // ── Trạng thái ──
+  let paused = false, speed = 1, crtOn = true;
+  let t = 0, lastFrame = performance.now(), fpsAcc = 0, fpsN = 0, fpsShown = 0;
+
+  const crtEl = document.getElementById("crt");
+  document.getElementById("btn-crt").addEventListener("click", function () {
+    crtOn = !crtOn;
+    crtEl.classList.toggle("off", !crtOn);
+    this.textContent = crtOn ? "📺 CRT: BẬT" : "📺 CRT: TẮT";
+  });
+  document.getElementById("btn-pause").addEventListener("click", function () {
+    paused = !paused;
+    this.textContent = paused ? "▶ CHẠY TIẾP" : "⏸ TẠM DỪNG";
+  });
+  document.getElementById("rng-speed").addEventListener("input", function () {
+    speed = this.value / 100;
+  });
+
+  // ── Sao trời (twinkle) ──
+  let stars = [];
+  function buildStars() {
+    stars = [];
+    const n = Math.floor((W * H) / 9000);
+    for (let i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.55,
+        r: Math.random() * 1.4 + 0.3,
+        ph: Math.random() * Math.PI * 2,
+        sp: 0.5 + Math.random() * 2,
+      });
+    }
+  }
+
+  // ── Mặt trời kẻ sọc ──
+  function drawSun(cx, cy, R) {
+    const grad = ctx.createLinearGradient(0, cy - R, 0, cy + R);
+    grad.addColorStop(0, "#fffb96");
+    grad.addColorStop(0.45, "#ff9a3c");
+    grad.addColorStop(0.75, "#ff71ce");
+    grad.addColorStop(1, "#b967ff");
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+
+    // Kẻ sọc cắt ngang dày dần về phía chân trời
+    const stripes = 9;
+    ctx.fillStyle = "#0b001a";
+    for (let i = 0; i < stripes; i++) {
+      const p = i / stripes;
+      const y = cy + R * (p * 1.05 - 0.02) + Math.sin(t * 0.4) * 3;
+      const h = 2 + p * 14;
+      ctx.fillRect(cx - R, y, R * 2, h);
+    }
+    ctx.restore();
+
+    // Quầng glow
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const glow = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.9);
+    glow.addColorStop(0, "rgba(255,113,206,0.35)");
+    glow.addColorStop(1, "rgba(255,113,206,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+    ctx.restore();
+  }
+
+  // ── Lưới phối cảnh vô tận ──
+  function drawGrid(horizonY) {
+    ctx.strokeStyle = "rgba(185,103,255,0.55)";
+    ctx.lineWidth = 1;
+
+    // Tia dọc hội tụ về điểm biến mất
+    const vpx = W / 2;
+    for (let i = -14; i <= 14; i++) {
+      const xBottom = vpx + i * (W / 9);
+      ctx.beginPath();
+      ctx.moveTo(vpx + i * 14, horizonY);
+      ctx.lineTo(xBottom, H);
+      ctx.stroke();
+    }
+
+    // Tia ngang chạy về phía người xem (easing phi tuyến)
+    const lines = 16;
+    for (let i = 0; i < lines; i++) {
+      const p = ((i + (t * 0.55 * speed) % 1) / lines);
+      const eased = Math.pow(p, 2.6);
+      const y = horizonY + eased * (H - horizonY);
+      const alpha = 0.15 + p * 0.65;
+      ctx.strokeStyle = "rgba(1,205,254," + alpha.toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.moveTo(0, y); ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  }
+
+  // ── Chú mèo pixel ngồi trên chân trời ──
+  function drawCat(x, y, s) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.fillStyle = "#0b001a";
+    // Thân
+    ctx.beginPath();
+    ctx.moveTo(-16, 0); ctx.quadraticCurveTo(-18, -22, 0, -24);
+    ctx.quadraticCurveTo(18, -22, 16, 0); ctx.closePath(); ctx.fill();
+    // Đầu
+    ctx.beginPath(); ctx.arc(0, -30, 11, 0, Math.PI * 2); ctx.fill();
+    // Tai
+    ctx.beginPath();
+    ctx.moveTo(-10, -37); ctx.lineTo(-7, -48); ctx.lineTo(-3, -38);
+    ctx.moveTo(10, -37); ctx.lineTo(7, -48); ctx.lineTo(3, -38);
+    ctx.closePath(); ctx.fill();
+    // Đuôi ve vẩy
+    const wag = Math.sin(t * 2.2) * 6;
+    ctx.strokeStyle = "#0b001a"; ctx.lineWidth = 4; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(15, -4);
+    ctx.quadraticCurveTo(26 + wag * 0.3, -10, 24 + wag, -22);
+    ctx.stroke();
+    // Mắt neon chớp
+    const blink = (Math.sin(t * 0.7) > 0.96) ? 1 : 0.25;
+    ctx.fillStyle = "rgba(5,255,161," + blink + ")";
+    ctx.fillRect(-6, -33, 3, 3); ctx.fillRect(3, -33, 3, 3);
+    ctx.restore();
+  }
+
+  // ── Tiêu đề glitch sắc ký ──
+  function drawTitle() {
+    const title = "LOVELYYELLOWCAT";
+    const sub = "A CYBERNETIC OASIS // EST. 1995";
+    const cx = W / 2, ty = H * 0.24;
+    const size = Math.min(54, W / 14);
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.font = "bold " + size + "px 'Courier New', monospace";
+
+    const glitch = Math.random() < 0.06 ? (Math.random() * 10 - 5) : 0;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "rgba(255,113,206,0.75)";
+    ctx.fillText(title, cx - 2.5 + glitch, ty);
+    ctx.fillStyle = "rgba(1,205,254,0.75)";
+    ctx.fillText(title, cx + 2.5 - glitch, ty);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "#f5ecff";
+    ctx.fillText(title, cx, ty);
+
+    ctx.font = (size * 0.24) + "px 'Courier New', monospace";
+    ctx.fillStyle = "rgba(160,140,192,0.95)";
+    ctx.fillText(sub, cx, ty + size * 0.55);
+    ctx.restore();
+  }
+
+  // ── Vòng lặp render ──
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+    if (paused) return;
+    t += dt * speed;
+
+    fpsAcc += dt; fpsN++;
+    if (fpsAcc >= 0.5) { fpsShown = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0;
+      document.getElementById("fps").textContent = fpsShown + " FPS";
+    }
+
+    // Nền trời gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#0b001a");
+    sky.addColorStop(0.5, "#1a003a");
+    sky.addColorStop(0.72, "#3d1052");
+    sky.addColorStop(0.74, "#12002b");
+    sky.addColorStop(1, "#0b001a");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sao
+    for (const s of stars) {
+      const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * s.sp + s.ph));
+      ctx.fillStyle = "rgba(232,213,255," + tw.toFixed(3) + ")";
+      ctx.fillRect(s.x, s.y, s.r, s.r);
+    }
+
+    const horizon = H * 0.72;
+    drawSun(W / 2, horizon - H * 0.16, Math.min(W, H) * 0.19);
+    drawGrid(horizon);
+    drawCat(W / 2 + Math.min(W, H) * 0.26, horizon + 4, Math.max(1, Math.min(2.2, W / 700)));
+    drawTitle();
+
+    // Đường chân trời phát sáng
+    ctx.strokeStyle = "rgba(255,113,206,0.8)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, horizon); ctx.lineTo(W, horizon); ctx.stroke();
+  }
+
+  resize();
+  requestAnimationFrame(frame);
+
+  // Tiết kiệm pin: tab ẩn thì ngừng vẽ
+  document.addEventListener("visibilitychange", function () {
+    paused = document.hidden ? true : paused;
+  });
+})();
+</script>
+</body>
+</html>

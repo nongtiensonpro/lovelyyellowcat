@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" width="1100" height="560" role="img" aria-label="Kiến trúc hệ thống LovelyYellowCat trên Cloudflare Workers, Supabase và Cloudinary">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#01cdfe"/>
+    </marker>
+    <marker id="arrowPink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ff71ce"/>
+    </marker>
+  </defs>
+
+  <rect width="1100" height="560" fill="#0b001a"/>
+  <text x="30" y="44" font-family="'Courier New',monospace" font-size="22" font-weight="bold" fill="#e8d5ff">📼 KIẾN TRÚC HỆ THỐNG — $0 BUDGET EDITION</text>
+  <text x="30" y="66" font-family="'Courier New',monospace" font-size="12" fill="#604880">SSR tại Edge · Realtime WebSocket · CDN ảnh toàn cầu</text>
+
+  <!-- Người dùng -->
+  <g>
+    <rect x="30" y="150" width="200" height="150" fill="#c0c0c0" stroke="#000"/>
+    <rect x="30" y="150" width="200" height="24" fill="#000080"/>
+    <text x="40" y="167" font-family="'MS Sans Serif',Tahoma" font-size="12" font-weight="bold" fill="#fff">🖥️ KHÁCH VIẾNG THĂM.EXE</text>
+    <text x="44" y="196" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">• Đọc tạp chí / ngắm tranh</text>
+    <text x="44" y="216" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">• Đăng nhập Google OAuth</text>
+    <text x="44" y="236" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">• Bình luận + thả reaction</text>
+    <text x="44" y="256" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">• Gửi tranh cộng đồng</text>
+    <text x="44" y="276" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">• Ctrl+K tìm kiếm toàn cục</text>
+  </g>
+
+  <!-- Cloudflare Worker -->
+  <g>
+    <rect x="330" y="110" width="260" height="240" fill="#c0c0c0" stroke="#000"/>
+    <rect x="330" y="110" width="260" height="24" fill="#000080"/>
+    <text x="340" y="127" font-family="'MS Sans Serif',Tahoma" font-size="12" font-weight="bold" fill="#fff">⚡ CLOUDFLARE WORKERS</text>
+    <rect x="344" y="146" width="232" height="40" fill="#e8e8e8" stroke="#808080"/>
+    <text x="352" y="163" font-family="'MS Sans Serif',Tahoma" font-size="11" font-weight="bold" fill="#000080">ASTRO v7 SSR (Edge Runtime)</text>
+    <text x="352" y="179" font-family="'MS Sans Serif',Tahoma" font-size="10" fill="#404040">Kết xuất server + Middleware phân quyền</text>
+    <rect x="344" y="194" width="232" height="34" fill="#e8e8e8" stroke="#808080"/>
+    <text x="352" y="211" font-family="'MS Sans Serif',Tahoma" font-size="11" font-weight="bold" fill="#000080">⚛ REACT 19 ISLANDS</text>
+    <text x="352" y="226" font-family="'MS Sans Serif',Tahoma" font-size="10" fill="#404040">Chat AI · Lightbox · Bình luận realtime</text>
+    <rect x="344" y="236" width="232" height="34" fill="#e8e8e8" stroke="#808080"/>
+    <text x="352" y="253" font-family="'MS Sans Serif',Tahoma" font-size="11" font-weight="bold" fill="#000080">🛡 ADMIN CONTROL PANEL 98</text>
+    <text x="352" y="268" font-family="'MS Sans Serif',Tahoma" font-size="10" fill="#404040">10 module quản trị · Audit log</text>
+    <rect x="344" y="278" width="232" height="34" fill="#e8e8e8" stroke="#808080"/>
+    <text x="352" y="295" font-family="'MS Sans Serif',Tahoma" font-size="11" font-weight="bold" fill="#000080">📡 API ENDPOINTS</text>
+    <text x="352" y="310" font-family="'MS Sans Serif',Tahoma" font-size="10" fill="#404040">/api/* · Cron purge-trash · RSS · Sitemap</text>
+    <text x="344" y="334" font-family="'Courier New',monospace" font-size="10" fill="#05ffa1">100.000 req/ngày miễn phí</text>
+  </g>
+
+  <!-- Supabase -->
+  <g>
+    <rect x="700" y="80" width="370" height="180" fill="#c0c0c0" stroke="#000"/>
+    <rect x="700" y="80" width="370" height="24" fill="#000080"/>
+    <text x="710" y="97" font-family="'MS Sans Serif',Tahoma" font-size="12" font-weight="bold" fill="#fff">🐘 SUPABASE — BỘ NÃO DỮ LIỆU</text>
+    <text x="714" y="126" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">🔐 Auth: Google OAuth · JWT · RLS 2 tầng</text>
+    <text x="714" y="150" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">🗄 Postgres: 14 bảng · Trigger XP · Anti-spam</text>
+    <text x="714" y="174" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">📡 Realtime: bình luận · reaction · thông báo</text>
+    <text x="714" y="198" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">🧠 RPC: award_xp · comment_tree · audit_log</text>
+    <text x="714" y="222" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">🛡 Trigger chống leo thang đặc quyền</text>
+    <text x="714" y="248" font-family="'Courier New',monospace" font-size="10" fill="#05ffa1">500MB DB · 50.000 MAU miễn phí</text>
+  </g>
+
+  <!-- Cloudinary -->
+  <g>
+    <rect x="700" y="300" width="370" height="130" fill="#c0c0c0" stroke="#000"/>
+    <rect x="700" y="300" width="370" height="24" fill="#000080"/>
+    <text x="710" y="317" font-family="'MS Sans Serif',Tahoma" font-size="12" font-weight="bold" fill="#fff">🖼️ CLOUDINARY — KHO ẢNH CDN</text>
+    <text x="714" y="346" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">⬆ Unsigned preset: cộng đồng tự gửi tranh</text>
+    <text x="714" y="370" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">🔍 Search API: lọc mồ côi / thư mục / dung lượng</text>
+    <text x="714" y="394" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">✂ Transform: f_auto,q_auto tiết kiệm băng thông</text>
+    <text x="714" y="418" font-family="'Courier New',monospace" font-size="10" fill="#05ffa1">25GB lưu trữ + băng thông miễn phí</text>
+  </g>
+
+  <!-- Gemini AI -->
+  <g>
+    <rect x="700" y="460" width="370" height="72" fill="#c0c0c0" stroke="#000"/>
+    <rect x="700" y="460" width="370" height="24" fill="#6a26a4"/>
+    <text x="710" y="477" font-family="'MS Sans Serif',Tahoma" font-size="12" font-weight="bold" fill="#fff">🐱 CAT_AI.EXE — GEMINI PROXY</text>
+    <text x="714" y="506" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#000">4 persona: Mèo Vàng · Giáo sư VAPOR · Hacker · DJ Neon</text>
+    <text x="714" y="524" font-family="'MS Sans Serif',Tahoma" font-size="10" fill="#404040">Key hệ thống ở lại server — BYOK gọi trực tiếp</text>
+  </g>
+
+  <!-- Mũi tên -->
+  <g stroke-width="2" fill="none">
+    <path d="M230 200 L326 200" stroke="#01cdfe" marker-end="url(#arrow)"/>
+    <path d="M326 230 L230 230" stroke="#01cdfe" marker-end="url(#arrowPink)"/>
+    <path d="M590 170 L696 150" stroke="#05ffa1" marker-end="url(#arrow)"/>
+    <path d="M696 190 L590 210" stroke="#05ffa1" marker-end="url(#arrowPink)"/>
+    <path d="M590 300 L696 360" stroke="#ff71ce" marker-end="url(#arrow)"/>
+    <path d="M590 340 L696 480" stroke="#b967ff" marker-end="url(#arrow)"/>
+  </g>
+  <g font-family="'Courier New',monospace" font-size="11" fill="#a08cc0">
+    <text x="238" y="192">HTTP GET</text>
+    <text x="240" y="248">HTML + Islands</text>
+    <text x="600" y="146" fill="#05ffa1">OAuth · SQL · Realtime</text>
+    <text x="604" y="342" fill="#ff71ce">Upload / Search / Destroy</text>
+    <text x="596" y="424" fill="#b967ff">AI proxy (key không rời server)</text>
+  </g>
+
+  <!-- Chú thích đáy -->
+  <text x="30" y="520" font-family="'Courier New',monospace" font-size="11" fill="#604880">※ Toàn bộ hạn mức Free Tier · Không đồng nào ra · MIT License</text>
+  <text x="30" y="540" font-family="'Courier New',monospace" font-size="11" fill="#604880">※ Bảo mật 3 tầng: Middleware → RLS → Trigger chống leo thang</text>
+</svg>

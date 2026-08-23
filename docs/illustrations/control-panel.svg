@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" width="940" height="560" role="img" aria-label="Mockup giao diện Admin Control Panel 98">
+  <rect width="940" height="560" fill="#0b001a"/>
+
+  <!-- Cửa sổ ngoài -->
+  <rect x="20" y="20" width="900" height="520" fill="#c0c0c0" stroke="#000" stroke-width="2"/>
+  <rect x="24" y="24" width="892" height="512" fill="none" stroke="#dfdfdf" stroke-width="2"/>
+  <rect x="26" y="26" width="888" height="26" fill="#000080"/>
+  <text x="36" y="44" font-family="'MS Sans Serif',Tahoma" font-size="13" font-weight="bold" fill="#fff">📼 LYC CONTROL PANEL 98 // C:\ADMIN\MISSION_CONTROL</text>
+  <g fill="#c0c0c0" stroke="#000">
+    <rect x="856" y="29" width="18" height="18"/><rect x="878" y="29" width="18" height="18"/><rect x="900" y="29" width="18" height="18"/>
+  </g>
+  <g font-family="'MS Sans Serif',Tahoma" font-size="11" font-weight="bold" fill="#000" text-anchor="middle">
+    <text x="865" y="42">_</text><text x="887" y="41">□</text><text x="909" y="42">✕</text>
+  </g>
+
+  <!-- Sidebar Explorer -->
+  <rect x="34" y="58" width="200" height="440" fill="#c0c0c0" stroke="#808080"/>
+  <text x="42" y="74" font-family="'MS Sans Serif',Tahoma" font-size="11" fill="#404040">📁 C:\ADMIN</text>
+
+  <g font-family="'MS Sans Serif',Tahoma" font-size="12">
+    <rect x="40" y="82" width="188" height="22" fill="#000080"/>
+    <text x="50" y="97" fill="#fff" font-weight="bold">🏠 Tổng Quan</text>
+    <text x="50" y="121" fill="#000">📚 Bài Viết</text>
+    <text x="50" y="145" fill="#000">📰 Viết Bài Mới</text>
+    <text x="50" y="169" fill="#000">🖼 Duyệt Tranh</text>
+    <rect x="176" y="156" width="40" height="16" fill="#fff" stroke="#808080"/>
+    <text x="196" y="168" text-anchor="middle" font-size="10" font-weight="bold" fill="#000080">7</text>
+    <text x="50" y="193" fill="#000">💬 Bình Luận</text>
+    <rect x="176" y="180" width="40" height="16" fill="#fff" stroke="#808080"/>
+    <text x="196" y="192" text-anchor="middle" font-size="10" font-weight="bold" fill="#000080">23</text>
+    <text x="50" y="217" fill="#000">👥 Người Dùng 🔒</text>
+    <text x="50" y="241" fill="#000">📊 Phân Tích 🔒</text>
+    <text x="50" y="265" fill="#000">📣 Thông Báo 🔒</text>
+    <text x="50" y="289" fill="#000">🗑 Thùng Rác 🔒</text>
+    <rect x="176" y="276" width="40" height="16" fill="#fff" stroke="#808080"/>
+    <text x="196" y="288" text-anchor="middle" font-size="10" font-weight="bold" fill="#000080">12</text>
+    <text x="50" y="313" fill="#000">🗃 Thư Viện Ảnh 🔒</text>
+    <text x="50" y="337" fill="#000">⚙ Cài Đặt 🔒</text>
+  </g>
+
+  <!-- Nút thoát + statusbar sidebar -->
+  <rect x="42" y="424" width="184" height="24" fill="#c0c0c0" stroke="#404040"/>
+  <text x="134" y="440" text-anchor="middle" font-family="'MS Sans Serif',Tahoma" font-size="11" font-weight="bold" fill="#000">🚪 Thoát về Trang Chủ</text>
+  <rect x="40" y="458" width="60" height="18" fill="#c0c0c0" stroke="#808080"/>
+  <text x="70" y="471" text-anchor="middle" font-family="'MS Sans Serif',Tahoma" font-size="10" fill="#000">👑 ADMIN</text>
+  <rect x="104" y="458" width="70" height="18" fill="#c0c0c0" stroke="#808080"/>
+  <text x="139" y="471" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#067a52">▲ ONLINE</text>
+  <rect x="178" y="458" width="50" height="18" fill="#c0c0c0" stroke="#808080"/>
+  <text x="203" y="471" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#000">14:32</text>
+
+  <!-- Vùng nội dung: 4 thẻ thống kê -->
+  <g font-family="'MS Sans Serif',Tahoma">
+    <!-- Thẻ 1 -->
+    <rect x="248" y="58" width="200" height="110" fill="#c0c0c0" stroke="#808080"/>
+    <rect x="248" y="58" width="200" height="20" fill="#000080"/>
+    <text x="256" y="72" font-size="10" font-weight="bold" fill="#fff">ARTICLE_STATS.DLL</text>
+    <text x="260" y="102" font-size="11" font-weight="bold" fill="#000">TỔNG SỐ BÀI VIẾT</text>
+    <text x="260" y="136" font-size="30" font-weight="bold" fill="#b967ff">14</text>
+    <text x="260" y="156" font-size="9" fill="#404040">Đã đăng 9 · Nháp 5</text>
+
+    <!-- Thẻ 2 -->
+    <rect x="460" y="58" width="200" height="110" fill="#c0c0c0" stroke="#808080"/>
+    <rect x="460" y="58" width="200" height="20" fill="#000080"/>
+    <text x="468" y="72" font-size="10" font-weight="bold" fill="#fff">COMMENT_STATS.DLL</text>
+    <text x="472" y="102" font-size="11" font-weight="bold" fill="#000">TỔNG BÌNH LUẬN</text>
+    <text x="472" y="136" font-size="30" font-weight="bold" fill="#01cdfe">312</text>
+    <text x="472" y="156" font-size="9" fill="#404040">Quản lý &gt;&gt;</text>
+
+    <!-- Thẻ 3 -->
+    <rect x="672" y="58" width="200" height="110" fill="#c0c0c0" stroke="#808080"/>
+    <rect x="672" y="58" width="200" height="20" fill="#000080"/>
+    <text x="680" y="72" font-size="10" font-weight="bold" fill="#fff">GALLERY_STATS.DLL</text>
+    <text x="684" y="102" font-size="11" font-weight="bold" fill="#000">TRANH CỘNG ĐỒNG</text>
+    <text x="684" y="136" font-size="30" font-weight="bold" fill="#ff71ce">636</text>
+    <text x="684" y="156" font-size="9" fill="#c00000" font-weight="bold">Chờ duyệt: 7</text>
+
+    <!-- Bảng bài viết gần đây -->
+    <rect x="248" y="184" width="624" height="200" fill="#c0c0c0" stroke="#808080"/>
+    <rect x="248" y="184" width="624" height="20" fill="#000080"/>
+    <text x="256" y="198" font-size="10" font-weight="bold" fill="#fff">RECENT_FILES.EXE</text>
+    <rect x="256" y="214" width="608" height="160" fill="#ffffff" stroke="#808080"/>
+    <rect x="256" y="214" width="608" height="18" fill="#c0c0c0"/>
+    <text x="264" y="227" font-size="10" font-weight="bold" fill="#000">TIÊU ĐỀ</text>
+    <text x="620" y="227" font-size="10" font-weight="bold" fill="#000">TRẠNG THÁI</text>
+    <text x="740" y="227" font-size="10" font-weight="bold" fill="#000">NGÀY</text>
+    <line x1="256" y1="232" x2="864" y2="232" stroke="#808080"/>
+    <text x="264" y="252" font-size="10" fill="#000">Hoài Niệm Windows 95: Vẻ Đẹp Của Hệ Điều Hành Cổ Điển</text>
+    <rect x="620" y="240" width="62" height="14" fill="#dcfce7" stroke="#86efac"/>
+    <text x="651" y="251" font-size="9" text-anchor="middle" fill="#166534" font-weight="bold">PUBLISHED</text>
+    <text x="740" y="252" font-size="10" fill="#404040">20/08/2026</text>
+    <text x="264" y="282" font-size="10" fill="#000">Neon Dreamscape: Sự Trỗi Dậy Của Không Gian Màu Neon</text>
+    <rect x="620" y="270" width="62" height="14" fill="#fef9c3" stroke="#fde047"/>
+    <text x="651" y="281" font-size="9" text-anchor="middle" fill="#854d0e" font-weight="bold">DRAFT</text>
+    <text x="740" y="282" font-size="10" fill="#404040">18/08/2026</text>
+    <text x="264" y="312" font-size="10" fill="#000">Hướng Dẫn Gửi Tranh: Từ Máy ẢNh Đến Phòng Triển Lãm</text>
+    <rect x="620" y="300" width="62" height="14" fill="#dcfce7" stroke="#86efac"/>
+    <text x="651" y="311" font-size="9" text-anchor="middle" fill="#166534" font-weight="bold">PUBLISHED</text>
+    <text x="740" y="312" font-size="10" fill="#404040">15/08/2026</text>
+  </g>
+
+  <!-- Activity Feed -->
+  <g font-family="'MS Sans Serif',Tahoma">
+    <rect x="248" y="398" width="624" height="100" fill="#c0c0c0" stroke="#808080"/>
+    <rect x="248" y="398" width="624" height="20" fill="#000080"/>
+    <text x="256" y="412" font-size="10" font-weight="bold" fill="#fff">⚡ ACTIVITY_FEED.RTP — SỰ KIỆN THỜI GIAN THỰC</text>
+    <rect x="256" y="426" width="608" height="64" fill="#0b001a"/>
+    <text x="264" y="444" font-size="10" font-family="'Courier New',monospace" fill="#05ffa1">🎬 @neon_dreamer vừa gửi TRANH_X.PNG • 2 phút trước</text>
+    <text x="264" y="462" font-size="10" font-family="'Courier New',monospace" fill="#01cdfe">💬 @retro_kid bình luận trong "Hoài Niệm Windows 95" • 5 phút trước</text>
+    <text x="264" y="480" font-size="10" font-family="'Courier New',monospace" fill="#ff71ce">👑 admin vừa duyệt TRANH_W.PNG (+50 XP) • 9 phút trước</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="470" y="522" text-anchor="middle" font-family="'Courier New',monospace" font-size="10" fill="#404040">RECENT_FILES.SYS v3.0 · SHELL v3.0 · $0 BUDGET EDITION</text>
+</svg>
