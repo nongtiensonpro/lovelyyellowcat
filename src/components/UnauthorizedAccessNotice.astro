@@ -1,0 +1,149 @@
+<section class="unauthorized-screen" aria-labelledby="unauthorized-title" role="alert">
+  <div class="unauthorized-signal unauthorized-signal-one" aria-hidden="true"></div>
+  <div class="unauthorized-signal unauthorized-signal-two" aria-hidden="true"></div>
+
+  <div class="unauthorized-window">
+    <div class="unauthorized-titlebar">
+      <span><span class="unauthorized-title-icon">🔒</span> ACCESS_CONTROL.EXE</span>
+      <span class="unauthorized-window-buttons" aria-hidden="true"><i>_</i><i>□</i><i>×</i></span>
+    </div>
+    <div class="unauthorized-menubar"><span>FILE</span><span>EDIT</span><span>VIEW</span><span>HELP</span><b>STATUS: PROTECTED</b></div>
+
+    <div class="unauthorized-content">
+      <div class="unauthorized-cat" aria-hidden="true">🐱</div>
+      <p class="unauthorized-kicker">HTTP 403 // AUTHORIZATION_REQUIRED</p>
+      <h1 id="unauthorized-title">Oops! Cánh cửa này<br /><span>chưa mở cho bạn.</span></h1>
+      <p class="unauthorized-message">
+        Bạn không có quyền truy cập trang này. Không sao cả — hệ thống không bị hỏng, chỉ là khu vực này đang dành riêng cho thành viên có quyền phù hợp thôi. 🐾
+      </p>
+
+      <div class="unauthorized-terminal" aria-label="Chi tiết lỗi truy cập">
+        <p><span>[INFO]</span> USER_ACCESS ................ <strong>LIMITED</strong></p>
+        <p><span>[HINT]</span> RETURN_TO_OASIS ............ <strong>RECOMMENDED</strong></p>
+        <p><span>[MEOW]</span> CAT_SECURITY ............... <strong>FRIENDLY</strong></p>
+      </div>
+
+      <div class="unauthorized-actions">
+        <a class="unauthorized-primary" href="/">🏠 VỀ TRANG CHỦ</a>
+        <a class="unauthorized-secondary" href="/gallery">🖼️ ĐI XEM TRANH</a>
+        <a class="unauthorized-secondary" href="/api/auth/signin">🔑 ĐĂNG NHẬP</a>
+      </div>
+
+      <div class="unauthorized-help">
+        <span class="unauthorized-help-icon">✉</span>
+        <p>
+          Nếu bạn nghĩ đây là nhầm lẫn hoặc gặp vấn đề, hãy gửi email cho
+          <a href="mailto:nongtiensonpro@gmail.com">nongtiensonpro@gmail.com</a>.
+          Mèo Vàng sẽ chuyển tín hiệu đến đúng người. 💌
+        </p>
+      </div>
+    </div>
+
+    <div class="unauthorized-statusbar"><span>LOVELYYELLOWCAT SECURITY GATE</span><span>CONNECTION: SAFE</span><span>🐱</span></div>
+  </div>
+
+  <p class="unauthorized-footer-note">ERROR: ACCESS_NOT_GRANTED.EXE · VUI LÒNG ĐỪNG HOẢNG, HÃY THỬ MỘT CÁNH CỬA KHÁC ✨</p>
+</section>
+
+<style>
+  .unauthorized-screen {
+    --ua-pink: var(--color-vapor-pink);
+    --ua-blue: var(--color-vapor-blue);
+    --ua-purple: var(--color-vapor-purple);
+    position: relative;
+    isolation: isolate;
+    min-height: min(720px, calc(100vh - 170px));
+    display: grid;
+    place-items: center;
+    padding: clamp(1rem, 4vw, 3rem) 0 1rem;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 48%, rgba(185, 103, 255, 0.13), transparent 33%),
+      linear-gradient(180deg, rgba(11, 0, 26, 0.2), rgba(11, 0, 26, 0.68));
+  }
+
+  .unauthorized-screen::before {
+    content: "";
+    position: absolute;
+    inset: 35% -10% -35%;
+    z-index: -1;
+    opacity: 0.27;
+    transform: perspective(390px) rotateX(56deg) scale(1.25);
+    background-image: linear-gradient(rgba(1, 205, 254, 0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(1, 205, 254, 0.35) 1px, transparent 1px);
+    background-size: 38px 38px;
+    mask-image: linear-gradient(to bottom, transparent, black 35%, black);
+  }
+
+  .unauthorized-screen::after {
+    content: "403";
+    position: absolute;
+    right: -0.04em;
+    bottom: -0.12em;
+    z-index: -1;
+    color: rgba(255, 113, 206, 0.035);
+    font: 18rem/0.8 var(--font-display);
+    pointer-events: none;
+  }
+
+  .unauthorized-signal { position: absolute; z-index: -1; border-radius: 50%; filter: blur(65px); pointer-events: none; }
+  .unauthorized-signal-one { width: 220px; height: 220px; top: 4%; left: 6%; background: rgba(255, 113, 206, 0.12); }
+  .unauthorized-signal-two { width: 180px; height: 180px; right: 5%; bottom: 12%; background: rgba(1, 205, 254, 0.13); }
+
+  .unauthorized-window {
+    width: min(100%, 720px);
+    padding: 4px;
+    color: var(--color-text-primary);
+    background: var(--color-win-gray);
+    box-shadow: 10px 12px 0 rgba(0, 0, 0, 0.42), inset -2px -2px 0 var(--color-win-darkest), inset 2px 2px 0 var(--color-win-light);
+    animation: unauthorized-rise 0.55s ease both;
+  }
+
+  .unauthorized-titlebar, .unauthorized-menubar, .unauthorized-statusbar { display: flex; align-items: center; }
+  .unauthorized-titlebar { justify-content: space-between; min-height: 29px; padding: 0.25rem 0.45rem; color: white; background: linear-gradient(90deg, var(--color-win-titlebar), #1084d0); font: 700 0.7rem var(--font-retro); }
+  .unauthorized-title-icon { color: var(--color-vapor-yellow); }
+  .unauthorized-window-buttons { display: flex; gap: 3px; }
+  .unauthorized-window-buttons i { display: grid; place-items: center; width: 18px; height: 17px; color: black; background: var(--color-win-gray); box-shadow: inset -1px -1px 0 var(--color-win-darkest), inset 1px 1px 0 var(--color-win-light); font: 700 0.64rem Arial; font-style: normal; }
+  .unauthorized-menubar { gap: 1rem; padding: 0.25rem 0.55rem; color: #161616; background: #d9d9d9; font: 0.55rem var(--font-mono); letter-spacing: 0.09em; }
+  .unauthorized-menubar b { margin-left: auto; color: #087a42; font-size: 0.52rem; }
+  .unauthorized-content { position: relative; padding: clamp(2rem, 6vw, 4rem) clamp(1rem, 7vw, 5rem) 2.5rem; text-align: center; background: radial-gradient(circle at 50% 0%, rgba(36, 0, 80, 0.9), rgba(5, 0, 17, 0.98) 66%); overflow: hidden; }
+  .unauthorized-content::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.18; background: repeating-linear-gradient(to bottom, transparent 0 3px, rgba(255,255,255,0.035) 4px 5px); }
+  .unauthorized-cat { position: relative; display: inline-grid; place-items: center; width: 70px; height: 70px; margin-bottom: 1.1rem; border: 1px solid rgba(255, 251, 150, 0.55); border-radius: 50%; background: rgba(255, 251, 150, 0.09); box-shadow: 0 0 25px rgba(255, 251, 150, 0.16); font-size: 2.5rem; animation: unauthorized-float 3.8s ease-in-out infinite; }
+  .unauthorized-kicker { position: relative; margin: 0 0 1rem; color: var(--ua-pink); font: 0.65rem var(--font-mono); letter-spacing: 0.14em; }
+  .unauthorized-content h1 { position: relative; margin: 0; color: white; font: clamp(3rem, 8vw, 5.7rem)/0.8 var(--font-display); letter-spacing: -0.02em; text-transform: uppercase; text-shadow: 3px 3px 0 rgba(1, 205, 254, 0.5), -3px -2px 0 rgba(255, 113, 206, 0.4); }
+  .unauthorized-content h1 span { color: var(--ua-pink); }
+  .unauthorized-message { position: relative; max-width: 590px; margin: 1.55rem auto 1.35rem; color: var(--color-text-secondary); font-size: 0.92rem; line-height: 1.65; }
+  .unauthorized-terminal { position: relative; max-width: 510px; margin: 0 auto; padding: 0.8rem 1rem; color: var(--color-text-secondary); border: 1px solid rgba(1, 205, 254, 0.25); background: rgba(1, 205, 254, 0.045); font: 0.66rem/1.9 var(--font-mono); text-align: left; }
+  .unauthorized-terminal p { display: flex; gap: 0.45rem; justify-content: space-between; margin: 0; }
+  .unauthorized-terminal p span { color: var(--ua-blue); }.unauthorized-terminal strong { color: var(--color-vapor-green); font-weight: 400; }
+  .unauthorized-actions { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.65rem; margin-top: 1.45rem; }
+  .unauthorized-actions a { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 0.75rem; border: 1px solid; font: 700 0.66rem var(--font-mono); text-decoration: none; transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease; }
+  .unauthorized-actions a:hover { transform: translateY(-2px); }
+  .unauthorized-primary { color: var(--color-cosmic-black); border-color: var(--ua-pink); background: var(--ua-pink); box-shadow: 4px 4px 0 rgba(1, 205, 254, 0.4); }
+  .unauthorized-primary:hover { box-shadow: 6px 6px 0 rgba(1, 205, 254, 0.58); }
+  .unauthorized-secondary { color: var(--ua-blue); border-color: rgba(1, 205, 254, 0.55); background: rgba(1, 205, 254, 0.07); }
+  .unauthorized-secondary:hover { background: rgba(1, 205, 254, 0.17); }
+  .unauthorized-help { position: relative; display: flex; align-items: center; gap: 0.65rem; max-width: 560px; margin: 1.6rem auto 0; padding: 0.75rem 0.9rem; border: 1px dashed rgba(255, 251, 150, 0.4); background: rgba(255, 251, 150, 0.05); text-align: left; }
+  .unauthorized-help-icon { color: var(--color-vapor-yellow); font-size: 1.25rem; }.unauthorized-help p { margin: 0; color: var(--color-text-secondary); font-size: 0.72rem; line-height: 1.6; }.unauthorized-help a { color: var(--color-vapor-yellow); font-weight: 700; text-decoration: underline; overflow-wrap: anywhere; }
+  .unauthorized-statusbar { justify-content: space-between; gap: 1rem; padding: 0.3rem 0.55rem; color: #333; font: 0.52rem var(--font-mono); letter-spacing: 0.08em; }
+  .unauthorized-footer-note { position: relative; margin: 1rem 0 0; color: var(--color-text-muted); font: 0.58rem var(--font-mono); letter-spacing: 0.08em; text-align: center; }
+
+  @keyframes unauthorized-rise { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes unauthorized-float { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-7px) rotate(3deg); } }
+
+  @media (max-width: 560px) {
+    .unauthorized-screen { min-height: calc(100vh - 130px); padding-top: 0.5rem; }
+    .unauthorized-menubar span:not(:first-child) { display: none; }
+    .unauthorized-content { padding: 1.7rem 0.8rem 1.7rem; }
+    .unauthorized-content h1 { font-size: clamp(2.8rem, 15vw, 4rem); }
+    .unauthorized-message { font-size: 0.82rem; }
+    .unauthorized-terminal p { align-items: flex-start; flex-direction: column; gap: 0; line-height: 1.5; }
+    .unauthorized-terminal strong { margin-left: 1rem; }
+    .unauthorized-actions a { width: 100%; }
+    .unauthorized-statusbar { flex-wrap: wrap; font-size: 0.48rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .unauthorized-window, .unauthorized-cat { animation: none; }
+    .unauthorized-actions a { transition: none; }
+  }
+</style>

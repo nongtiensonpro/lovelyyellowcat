@@ -15,6 +15,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const url = new URL(context.request.url);
   const pathname = url.pathname;
 
+  // Màn hình 403 độc lập: giữ nguyên URL redirect `/?error=unauthorized`
+  // nhưng không khởi động toàn bộ trang chủ hoặc các component cần đăng nhập.
+  if (pathname === "/" && url.searchParams.get("error") === "unauthorized") {
+    return context.rewrite(new URL("/unauthorized", url));
+  }
+
   // ────────────────────────────────────────────────
   // 1) Bảo vệ khu vực /admin
   // ────────────────────────────────────────────────

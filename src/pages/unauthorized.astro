@@ -1,0 +1,24 @@
+---
+import "../styles/global.css";
+import UnauthorizedAccessNotice from "../components/UnauthorizedAccessNotice.astro";
+---
+
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>ACCESS DENIED // LOVELYYELLOWCAT</title>
+    <meta name="description" content="Bạn không có quyền truy cập khu vực này. Liên hệ nongtiensonpro@gmail.com nếu cần hỗ trợ." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Outfit:wght@400;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen bg-cosmic-black text-white antialiased">
+    <main id="main-content" class="min-h-screen px-3 py-5 sm:px-6">
+      <UnauthorizedAccessNotice />
+    </main>
+  </body>
+</html>
