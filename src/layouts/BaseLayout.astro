@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import { createSupabaseServerClient } from "../lib/supabase";
 import HeaderNav from "../components/HeaderNav.astro";
+import BootSplash from "../components/BootSplash.astro";
 import MarqueeTicker from "../components/MarqueeTicker.astro";
 import CassettePlayer from "../components/CassettePlayer.astro";
 
@@ -87,6 +88,8 @@ try {
     )}
   </head>
   <body class="min-h-screen text-white font-body selection:bg-vapor-pink selection:text-black antialiased bg-cosmic-black">
+    <!-- Boot BIOS cho khách lần đầu (1 lần · bỏ qua được · reduced-motion tự ẩn) -->
+    <BootSplash />
     <!-- Skip-to-content: điều hướng bàn phím/screen reader -->
     <a class="skip-link" href="#main-content">⏭ Bỏ qua tới nội dung chính</a>
     <!-- Lớp phủ CRT toàn trang -->
@@ -240,6 +243,43 @@ try {
 
       // Khởi tạo trạng thái ban đầu
       updateCrtDisplay();
+    </script>
+
+    <!-- 🎮 Easter egg: Konami Code → VAPOR MODE -->
+    <script>
+      (function () {
+        const SEQUENCE = [
+          "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown",
+          "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a",
+        ];
+        let progress = 0;
+
+        function showToast(text) {
+          const el = document.createElement("div");
+          el.className = "win95-container";
+          el.style.cssText =
+            "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);" +
+            "z-index:10001;padding:3px;font-family:'MS Sans Serif',Tahoma;font-size:12px;" +
+            "font-weight:bold;color:#000;box-shadow:4px 4px 0 rgba(0,0,0,.6)";
+          el.textContent = text;
+          document.body.appendChild(el);
+          setTimeout(function () { el.remove(); }, 2600);
+        }
+
+        document.addEventListener("keydown", function (e) {
+          const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+          if (key === SEQUENCE[progress]) {
+            progress++;
+            if (progress === SEQUENCE.length) {
+              progress = 0;
+              const on = document.documentElement.classList.toggle("vapor-mode");
+              showToast(on ? "🎮 KONAMI CODE — VAPOR MODE: ON 🌈" : "🎮 VAPOR MODE: OFF");
+            }
+          } else {
+            progress = key === SEQUENCE[0] ? 1 : 0;
+          }
+        });
+      })();
     </script>
   </body>
 </html>

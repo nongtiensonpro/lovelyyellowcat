@@ -1,0 +1,219 @@
+---
+/**
+ * VaporCanvasHero — nền hero Canvas2D động (mặt trời sọc, lưới vô tận, sao, mèo pixel).
+ * Vanilla script không hydration · tự pause khi ngoài viewport/tab ẩn · tôn trọng reduced-motion.
+ * Phối hợp với nút VHS ở index: mode lưu localStorage "hero-video-paused" = "canvas" | "video" | "off".
+ */
+---
+
+<canvas
+  id="vapor-canvas-hero"
+  class="absolute inset-0 z-0 w-full h-full pointer-events-none"
+  aria-hidden="true"
+></canvas>
+
+<script>
+  (function initVaporCanvas() {
+    const canvas = document.getElementById("vapor-canvas-hero");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const section = canvas.closest("section");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let W = 0, H = 0, dpr = 1;
+    let stars = [];
+    let t = 0;
+    let running = false;
+    let rafId = 0;
+    let inViewport = true;
+    let last = performance.now();
+
+    function currentMode() {
+      try {
+        const v = localStorage.getItem("hero-video-paused");
+        if (v === "video") return "video";
+        if (v === "off") return "off";
+      } catch {}
+      return "canvas";
+    }
+
+    function resize() {
+      const rect = section ? section.getBoundingClientRect() : { width: window.innerWidth, height: 400 };
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = Math.max(1, Math.round(rect.width));
+      H = Math.max(1, Math.round(rect.height));
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildStars();
+      if (reducedMotion) drawFrame(12.34);
+    }
+
+    function buildStars() {
+      stars = [];
+      const n = Math.min(140, Math.floor((W * H) / 9000));
+      for (let i = 0; i < n; i++) {
+        stars.push({
+          x: Math.random() * W,
+          y: Math.random() * H * 0.55,
+          r: Math.random() * 1.4 + 0.3,
+          ph: Math.random() * Math.PI * 2,
+          sp: 0.5 + Math.random() * 2,
+        });
+      }
+    }
+
+    function drawSun(cx, cy, R) {
+      const grad = ctx.createLinearGradient(0, cy - R, 0, cy + R);
+      grad.addColorStop(0, "#fffb96");
+      grad.addColorStop(0.45, "#ff9a3c");
+      grad.addColorStop(0.75, "#ff71ce");
+      grad.addColorStop(1, "#b967ff");
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = grad;
+      ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+      ctx.fillStyle = "#0b001a";
+      for (let i = 0; i < 8; i++) {
+        const p = i / 8;
+        ctx.fillRect(cx - R, cy + R * (p - 0.02) + Math.sin(t * 0.4) * 3, R * 2, 2 + p * 12);
+      }
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      const glow = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.8);
+      glow.addColorStop(0, "rgba(255,113,206,0.30)");
+      glow.addColorStop(1, "rgba(255,113,206,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+      ctx.restore();
+    }
+
+    function drawGrid(horizonY) {
+      const vpx = W / 2;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(185,103,255,0.45)";
+      for (let i = -12; i <= 12; i++) {
+        ctx.beginPath();
+        ctx.moveTo(vpx + i * 16, horizonY);
+        ctx.lineTo(vpx + i * (W / 8), H);
+        ctx.stroke();
+      }
+      for (let i = 0; i < 14; i++) {
+        const p = (i + (t * 0.55) % 1) / 14;
+        const y = horizonY + Math.pow(p, 2.6) * (H - horizonY);
+        ctx.strokeStyle = "rgba(1,205,254," + (0.12 + p * 0.55).toFixed(3) + ")";
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+    }
+
+    function drawCat(x, y, s) {
+      ctx.save();
+      ctx.translate(x, y); ctx.scale(s, s);
+      ctx.fillStyle = "#0b001a";
+      ctx.beginPath();
+      ctx.moveTo(-14, 0); ctx.quadraticCurveTo(-16, -20, 0, -22);
+      ctx.quadraticCurveTo(16, -20, 14, 0); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, -27, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-9, -33); ctx.lineTo(-6, -43); ctx.lineTo(-2, -34);
+      ctx.moveTo(9, -33); ctx.lineTo(6, -43); ctx.lineTo(2, -34);
+      ctx.closePath(); ctx.fill();
+      const wag = Math.sin(t * 2.2) * 5;
+      ctx.strokeStyle = "#0b001a"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(13, -4);
+      ctx.quadraticCurveTo(22 + wag * 0.3, -9, 20 + wag, -19);
+      ctx.stroke();
+      const blink = Math.sin(t * 0.7) > 0.96 ? 1 : 0.3;
+      ctx.fillStyle = "rgba(5,255,161," + blink + ")";
+      ctx.fillRect(-5, -30, 3, 3); ctx.fillRect(2, -30, 3, 3);
+      ctx.restore();
+    }
+
+    function drawFrame(dt: number) {
+      t += dt;
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#0b001a");
+      sky.addColorStop(0.5, "#1a003a");
+      sky.addColorStop(0.72, "#3d1052");
+      sky.addColorStop(0.74, "#12002b");
+      sky.addColorStop(1, "#0b001a");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H);
+
+      for (const s of stars) {
+        const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * s.sp + s.ph));
+        ctx.fillStyle = "rgba(232,213,255," + tw.toFixed(3) + ")";
+        ctx.fillRect(s.x, s.y, s.r, s.r);
+      }
+
+      const horizon = H * 0.74;
+      drawSun(W / 2, horizon - H * 0.17, Math.min(W, H) * 0.17);
+      drawGrid(horizon);
+      drawCat(W * 0.82, horizon + 3, Math.max(0.9, Math.min(1.8, W / 900)));
+
+      ctx.strokeStyle = "rgba(255,113,206,0.75)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(0, horizon); ctx.lineTo(W, horizon); ctx.stroke();
+    }
+
+    function loop(now: number) {
+      rafId = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      drawFrame(dt);
+    }
+
+    function syncState() {
+      const shouldRun =
+        currentMode() === "canvas" &&
+        inViewport &&
+        !document.hidden &&
+        !reducedMotion;
+
+      if (shouldRun && !running) {
+        running = true;
+        canvas.style.visibility = "visible";
+        last = performance.now();
+        rafId = requestAnimationFrame(loop);
+      } else if (!shouldRun && running) {
+        running = false;
+        cancelAnimationFrame(rafId);
+      }
+
+      // Ẩn/hiện canvas theo mode (video chiếm lớp trên khi bật)
+      const mode = currentMode();
+      canvas.style.visibility = mode === "off" ? "hidden" : "visible";
+      if (mode === "video") canvas.style.opacity = "0";
+      else canvas.style.opacity = "1";
+
+      if (reducedMotion && mode === "canvas") {
+        canvas.style.visibility = "visible";
+        drawFrame(0);
+      }
+    }
+
+    window.addEventListener("lyc-hero-mode", syncState);
+    window.addEventListener("storage", syncState);
+    document.addEventListener("visibilitychange", syncState);
+
+    if (section && "IntersectionObserver" in window) {
+      new IntersectionObserver(
+        ([entry]) => { inViewport = entry.isIntersecting; syncState(); },
+        { threshold: 0.05 }
+      ).observe(section);
+    }
+
+    if ("ResizeObserver" in window && section) {
+      new ResizeObserver(function () { resize(); }).observe(section);
+    } else {
+      window.addEventListener("resize", resize);
+    }
+
+    resize();
+    syncState();
+  })();
+</script>

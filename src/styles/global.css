@@ -1061,6 +1061,19 @@ body {
 }
 
 /* ══════════════════════════════════════════
+   KONAMI VAPOR MODE (easter egg ↑↑↓↓←→←→BA)
+   ══════════════════════════════════════════ */
+@keyframes vapor-hue {
+  0%   { filter: hue-rotate(0deg) saturate(1.15); }
+  50%  { filter: hue-rotate(180deg) saturate(1.35); }
+  100% { filter: hue-rotate(360deg) saturate(1.15); }
+}
+
+html.vapor-mode body {
+  animation: vapor-hue 9s linear infinite;
+}
+
+/* ══════════════════════════════════════════
    ACCESSIBILITY & PRINT UTILITIES
    ══════════════════════════════════════════ */
 a:focus-visible,

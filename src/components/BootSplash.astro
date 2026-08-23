@@ -1,0 +1,95 @@
+---
+/**
+ * BootSplash — màn BIOS 1995 chào đón khách lần đầu (chạy 1 lần, bỏ qua được).
+ * Không chặn SEO/crawler: chỉ hiện qua JS, reduced-motion tự ẩn, ?noboot tắt hẳn.
+ */
+---
+
+<div
+  id="boot-splash"
+  hidden
+  aria-hidden="true"
+  class="fixed inset-0 z-[10000] bg-black font-mono text-[#c8c8c8] p-[4vh_5vw] overflow-hidden select-none"
+  style="font-size: clamp(11px, 1.5vw, 15px); line-height: 1.6; cursor: pointer;"
+>
+  <div id="boot-lines" class="whitespace-pre-wrap break-words"></div>
+  <div id="boot-skip" hidden class="mt-[3vh] text-center text-[#05ffa1] font-bold animate-pulse">
+    NHẤN PHÍM BẤT KỲ ĐỂ BỎ QUA ▸▸
+  </div>
+  <div class="pointer-events-none fixed inset-0" style="background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.16) 2px 4px);"></div>
+</div>
+
+<script>
+  (function () {
+    const splash = document.getElementById("boot-splash");
+    if (!splash) return;
+
+    let seen = false;
+    try { seen = localStorage.getItem("lyc_boot_seen_v1") === "1"; } catch {}
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const noBoot = new URLSearchParams(location.search).has("noboot");
+
+    if (seen || reduced || noBoot) {
+      splash.remove();
+      return;
+    }
+
+    const lines = [
+      { t: "LOVELYYELLOWCAT BIOS v3.0 — CYBERNETIC OASIS", cls: "text-white font-bold", d: 260 },
+      { t: "Memory Test : 65536 KB .................. OK", cls: "", d: 200 },
+      { t: "Nạp VAPORWAVE.SYS ........................ [ OK ]", cls: "text-[#01cdfe]", d: 220 },
+      { t: "Nạp CRT_SCANLINE.DRV ..................... [ OK ]", cls: "text-[#01cdfe]", d: 180 },
+      { t: "Kết nối SUPABASE POSTGRES ................ [ OK ]", cls: "text-[#05ffa1]", d: 220 },
+      { t: "Gắn CLOUDINARY IMAGE VAULT ............... [ OK ]", cls: "text-[#05ffa1]", d: 200 },
+      { t: "Khởi động MEOW_ENGINE.EXE 🐱 ............ [ OK ]", cls: "text-[#ff71ce]", d: 300 },
+      { t: "", d: 60 },
+      { t: "Chào mừng đến Cybernetic Oasis. ✨", cls: "text-[#fffb96] font-bold", d: 500 },
+    ];
+
+    const box = document.getElementById("boot-lines");
+    const skipEl = document.getElementById("boot-skip");
+    let finished = false;
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      splash.style.transition = "opacity 0.4s ease";
+      splash.style.opacity = "0";
+      setTimeout(function () { splash.remove(); }, 420);
+      try { localStorage.setItem("lyc_boot_seen_v1", "1"); } catch {}
+      document.removeEventListener("keydown", onAny);
+      document.removeEventListener("pointerdown", onAny);
+    }
+
+    function onAny() { finish(); }
+
+    splash.addEventListener("pointerdown", onAny);
+    document.addEventListener("keydown", onAny);
+    setTimeout(onAny, 7000); // failsafe
+
+    splash.hidden = false;
+    document.body.style.overflow = "hidden";
+
+    let li = 0;
+    function next() {
+      if (finished) { document.body.style.overflow = ""; return; }
+      if (li >= lines.length) {
+        if (skipEl) skipEl.hidden = false;
+        document.body.style.overflow = "";
+        setTimeout(finish, 1400);
+        return;
+      }
+      const line = lines[li++];
+      const span = document.createElement("div");
+      if (line.cls) span.className = line.cls;
+      box.appendChild(span);
+      let i = 0;
+      const iv = setInterval(function () {
+        span.textContent = line.t.slice(0, ++i);
+        if (i >= line.t.length) { clearInterval(iv); setTimeout(next, line.d); }
+      }, 9);
+    }
+    setTimeout(next, 350);
+  })();
+</script>
