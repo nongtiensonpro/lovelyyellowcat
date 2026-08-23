@@ -268,7 +268,7 @@ let submissionsQuery = supabase
 if (["pending", "approved", "rejected"].includes(statusTab)) {
   submissionsQuery = submissionsQuery.eq("status", statusTab);
 }
-submissionsQuery = submissionsQuery.isNull("deleted_at");
+submissionsQuery = submissionsQuery.is("deleted_at", null);
 submissionsQuery = submissionsQuery.order("created_at", { ascending: true });
 
 const subFrom = (page - 1) * PAGE_SIZE;

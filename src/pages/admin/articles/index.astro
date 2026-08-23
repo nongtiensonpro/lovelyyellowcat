@@ -294,7 +294,7 @@ if (Astro.request.method === "POST") {
 let query = supabase
   .from("articles")
   .select("id, title, slug, status, view_count, created_at, published_at, tags, author_id, is_featured, profiles(full_name)", { count: "exact" })
-  .isNull("deleted_at");
+  .is("deleted_at", null);
 
 if (search) {
   query = query.or(`title.ilike.%${search}%,slug.ilike.%${search}%`);
@@ -316,7 +316,7 @@ const statusCounts = { published: 0, draft: 0, archived: 0 };
 const { data: allStatuses } = await supabase
   .from("articles")
   .select("status")
-  .isNull("deleted_at");
+  .is("deleted_at", null);
 (allStatuses || []).forEach((a: any) => {
   if (a.status in statusCounts) (statusCounts as any)[a.status]++;
 });
