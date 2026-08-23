@@ -123,6 +123,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
     <h1>🛠️ HỆ THỐNG ĐANG BẢO TRÌ 🛠️</h1>
     <p>Chúng tôi đang nâng cấp máy chủ Cybernet để mang lại trải nghiệm mượt mà hơn.<br />Vui lòng quay lại sau ít phút nhé! 🐱💾</p>
     <p style="font-size:12px;opacity:.8">ERROR: SYSTEM_MAINTENANCE.EXE · CODE 0x503</p>
+    <hr style="border:none;border-top:1px dashed rgba(255,255,255,.35);margin:18px 0" />
+    <p style="font-size:12px">
+      🔑 Bạn là quản trị viên?
+      <a href="/api/auth/signin" style="color:#ffff55;font-weight:bold">Đăng nhập tại đây</a>
+      — sau khi đăng nhập bằng tài khoản admin/editor, trang sẽ tự mở lại bình thường
+      và bạn có thể tắt bảo trì trong <a href="/admin/settings" style="color:#ffff55">C:\ADMIN\SETTINGS</a>.
+    </p>
   </div>
 </body>
 </html>`,
@@ -181,5 +188,64 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return response;
   }
 
-  return next();
+  // ────────────────────────────────────────────────
+  // 5) Bắt lỗi SSR toàn cục: log vào Workers Logs và hiển thị cửa sổ
+  //    chẩn đoán cho route /admin thay vì 500 trắng tinh vô hình.
+  // ────────────────────────────────────────────────
+  try {
+    return await next();
+  } catch (err: any) {
+    console.error(`[SSR ERROR] ${context.request.method} ${pathname}:`, err);
+
+    const rawDetail = err?.stack || err?.message || String(err);
+    const detail = rawDetail.slice(0, 4000).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    if (pathname.startsWith("/admin")) {
+      return new Response(
+        `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LỖI HỆ THỐNG — LOVELYYELLOWCAT ADMIN</title>
+<style>
+  body{background:#0b001a;color:#e8d5ff;font-family:'Courier New',monospace;margin:0;padding:24px;display:flex;justify-content:center}
+  .box{max-width:860px;width:100%;background:#c0c0c0;color:#000;padding:3px;box-shadow:inset -1px -1px 0 #404040,inset 1px 1px 0 #dfdfdf,inset -2px -2px 0 #808080,inset 2px 2px 0 #c0c0c0}
+  .bar{background:linear-gradient(90deg,#000080,#1084d0);color:#fff;font-weight:bold;font-size:12px;padding:3px 6px;display:flex;justify-content:space-between}
+  .body{padding:14px;font-size:13px;line-height:1.6}
+  pre{background:#000;color:#05ffa1;padding:10px;overflow:auto;max-height:340px;font-size:11px;white-space:pre-wrap;word-break:break-all;border:2px inset #808080}
+  a.btn{display:inline-block;background:#c0c0c0;color:#000;text-decoration:none;font-weight:bold;font-size:12px;padding:6px 12px;margin-right:8px;border:2px outset #fff}
+  .hint{font-size:11px;color:#444;margin-top:10px}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="bar"><span>❌ SYSTEM_CRASH.DMP — ${pathname}</span><span>500</span></div>
+    <div class="body">
+      <p><strong>Trang quản trị gặp lỗi khi render phía server.</strong> Chi tiết kỹ thuật bên dưới — hãy gửi cho lập trình viên hoặc tự đối chiếu:</p>
+      <pre>${detail}</pre>
+      <p class="hint">Nội dung này cũng đã được ghi vào Cloudflare Workers Logs (tab Logs trên Dashboard Cloudflare).</p>
+      <p style="margin-top:14px">
+        <a class="btn" href="/admin">🏠 Về Bảng Điều Khiển</a>
+        <a class="btn" href="/">↩ Thoát ra Trang Chủ</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`,
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
+        }
+      );
+    }
+
+    return new Response("Lỗi máy chủ nội bộ. Vui lòng thử lại sau.", {
+      status: 500,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
 });
