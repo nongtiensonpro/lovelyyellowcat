@@ -105,24 +105,6 @@ export function getCloudinaryPublicIdsFromText(value: string | null | undefined,
   return [...new Set(publicIds)];
 }
 
-async function sha1Hex(value: string) {
-  const encoded = new TextEncoder().encode(value);
-  const hashBuffer = await crypto.subtle.digest("SHA-1", encoded);
-
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-async function createCloudinarySignature(params: Record<string, string>, apiSecret: string) {
-  const payload = Object.keys(params)
-    .sort()
-    .map((key) => `${key}=${params[key]}`)
-    .join("&");
-
-  return sha1Hex(`${payload}${apiSecret}`);
-}
-
 export interface CloudinaryImageResource {
   public_id: string;
   secure_url: string;
@@ -145,7 +127,15 @@ function maskKey(value?: string): string {
 }
 
 /**
- * Liệt kê ảnh trong thư viện Cloudinary qua Admin API (signed request).
+ * Header xác thực HTTP Basic cho Cloudinary Admin API.
+ * Tài khoản hiện tại từ chối chữ ký query-style cũ — Basic Auth được xác minh hoạt động.
+ */
+function cloudinaryBasicAuthHeader(apiKey: string, apiSecret: string): string {
+  return `Basic ${btoa(`${apiKey}:${apiSecret}`)}`;
+}
+
+/**
+ * Liệt kê ảnh trong thư viện Cloudinary qua Admin API (Basic Auth).
  * Key/secret chỉ tồn tại phía server — không bao giờ xuống client.
  */
 export async function listCloudinaryImages(
@@ -168,26 +158,24 @@ export async function listCloudinaryImages(
     };
   }
 
-  const diag = `[cloud=${cloudName}, api_key=${maskKey(apiKey)}, secret=${maskKey(apiSecret)}]`;
+  const diag = `[cloud=${cloudName}, api_key=${maskKey(apiKey)}]`;
 
   try {
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const paramsToSign: Record<string, string> = { timestamp };
-    if (opts.nextCursor) paramsToSign.next_cursor = opts.nextCursor;
-    if (opts.maxResults) paramsToSign.max_results = String(opts.maxResults);
-
-    const signature = await createCloudinarySignature(paramsToSign, apiSecret);
-    const query = new URLSearchParams({ ...paramsToSign, api_key: apiKey, signature });
+    const params: Record<string, string> = {};
+    if (opts.nextCursor) params.next_cursor = opts.nextCursor;
+    if (opts.maxResults) params.max_results = String(opts.maxResults);
+    const query = new URLSearchParams(params);
 
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image?${query.toString()}`
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image?${query.toString()}`,
+      { headers: { Authorization: cloudinaryBasicAuthHeader(apiKey, apiSecret) } }
     );
     const data: any = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       const apiMsg = data?.error?.message || `HTTP ${response.status}`;
-      const hint = /credential|signature|auth/i.test(apiMsg)
-        ? ` → Cặp api_key ↔ api_secret KHÔNG khớp với tài khoản Cloudinary "${cloudName}". Hãy vào Cloudinary Console → Settings → Access Keys lấy đúng cặp hiện tại, rồi cập nhật 2 biến CLOUDINARY_API_KEY & CLOUDINARY_API_SECRET trong Cloudflare Dashboard → Worker lovelyyellowcat → Settings → Variables & Secrets.`
+      const hint = /credential|secret|auth/i.test(apiMsg)
+        ? ` → Cặp api_key ↔ api_secret không khớp với tài khoản "${cloudName}". Vào Cloudflare Dashboard → Worker lovelyyellowcat → Variables & Secrets để cập nhật lại 2 biến CLOUDINARY_API_KEY & CLOUDINARY_API_SECRET.`
         : "";
       return { resources: [], nextCursor: null, error: `${apiMsg} ${diag}.${hint}` };
     }
@@ -220,25 +208,14 @@ export async function deleteCloudinaryImages(publicIds: string[], runtimeEnv?: C
   }
 
   for (const publicId of ids) {
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const paramsToSign = {
-      invalidate: "true",
-      public_id: publicId,
-      timestamp,
-    };
-    const signature = await createCloudinarySignature(paramsToSign, apiSecret);
-    const formData = new FormData();
-
-    formData.set("public_id", publicId);
-    formData.set("invalidate", "true");
-    formData.set("timestamp", timestamp);
-    formData.set("api_key", apiKey);
-    formData.set("signature", signature);
-
     try {
       const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
         method: "POST",
-        body: formData,
+        headers: {
+          Authorization: cloudinaryBasicAuthHeader(apiKey, apiSecret),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ public_id: publicId, invalidate: "true" }),
       });
 
       const result = await response.json().catch(() => ({}));
