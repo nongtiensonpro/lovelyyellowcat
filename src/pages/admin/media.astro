@@ -1,7 +1,7 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
-import { searchCloudinaryImages, deleteCloudinaryImages } from "../../lib/cloudinary";
+import { searchCloudinaryImages, deleteCloudinaryImages, getCloudinaryPublicIdFromUrl, getCloudinaryPublicIdsFromText } from "../../lib/cloudinary";
 import { logAdminAction } from "../../lib/adminAudit";
 import { env } from "cloudflare:workers";
 
@@ -61,12 +61,16 @@ const pageSize = [24, 48, 96].includes(sizeParam) ? sizeParam : 24;
 const cur = url.searchParams.get("cur") || "";
 const hist = (url.searchParams.get("hist") || "").split("|").filter(Boolean);
 
+// Bộ lọc tình trạng sử dụng: "" | "used" | "orphan"
+const usageParam = url.searchParams.get("usage") || "";
+const usageFilter = (["used", "orphan"].includes(usageParam) ? usageParam : "") as "" | "used" | "orphan";
+
 let savedMsg = url.searchParams.get("msg");
 let savedType = url.searchParams.get("type");
 
 function buildMediaUrl(overrides: Record<string, string>) {
   const u = new URL("/admin/media", Astro.url.origin);
-  const base: Record<string, string> = { q, folder, sort: sortKey, size: String(pageSize) };
+  const base: Record<string, string> = { q, folder, sort: sortKey, size: String(pageSize), usage: usageFilter };
   if (minkb) base.minkb = String(minkb);
   if (from) base.from = from;
   Object.entries({ ...base, ...overrides }).forEach(([k, v]) => {
@@ -74,6 +78,110 @@ function buildMediaUrl(overrides: Record<string, string>) {
     else u.searchParams.delete(k);
   });
   return u.pathname + u.search;
+}
+
+// ══════════════════════════════════════════════
+// ORPHAN DETECTION — quét toàn bộ tham chiếu ảnh trong Supabase
+// ══════════════════════════════════════════════
+type UsageTag = "gallery" | "article" | "profile" | "orphan";
+
+const usedGallery = new Set<string>();
+const usedArticle = new Set<string>();
+const usedProfile = new Set<string>();
+
+try {
+  const { data: subs } = await supabase.from("submissions").select("image_pid, image_url");
+  (subs || []).forEach((s: any) => {
+    if (s.image_pid && typeof s.image_pid === "string") usedGallery.add(s.image_pid.trim());
+    const fromUrl = getCloudinaryPublicIdFromUrl(s.image_url, runtimeEnv);
+    if (fromUrl) usedGallery.add(fromUrl);
+  });
+
+  const { data: arts } = await supabase.from("articles").select("cover_url, body_md");
+  (arts || []).forEach((a: any) => {
+    const coverPid = getCloudinaryPublicIdFromUrl(a.cover_url, runtimeEnv);
+    if (coverPid) usedArticle.add(coverPid);
+    getCloudinaryPublicIdsFromText(a.body_md, runtimeEnv).forEach((pid: string) => usedArticle.add(pid));
+  });
+
+  const { data: profs } = await supabase.from("profiles").select("avatar_url, banner_url");
+  (profs || []).forEach((p: any) => {
+    [p.avatar_url, p.banner_url].forEach((u: any) => {
+      const pid = getCloudinaryPublicIdFromUrl(u, runtimeEnv);
+      if (pid) usedProfile.add(pid);
+    });
+  });
+} catch {
+  // Nếu quét lỗi (mạng/RLS) → coi như không có tham chiếu nào, badge sẽ lệch nhưng trang vẫn chạy
+}
+
+function usageOf(pid: string): UsageTag {
+  if (usedGallery.has(pid)) return "gallery";
+  if (usedArticle.has(pid)) return "article";
+  if (usedProfile.has(pid)) return "profile";
+  return "orphan";
+}
+
+const USAGE_LABELS: Record<UsageTag, { text: string; cls: string }> = {
+  gallery: { text: "🖼 Tranh đang dùng", cls: "badge-success" },
+  article: { text: "📰 Dùng trong bài", cls: "badge-info" },
+  profile: { text: "👤 Hồ sơ người dùng", cls: "badge-warning" },
+  orphan: { text: "⚠ CHƯA được dùng", cls: "badge-error" },
+};
+
+// ── Gọi Cloudinary Search API (có lọc usage → quét gộp nhiều trang nội bộ) ──
+const searchOpts = {
+  q, folder,
+  minBytes: minkb,
+  uploadedAfter: from || undefined,
+  sortKey,
+  nextCursor: cur || undefined,
+};
+
+let resources: Array<any> = [];
+let nextCursor: string | null = null;
+let totalCount: number | undefined = undefined;
+let scanNote = "";
+let resultError: string | null = null;
+
+if (!usageFilter) {
+  // Fast-path: một lần gọi duy nhất
+  const result = await searchCloudinaryImages({ ...searchOpts, maxResults: pageSize }, runtimeEnv);
+  if (result.error) {
+    resources = [];
+    resultError = result.error;
+  } else {
+    resources = result.resources.map((r: any) => ({ ...r, usageTag: usageOf(r.public_id) }));
+    totalCount = result.totalCount;
+    nextCursor = result.nextCursor;
+  }
+} else {
+  // Quét gộp tối đa 8 trang × 100 ảnh để lấp đầy trang hiện tại theo usage
+  let cursorVar: string | undefined = cur || undefined;
+  const collected: any[] = [];
+  let scannedTotal = 0;
+  let searchError: string | null = null;
+
+  for (let page = 0; page < 8; page++) {
+    const pr = await searchCloudinaryImages({ ...searchOpts, maxResults: 100, nextCursor: cursorVar }, runtimeEnv);
+    if (pr.error) { searchError = pr.error; break; }
+
+    scannedTotal += pr.resources.length;
+    for (const r of pr.resources) {
+      const tag = usageOf(r.public_id);
+      const match = usageFilter === "used" ? tag !== "orphan" : tag === "orphan";
+      if (match && collected.length < pageSize) collected.push({ ...r, usageTag: tag });
+    }
+
+    const hasMoreRaw = Boolean(pr.nextCursor);
+    nextCursor = pr.nextCursor ?? null;
+    if (!hasMoreRaw || collected.length >= pageSize) break;
+    cursorVar = pr.nextCursor!;
+  }
+
+  resources = collected;
+  scanNote = `đã quét ${scannedTotal.toLocaleString("vi-VN")} ảnh trong kho`;
+  if (searchError) resultError = searchError;
 }
 
 // ── Xử lý xóa hàng loạt ──
@@ -104,16 +212,6 @@ if (Astro.request.method === "POST" && user) {
   }
 }
 
-// ── Gọi Cloudinary Search API ──
-const result = await searchCloudinaryImages(
-  { q, folder, minBytes: minkb, uploadedAfter: from || undefined, sortKey, maxResults: pageSize, nextCursor: cur || undefined },
-  runtimeEnv
-);
-
-const resources = result.resources;
-const nextCursor = result.nextCursor;
-const totalCount = result.totalCount;
-
 // Trang hiện tại = số mốc con trỏ đã đi qua + 1
 const pageIndex = hist.length + 1;
 
@@ -125,6 +223,10 @@ const nextUrl = nextCursor
 const prevUrl = hist.length > 0
   ? buildMediaUrl({ cur: hist[hist.length - 1], hist: hist.slice(0, -1).join("|") })
   : null;
+
+// Thống kê mồ côi trên trang hiện tại (cho statusbar)
+const pageOrphans = resources.filter((r: any) => r.usageTag === "orphan").length;
+const pageUsed = resources.length - pageOrphans;
 ---
 
 <AdminLayout title="VAPORWAVE MAGAZINE // THƯ VIỆN ẢNH" userProfile={userProfile} activePath="/admin/media">
@@ -137,10 +239,10 @@ const prevUrl = hist.length > 0
     </div>
   )}
 
-  {result.error && (
+  {resultError && (
     <div class="win95-container mb-5 max-w-3xl font-retro text-xs border-red-600">
       <div class="win95-header bg-gradient-to-r from-red-800 to-red-600"><span>❌ CLOUD_ERROR.ERR</span></div>
-      <div class="p-3 bg-red-100 text-black font-bold">{result.error}</div>
+      <div class="p-3 bg-red-100 text-black font-bold">{resultError}</div>
     </div>
   )}
 
@@ -157,7 +259,13 @@ const prevUrl = hist.length > 0
   <form method="GET" action="/admin/media" class="win95-container font-retro text-black mb-4">
     <div class="win95-header">
       <span>🔍 FIND_ALL_FILES.DLL</span>
-      <span class="text-[10px] text-vapor-yellow">{totalCount !== undefined ? `${totalCount.toLocaleString("vi-VN")} ảnh khớp` : ""}</span>
+      <span class="text-[10px] text-vapor-yellow">
+        {totalCount !== undefined
+          ? `${totalCount.toLocaleString("vi-VN")} ảnh khớp`
+          : usageFilter
+            ? `${resources.length} ảnh khớp · ${scanNote}`
+            : ""}
+      </span>
     </div>
     <div class="p-3 bg-win-gray grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
       <div class="col-span-2">
@@ -179,6 +287,14 @@ const prevUrl = hist.length > 0
         <label for="f-from" class="block text-[10px] font-bold uppercase mb-1">Tải từ ngày</label>
         <input id="f-from" name="from" type="date" value={from}
           class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;" />
+      </div>
+      <div>
+        <label for="f-usage" class="block text-[10px] font-bold uppercase mb-1">Tình trạng sử dụng</label>
+        <select id="f-usage" name="usage" class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color:#808080 #fff #fff #808080;">
+          <option value="" selected={!usageFilter}>Tất cả</option>
+          <option value="orphan" selected={usageFilter === "orphan"}>🔴 Mồ côi (chưa dùng)</option>
+          <option value="used" selected={usageFilter === "used"}>🟢 Đang sử dụng</option>
+        </select>
       </div>
       <div>
         <label for="f-sort" class="block text-[10px] font-bold uppercase mb-1">Sắp xếp</label>
@@ -213,7 +329,16 @@ const prevUrl = hist.length > 0
         Chọn hết
       </label>
       <span>Đã chọn: <strong id="media-count">0</strong></span>
-      <span class="text-win-dark hidden sm:inline">· Trang {pageIndex}{nextCursor ? "+" : ""} · Hiển thị {resources.length}/{totalCount ?? resources.length} ảnh khớp bộ lọc</span>
+      <span class="hidden md:inline text-win-dark">
+        · Trang {pageIndex}{nextCursor ? "+" : ""} · Hiển thị {resources.length}{totalCount !== undefined ? `/${totalCount}` : ""}
+        {usageFilter === "orphan" && scanNote ? ` (${scanNote})` : ""}
+      </span>
+      {resources.length > 0 && (
+        <span class="ml-2 flex gap-1">
+          <span class="badge badge-success">🖼 {pageUsed} đang dùng</span>
+          <span class={`badge ${pageOrphans > 0 ? "badge-error" : ""}`}>⚠ {pageOrphans} mồ côi (trang này)</span>
+        </span>
+      )}
       <span class="ml-auto"></span>
       <button
         type="submit"
@@ -226,7 +351,7 @@ const prevUrl = hist.length > 0
       </button>
     </div>
 
-    {!result.error && resources.length === 0 ? (
+    {!resultError && resources.length === 0 ? (
       <div class="win95-container font-retro text-black p-10 text-center mb-6">
         <span class="text-4xl block mb-3" aria-hidden="true">🗃️</span>
         <p class="font-bold text-sm">Không có ảnh nào khớp bộ lọc hiện tại.</p>
@@ -239,6 +364,7 @@ const prevUrl = hist.length > 0
             class="win95-container font-retro text-black relative"
             data-media-card
             data-pid={img.public_id}
+            data-usage={img.usageTag}
             data-w={img.width || ""}
             data-h={img.height || ""}
             data-bytes={img.bytes || ""}
@@ -246,6 +372,11 @@ const prevUrl = hist.length > 0
             data-fmt={img.format || ""}
             data-folder={img.folder || ""}
           >
+            <div class="absolute bottom-1 left-1 right-1 z-10 pointer-events-none">
+              <span class={`badge ${USAGE_LABELS[img.usageTag as UsageTag].cls} !text-[7px] px-1 py-0`}>
+                {USAGE_LABELS[img.usageTag as UsageTag].text}
+              </span>
+            </div>
             <label class="absolute top-1 left-1 z-20 cursor-pointer" title="Chọn để xóa">
               <input type="checkbox" name="selectedIds" value={img.public_id} class="checkbox-vapor media-check" />
             </label>
@@ -448,9 +579,18 @@ const prevUrl = hist.length > 0
       });
       var delBtn = document.querySelector(".bulk-del");
       delBtn && delBtn.addEventListener("click", function (e) {
-        if (!confirm("🗑 XÓA VĨNH VIỄN các ảnh đã chọn khỏi Cloudinary?\n\n⚠️ Lưu ý: nếu ảnh đang được dùng trong bài viết hoặc tranh đã duyệt, link hiển thị sẽ gãy!\n\n(Thao tác này không thể hoàn tác)")) {
-          e.preventDefault();
+        var checked = Array.prototype.slice.call(document.querySelectorAll(".media-check")).filter(function (b) { return b.checked; });
+        if (checked.length === 0) return;
+        var usedCount = checked.filter(function (b) {
+          return b.closest("[data-media-card]")?.getAttribute("data-usage") !== "orphan";
+        }).length;
+
+        var msg = "🗑 XÓA VĨNH VIỄN " + checked.length + " ảnh khỏi Cloudinary?\n(Thao tác không thể hoàn tác)";
+        if (usedCount > 0) {
+          msg = "⚠️ CẢNH BÁO NGHIÊM TRỌNG!\n\n" + usedCount + "/" + checked.length + " ảnh đang ĐƯỢC SỬ DỤNG trong tranh/bài viết/hồ sơ.\nXóa sẽ làm GÃY LINK hiển thị công khai!\n\n" + msg;
+          if (!confirm(msg)) { e.preventDefault(); return; }
         }
+        if (!confirm(msg)) e.preventDefault();
       });
       refreshCount();
     })();
