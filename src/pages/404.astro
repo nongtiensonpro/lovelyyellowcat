@@ -1,0 +1,82 @@
+---
+import "../styles/global.css";
+---
+
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <title>404 // SYSTEM FAILURE — LOVELYYELLOWCAT</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Trang không tồn tại — Lỗi hệ thống 0x000000ED (UNMOUNTABLE_AESTHETIC_VOLUME)" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen bg-[#0000aa] font-mono text-white antialiased overflow-hidden" style="font-family: 'Share Tech Mono', 'Courier New', monospace;">
+    <main class="min-h-screen flex items-center justify-center p-4 sm:p-8">
+      <div class="w-full max-w-2xl">
+        <!-- Header bluescreen -->
+        <p class="bg-[#aaaaaa] text-[#0000aa] inline-block px-3 py-0.5 font-bold tracking-widest text-sm mb-6">
+          LOVELYYELLOWCAT
+        </p>
+
+        <div class="space-y-4 text-sm sm:text-base leading-relaxed">
+          <p>
+            A fatal exception <span class="text-[#ffff55]">0E</span> has occurred at
+            <span class="text-[#ffff55]">0028:C001CA7</span> in VXD AESTHETIC(01) +
+            <span class="text-[#ffff55]">000010EC</span>. The current
+            application will be terminated.
+          </p>
+
+          <p class="text-center text-lg sm:text-xl font-bold my-8 tracking-wider">
+            ☠️ 404 — TRANG KHÔNG TỒN TẠI ☠️
+          </p>
+
+          <p>
+            Trang bạn tìm kiếm đã bị nuốt chửng bởi hố đen Vaporwave, hoặc chưa bao giờ
+            tồn tại trong dòng thời gian này. Mèo Vàng Cybernetic đã được điều đến để
+            cứu vãn tình hình. 🐱💾
+          </p>
+
+          <ul class="list-disc list-inside space-y-1 text-xs sm:text-sm opacity-90">
+            <li>Kiểm tra lại đường dẫn URL có bị glitch không.</li>
+            <li>Nhấn <span class="border border-white px-1">Ctrl</span> + <span class="border border-white px-1">K</span> để tìm kiếm nội dung.</li>
+            <li>Hoặc quay về nơi mọi thứ bắt đầu...</li>
+          </ul>
+
+          <p class="pt-4">
+            * Press any key to RETURN TO REALITY _
+            <span class="inline-block w-2.5 h-4 bg-white align-middle animate-pulse ml-1"></span>
+          </p>
+        </div>
+
+        <!-- Nút hành động kiểu Win95 trên nền xanh -->
+        <div class="mt-10 flex flex-wrap gap-3 justify-center">
+          <a href="/" class="win95-btn no-underline font-bold px-5 py-2 text-black text-sm min-h-[44px]">
+            🏠 VỀ TRANG CHỦ
+          </a>
+          <a href="/gallery" class="win95-btn no-underline font-bold px-5 py-2 text-black text-sm min-h-[44px]">
+            🖼️ NGẮM TRANH
+          </a>
+          <button id="bluescreen-retry" class="win95-btn font-bold px-5 py-2 text-black text-sm min-h-[44px]" onclick="location.reload()">
+            🔄 THỬ LẠI
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const blinkEl = document.querySelector(".animate-pulse");
+      if (blinkEl) {
+        setInterval(() => {
+          if (blinkEl instanceof HTMLElement) {
+            blinkEl.style.visibility = blinkEl.style.visibility === "hidden" ? "visible" : "hidden";
+          }
+        }, 500);
+      }
+    </script>
+  </body>
+</html>

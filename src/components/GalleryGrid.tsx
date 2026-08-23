@@ -142,7 +142,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     };
   }, [isFavoritesOnly, currentUser?.id]);
 
-  // 3. Đọc tham số URL ?view=id
+  // 3. Đọc tham số URL ?view=id và ?tag=<tên tag>
   useEffect(() => {
     const handleUrlParams = () => {
       const params = new URLSearchParams(window.location.search);
@@ -151,6 +151,13 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
         setActiveViewId(viewId);
       } else {
         setActiveViewId(null);
+      }
+
+      const tagParam = params.get("tag");
+      if (tagParam && tagParam.trim()) {
+        setSelectedTag(tagParam.trim());
+      } else if (params.has("tag") === false) {
+        setSelectedTag("Tất Cả");
       }
     };
 

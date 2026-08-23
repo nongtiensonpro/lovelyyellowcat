@@ -292,18 +292,33 @@ const currentPath = Astro.url.pathname;
 </header>
 
 <script>
-  // Cập nhật đồng hồ thời gian thực ở Taskbar Tray
+  // Cập nhật đồng hồ thời gian thực ở Taskbar Tray (tạm dừng khi tab ẩn để tiết kiệm CPU)
+  const clockEl = document.getElementById("tray-clock");
+  let clockInterval: ReturnType<typeof setInterval> | null = null;
+
   function updateClock() {
-    const clockEl = document.getElementById("tray-clock");
     if (clockEl) {
-      const now = new Date();
-      clockEl.textContent = now.toLocaleTimeString("vi-VN", { hour12: false });
+      clockEl.textContent = new Date().toLocaleTimeString("vi-VN", { hour12: false });
     }
   }
-  setInterval(updateClock, 1000);
-  updateClock();
+  function startClock() {
+    if (!clockInterval) {
+      updateClock();
+      clockInterval = setInterval(updateClock, 1000);
+    }
+  }
+  function stopClock() {
+    if (clockInterval) {
+      clearInterval(clockInterval);
+      clockInterval = null;
+    }
+  }
+  document.addEventListener("visibilitychange", () => {
+    document.hidden ? stopClock() : startClock();
+  });
+  startClock();
 
-  // Quản lý đóng/mở Mobile Menu Drawer
+  // Quản lý đóng/mở Mobile Menu Drawer (khóa scroll nền + Escape + trả focus)
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const closeMenuBtn = document.getElementById('close-menu-btn');
   const mobileMenuDrawer = document.getElementById('mobile-menu-drawer');
@@ -313,6 +328,8 @@ const currentPath = Astro.url.pathname;
       hamburgerBtn.setAttribute('aria-expanded', 'true');
       mobileMenuDrawer.setAttribute('aria-hidden', 'false');
       mobileMenuDrawer.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      closeMenuBtn?.focus();
     }
   }
 
@@ -321,6 +338,8 @@ const currentPath = Astro.url.pathname;
       hamburgerBtn.setAttribute('aria-expanded', 'false');
       mobileMenuDrawer.setAttribute('aria-hidden', 'true');
       mobileMenuDrawer.classList.add('hidden');
+      document.body.style.overflow = '';
+      hamburgerBtn.focus();
     }
   }
 
@@ -342,6 +361,13 @@ const currentPath = Astro.url.pathname;
       closeMenu();
     });
   }
+
+  // Phím Escape đóng menu khi đang mở
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileMenuDrawer && !mobileMenuDrawer.classList.contains('hidden')) {
+      closeMenu();
+    }
+  });
 
   // Click ra ngoài để đóng menu
   document.addEventListener('click', (e) => {

@@ -12,6 +12,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   try {
+    // 0. Kiểm tra công tắc nhận tranh từ site_settings (editor/admin được bỏ qua)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const isStaff = profile?.role === "admin" || profile?.role === "editor";
+
+    if (!isStaff) {
+      const { data: gate } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "submissions_open")
+        .maybeSingle();
+      if (gate && gate.value?.enabled === false) {
+        return new Response(
+          JSON.stringify({ error: "Phòng triển lãm tạm đóng cửa nhận tác phẩm mới. Vui lòng quay lại sau nhé! 🐱" }),
+          { status: 423 }
+        );
+      }
+    }
+
     const body = await request.json();
     const { title, description, image_url, image_pid, recaptcha_token } = body;
 

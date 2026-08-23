@@ -444,27 +444,50 @@ const {
 
     window.addEventListener("resize", handleResize);
 
-    // ── Pause khi tab không active để tối ưu CPU ──
-    let wasPaused = false;
-    function handleVisibility() {
-      if (document.hidden) {
-        wasPaused = true;
-        cancelAnimationFrame(animFrameId);
-      } else if (wasPaused) {
-        wasPaused = false;
+    // ── Pause khi tab không active HOẶC hero cuộn khỏi viewport (tiết kiệm CPU/GPU) ──
+    let pausedByTab = false;
+    let pausedByViewport = false;
+
+    function syncAnimationState() {
+      const shouldRun = !pausedByTab && !pausedByViewport;
+      if (!shouldRun) {
+        if (animFrameId) {
+          cancelAnimationFrame(animFrameId);
+          animFrameId = 0;
+        }
+      } else if (!animFrameId) {
         phaseStartTime = performance.now();
         animFrameId = requestAnimationFrame(render);
       }
     }
+
+    function handleVisibility() {
+      pausedByTab = document.hidden;
+      syncAnimationState();
+    }
     document.addEventListener("visibilitychange", handleVisibility);
+
+    // IntersectionObserver: dừng hẳn vòng render khi canvas không còn hiển thị
+    let viewportObserver: IntersectionObserver | null = null;
+    if ("IntersectionObserver" in window) {
+      viewportObserver = new IntersectionObserver(
+        ([entry]) => {
+          pausedByViewport = !entry.isIntersecting;
+          syncAnimationState();
+        },
+        { threshold: 0.05 }
+      );
+      viewportObserver.observe(wrapper);
+    }
 
     // Cleanup khi component bị hủy
     // @ts-ignore
     wrapper.__pixelTextCleanup = () => {
       isDestroyed = true;
-      cancelAnimationFrame(animFrameId);
+      if (animFrameId) cancelAnimationFrame(animFrameId);
       window.removeEventListener("resize", handleResize);
       document.removeEventListener("visibilitychange", handleVisibility);
+      viewportObserver?.disconnect();
       if (resizeTimeout) clearTimeout(resizeTimeout);
     };
   }

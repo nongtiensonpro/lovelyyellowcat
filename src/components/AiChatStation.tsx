@@ -294,8 +294,9 @@ export const AiChatStation: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"chat" | "topics" | "settings">("chat");
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({});
   
-  // Key từ cấu hình hệ thống (env) tự động nạp
-  const [systemApiKey, setSystemApiKey] = useState<string>("");
+  // Cờ cho biết hệ thống có key AI mặc định hay không.
+  // Server CHỈ trả boolean — key gốc không bao giờ được gửi xuống trình duyệt.
+  const [hasSystemKey, setHasSystemKey] = useState(false);
   
   // Custom API Key do người dùng tự đổi khi hệ thống quá tải
   const [userCustomApiKey, setUserCustomApiKey] = useState<string>("");
@@ -336,12 +337,12 @@ export const AiChatStation: React.FC = () => {
   // Nạp lịch sử và cấu hình tự động khi khởi động
   useEffect(() => {
     try {
-      // 1. Tự động lấy system API Key từ máy chủ (env)
+      // 1. Kiểm tra hệ thống có cấu hình AI mặc định không (chỉ nhận boolean hasKey)
       fetch("/api/ai/config")
         .then(res => res.json())
         .then(data => {
-          if (data?.apiKey) {
-            setSystemApiKey(data.apiKey);
+          if (data?.hasKey) {
+            setHasSystemKey(true);
           }
         })
         .catch(e => console.warn("Không thể lấy cấu hình AI mặc định:", e));
@@ -443,13 +444,14 @@ export const AiChatStation: React.FC = () => {
     setInputVal("");
     setIsTyping(true);
 
-    // Ưu tiên key override -> user custom key -> system key từ env
-    const effectiveApiKey = (overrideApiKey || userCustomApiKey || systemApiKey).trim();
+    // CHỈ key cá nhân do người dùng tự cung cấp (BYOK) mới được gọi trực tiếp từ trình duyệt.
+    // Key hệ thống luôn đi qua proxy /api/ai/chat phía server và không bao giờ rời khỏi máy chủ.
+    const effectiveApiKey = (overrideApiKey || userCustomApiKey).trim();
 
     try {
       let result: any = null;
 
-      // NẾU CÓ KEY (KEY HỆ THỐNG HOẶC KEY CÁ NHÂN) -> GỌI TRỰC TIẾP TỪ TRÌNH DUYỆT ĐỂ BỎ QUA CHẶN IP CLOUDFLARE
+      // NẾU NGƯỜI DÙNG TỰ DÁN KEY CÁ NHÂN -> GỌI TRỰC TIẾP TỪ TRÌNH DUYỆT ĐỂ BỎ QUA CHẶN IP CLOUDFLARE
       if (effectiveApiKey) {
         result = await executeClientDirectChat(
           effectiveApiKey,
@@ -673,9 +675,9 @@ export const AiChatStation: React.FC = () => {
               <span className="bg-vapor-yellow text-black px-2 py-0.5 font-bold border border-black shadow-xs">
                 🔑 KEY CÁ NHÂN
               </span>
-            ) : systemApiKey ? (
+            ) : hasSystemKey ? (
               <span className="bg-[#05ffa1] text-black px-2 py-0.5 font-bold border border-black shadow-xs">
-                ⚡ KEY HỆ THỐNG (SẴN SÀNG)
+                ⚡ KEY HỆ THỐNG (PROXY)
               </span>
             ) : (
               <span className="bg-black text-vapor-green px-2 py-0.5 font-bold">
@@ -859,8 +861,8 @@ export const AiChatStation: React.FC = () => {
             <div className="p-2 bg-[#c0c0c0] border border-win-dark text-[10px] font-mono space-y-1">
               <div className="flex justify-between items-center">
                 <span>Nguồn API Key:</span>
-                <span className={`font-bold px-1 py-0.2 ${userCustomApiKey ? 'bg-vapor-yellow text-black' : systemApiKey ? 'bg-[#05ffa1] text-black' : 'bg-black text-white'}`}>
-                  {userCustomApiKey ? '🔑 Key Cá Nhân' : systemApiKey ? '⚡ Key Mặc Định Sẵn Có' : '☁️ Server Cloudflare'}
+                <span className={`font-bold px-1 py-0.2 ${userCustomApiKey ? 'bg-vapor-yellow text-black' : hasSystemKey ? 'bg-[#05ffa1] text-black' : 'bg-black text-white'}`}>
+                  {userCustomApiKey ? '🔑 Key Cá Nhân' : hasSystemKey ? '⚡ Key Hệ Thống (Proxy)' : '☁️ Server Cloudflare'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1277,8 +1279,8 @@ export const AiChatStation: React.FC = () => {
                     <div className="text-[10px] font-mono">
                       {userCustomApiKey ? (
                         <span className="text-vapor-purple font-bold">● Đang dùng API Key Cá Nhân (Đã ghi đè thành công)</span>
-                      ) : systemApiKey ? (
-                        <span className="text-green-700 font-bold">● Đang dùng API Key Mặc Định Của Hệ Thống (Sẵn Sàng)</span>
+                      ) : hasSystemKey ? (
+                        <span className="text-green-700 font-bold">● Đang dùng Key hệ thống qua proxy bảo mật phía máy chủ</span>
                       ) : (
                         <span className="text-win-dark font-bold">● Đang kết nối máy chủ Cloudflare</span>
                       )}

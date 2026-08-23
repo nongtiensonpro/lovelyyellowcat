@@ -1,5 +1,5 @@
 ---
-import BaseLayout from "../../../../layouts/BaseLayout.astro";
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../../../lib/supabase";
 import { ArticleEditor } from "../../../../components/ArticleEditor";
 
@@ -33,15 +33,6 @@ if (error || !article) {
   return Astro.redirect("/admin?error=article-not-found");
 }
 
-const { count: commentsCount } = await supabase
-  .from("comments")
-  .select("*", { count: "exact", head: true });
-
-const { count: pendingSubmissionsCount } = await supabase
-  .from("submissions")
-  .select("*", { count: "exact", head: true })
-  .eq("status", "pending");
-
 // Chuyển đổi dữ liệu bài viết sang định dạng của React component mong đợi
 const initialArticle = {
   id: article.id,
@@ -55,20 +46,7 @@ const initialArticle = {
 };
 ---
 
-<BaseLayout title={`VAPORWAVE MAGAZINE // CHỈNH SỬA BÀI VIẾT - ${article.title}`} userProfile={userProfile}>
-  <!-- Menu Bar Quản Trị Viên -->
-  <div class="win95-container w-full mb-6 font-retro">
-    <div class="win95-header">
-      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
-    </div>
-    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
-      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
-      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
-      <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
-      <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
-    </div>
-  </div>
-
+<AdminLayout title={`VAPORWAVE MAGAZINE // CHỈNH SỬA BÀI VIẾT - ${article.title}`} userProfile={userProfile} activePath="/admin/articles/new">
   <!-- Header -->
   <div class="text-center py-6">
     <h1 class="text-3xl font-extrabold uppercase tracking-widest text-vapor-purple font-retro animate-text-glitch">
@@ -83,4 +61,4 @@ const initialArticle = {
   <div class="mt-4">
     <ArticleEditor client:load initialArticle={initialArticle} />
   </div>
-</BaseLayout>
+</AdminLayout>

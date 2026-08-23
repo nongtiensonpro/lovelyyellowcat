@@ -135,7 +135,7 @@ const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN"
       </div>
 
       {/* Bảng Reactions Deck */}
-      <ReactionBar articleId={submission.id} currentUser={userProfile} client:load />
+      <ReactionBar articleId={submission.id} currentUser={userProfile} client:visible />
     </div>
 
     {/* Cột Phải: Thông tin chi tiết, Tags & Comments (col-span-5) */}
@@ -194,7 +194,7 @@ const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN"
         articleId={submission.id}
         initialComments={initialComments}
         currentUser={userProfile}
-        client:load
+        client:visible
       />
     </div>
   </div>

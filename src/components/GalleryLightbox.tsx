@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { ReactionBar } from "./ReactionBar";
 import { FavoriteButton } from "./FavoriteButton";
+import { useFocusTrap } from "../lib/a11y";
 
 export interface Submission {
   id: string;
@@ -126,6 +127,9 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   const progressIntervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const toastTimeoutRef = useRef<number | null>(null);
+
+  // Khóa focus bên trong lightbox (ARIA dialog) — Escape/đóng trả focus về trigger
+  useFocusTrap(containerRef, true, onClose);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -582,7 +586,11 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   return ReactDOM.createPortal(
     <div
       ref={containerRef}
-      className="fixed inset-0 bg-[#080014]/98 -webkit-backdrop-filter:blur(12px) backdrop-blur-md z-[9999] flex flex-col justify-between p-1 sm:p-3 overflow-hidden font-retro text-black select-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Xem tác phẩm: ${activeSubmission.title || "không tên"}`}
+      tabIndex={-1}
+      className="fixed inset-0 bg-[#080014]/98 -webkit-backdrop-filter:blur(12px) backdrop-blur-md z-[var(--z-lightbox)] flex flex-col justify-between p-1 sm:p-3 overflow-hidden font-retro text-black select-none"
       style={{ height: "100dvh" }}
     >
       {/* Toast HUD Notification */}

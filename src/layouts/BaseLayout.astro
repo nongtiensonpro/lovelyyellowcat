@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { createSupabaseServerClient } from "../lib/supabase";
 import HeaderNav from "../components/HeaderNav.astro";
 import MarqueeTicker from "../components/MarqueeTicker.astro";
 import CassettePlayer from "../components/CassettePlayer.astro";
@@ -25,6 +26,22 @@ const {
 } = Astro.props;
 
 const currentUrl = canonicalUrl || Astro.url.href;
+
+// Thông báo toàn站 đang hoạt động (ưu tiên banner > marquee). Bỏ qua lỗi nếu chưa có bảng.
+let siteAnnouncement: any = null;
+try {
+  const annSupabase = createSupabaseServerClient({ request: Astro.request, cookies: Astro.cookies });
+  const { data } = await annSupabase
+    .from("site_announcements")
+    .select("id, title, body, type")
+    .eq("is_active", true)
+    .gt("end_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1);
+  siteAnnouncement = data?.[0] || null;
+} catch {
+  // Chưa chạy migration upgrade_v3 → bỏ qua
+}
 ---
 
 <html lang="vi">
@@ -38,6 +55,7 @@ const currentUrl = canonicalUrl || Astro.url.href;
     
     <!-- SEO Canonical -->
     <link rel="canonical" href={currentUrl} />
+    <link rel="alternate" type="application/rss+xml" title="LOVELYYELLOWCAT RSS Feed" href="/rss.xml" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content={articleJsonLd ? "article" : "website"} />
@@ -63,10 +81,14 @@ const currentUrl = canonicalUrl || Astro.url.href;
       <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} is:inline />
     )}
 
-    <!-- Google reCAPTCHA v2 Library -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5" async defer></script>
+    <!-- Google reCAPTCHA v2 Library — chỉ tải tại trang gửi tranh để giảm trọng lượng mọi trang khác -->
+    {Astro.url.pathname.startsWith("/submit") && (
+      <script src="https://www.google.com/recaptcha/api.js?render=6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5" async defer></script>
+    )}
   </head>
   <body class="min-h-screen text-white font-body selection:bg-vapor-pink selection:text-black antialiased bg-cosmic-black">
+    <!-- Skip-to-content: điều hướng bàn phím/screen reader -->
+    <a class="skip-link" href="#main-content">⏭ Bỏ qua tới nội dung chính</a>
     <!-- Lớp phủ CRT toàn trang -->
     <div id="crt-overlay-layer" class="crt-overlay" aria-hidden="true">
       <div class="crt-scanlines"></div>
@@ -87,9 +109,27 @@ const currentUrl = canonicalUrl || Astro.url.href;
 
         <!-- Thanh điều hướng responsive chuẩn hóa Windows 95 Taskbar -->
         <HeaderNav userProfile={userProfile} />
+
+        <!-- Banner thông báo toàn站 (WinPopUp Station) -->
+        {siteAnnouncement && (
+          <div class="win95-container mb-3 font-retro text-black" role="status">
+            <div class="flex items-stretch">
+              <div class="win95-header bg-gradient-to-r from-vapor-orange to-vapor-pink px-3 py-2 flex items-center gap-2 shrink-0">
+                <span aria-hidden="true">{siteAnnouncement.type === "banner" ? "🚩" : "📣"}</span>
+                <span class="font-bold">THÔNG BÁO</span>
+              </div>
+              <div class="flex-1 bg-win-gray px-3 py-2 min-w-0">
+                <p class="text-xs font-bold truncate sm:whitespace-normal" title={siteAnnouncement.body || siteAnnouncement.title}>
+                  {siteAnnouncement.title}
+                  {siteAnnouncement.body && <span class="hidden md:inline font-normal text-[10px] text-black/70"> — {siteAnnouncement.body}</span>}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         
         <!-- Nội dung chính -->
-        <main class="flex-grow w-full py-2">
+        <main id="main-content" class="flex-grow w-full py-2">
           <slot />
         </main>
         

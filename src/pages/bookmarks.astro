@@ -1,0 +1,126 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Lấy phiên đăng nhập
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) {
+  return Astro.redirect("/?error=login-required");
+}
+
+const userProfile = (await supabase
+  .from("profiles")
+  .select("*")
+  .eq("id", user.id)
+  .single()).data;
+
+// Xử lý gỡ bookmark từ form POST
+let removedTitle: string | null = null;
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = formData.get("action");
+  const articleId = formData.get("articleId") as string;
+
+  if (action === "remove" && articleId) {
+    const { error } = await supabase
+      .from("bookmarks")
+      .delete()
+      .eq("profile_id", user.id)
+      .eq("article_id", articleId);
+    if (!error) removedTitle = " ";
+    return Astro.redirect("/bookmarks", 303);
+  }
+}
+
+// Lấy danh sách bookmark rồi tra thông tin bài viết
+const { data: bookmarks } = await supabase
+  .from("bookmarks")
+  .select("article_id, saved_at")
+  .eq("profile_id", user.id)
+  .order("saved_at", { ascending: false });
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const articleIds = (bookmarks || []).map((b: any) => b.article_id).filter((id: string) => UUID_RE.test(id));
+
+let savedArticles: any[] = [];
+if (articleIds.length > 0) {
+  const { data } = await supabase
+    .from("articles")
+    .select("id, title, slug, excerpt, cover_url, tags, published_at, created_at")
+    .in("id", articleIds)
+    .eq("status", "published");
+
+  // Giữ đúng thứ tự đã lưu gần nhất
+  const byId = new Map((data || []).map((a: any) => [a.id, a]));
+  savedArticles = (bookmarks || [])
+    .map((b: any) => ({ ...byId.get(b.article_id), saved_at: b.saved_at }))
+    .filter((a: any) => a && a.id);
+}
+---
+
+<BaseLayout
+  title="SAVED_ARTICLES.DOC // BÀI VIẾT ĐÃ LƯU"
+  description="Kho lưu trữ cá nhân các bài viết bạn đã đánh dấu đọc sau trên LOVELYYELLOWCAT."
+  userProfile={userProfile}
+>
+  <div class="text-center py-6">
+    <h1 class="hero-title">💾 Drive A:\Saved</h1>
+    <p class="text-[9px] sm:text-xs tracking-[0.2em] text-vapor-blue mt-3 font-mono uppercase">
+      // KHO LƯU TRỮ CÁ NHÂN — BÀI VIẾT ĐÃ ĐÁNH DẤU ĐỌC SAU //
+    </p>
+  </div>
+
+  {savedArticles.length === 0 ? (
+    <div class="win95-container font-retro text-black max-w-2xl mx-auto mb-10">
+      <div class="win95-header"><span>A:\ — THƯ MỤC RỖNG</span></div>
+      <div class="p-10 text-center bg-win-gray">
+        <span class="text-5xl block mb-4" aria-hidden="true">📂</span>
+        <p class="font-bold text-sm mb-1">Chưa có bài viết nào được lưu.</p>
+        <p class="text-[11px] text-black/70 mb-6">Khi đọc bài, hãy bấm nút <strong>🔖 LƯU BÀI</strong> để cất vào đây.</p>
+        <a href="/" class="win95-btn no-underline font-bold px-4 py-2 inline-flex items-center gap-2">
+          ✍️ KHÁM PHÁ BÀI VIẾT MỚI
+        </a>
+      </div>
+    </div>
+  ) : (
+    <div class="win95-container font-retro text-black max-w-3xl mx-auto mb-10">
+      <div class="win95-header">
+        <span>SAVED_ARTICLES.DOC</span>
+        <span class="text-[10px] text-vapor-yellow">{savedArticles.length} TÀI LIỆU</span>
+      </div>
+
+      <ul class="divide-y divide-[#e0e0e0] bg-white m-1 border-2 border-win-dark">
+        {savedArticles.map((art: any) => (
+          <li class="flex flex-wrap sm:flex-nowrap items-center gap-3 px-3 py-3 hover:bg-[#f0f0f0]">
+            {art.cover_url && (
+              <img src={art.cover_url} alt="" class="w-16 h-12 object-cover border border-win-dark shrink-0" loading="lazy" />
+            )}
+            <div class="min-w-0 flex-1">
+              <a href={`/articles/${art.slug}`} class="font-bold text-sm text-black no-underline hover:underline">
+                📄 {art.title}
+              </a>
+              <p class="text-[10px] text-win-dark line-clamp-1 mt-0.5">
+                {(Array.isArray(art.tags) ? art.tags : []).map((t: string) => `#${t}`).join(" ") || art.excerpt || ""}
+              </p>
+              <p class="text-[9px] text-win-dark mt-0.5">
+                Đã lưu: {new Date(art.saved_at).toLocaleDateString("vi-VN")}
+              </p>
+            </div>
+            <form method="POST" class="m-0 shrink-0">
+              <input type="hidden" name="action" value="remove" />
+              <input type="hidden" name="articleId" value={art.id} />
+              <button type="submit" class="win95-btn btn-danger text-[10px] px-2 py-1" aria-label={`Bỏ lưu bài ${art.title}`}>
+                ❌ GỠ
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</BaseLayout>

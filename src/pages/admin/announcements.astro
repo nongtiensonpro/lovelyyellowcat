@@ -1,0 +1,211 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { logAdminAction } from "../../lib/adminAudit";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile: any = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+if (!user || !userProfile || userProfile.role !== "admin") {
+  return Astro.redirect("/admin?error=admin-only");
+}
+
+let actionResult: { success: boolean; message: string } | null = null;
+
+// ── Mutations ──
+if (Astro.request.method === "POST" && user) {
+  const formData = await Astro.request.formData();
+  const action = String(formData.get("action") || "");
+  const id = String(formData.get("announcementId") || "");
+
+  try {
+    if (action === "create") {
+      const title = String(formData.get("title") || "").trim();
+      const body = String(formData.get("body") || "").trim();
+      const type = ["banner", "marquee", "popup"].includes(String(formData.get("type")))
+        ? String(formData.get("type"))
+        : "marquee";
+      const days = Math.min(365, Math.max(1, parseInt(String(formData.get("days") || "7"))));
+
+      if (!title) {
+        actionResult = { success: false, message: "Vui lòng nhập tiêu đề thông báo." };
+      } else {
+        const endAt = new Date(Date.now() + days * 86400000).toISOString();
+        const { error } = await supabase.from("site_announcements").insert({
+          title,
+          body,
+          type,
+          end_at: endAt,
+          created_by: user.id,
+        });
+        if (error) throw new Error(error.message);
+        await logAdminAction(supabase, {
+          adminId: user.id,
+          action: "announcement_create",
+          targetType: "profile",
+          targetId: user.id,
+          details: { title, type, days },
+        });
+        actionResult = { success: true, message: `Đã phát thông báo "${title}" (hiển thị ${days} ngày).` };
+      }
+    } else if (action === "toggle" && id) {
+      const { data: current } = await supabase
+        .from("site_announcements")
+        .select("is_active, title")
+        .eq("id", id)
+        .single();
+      if (current) {
+        const nextValue = !current.is_active;
+        const { error } = await supabase
+          .from("site_announcements")
+          .update({ is_active: nextValue })
+          .eq("id", id);
+        if (error) throw new Error(error.message);
+        await logAdminAction(supabase, {
+          adminId: user.id,
+          action: "announcement_toggle",
+          targetType: "profile",
+          targetId: user.id,
+          details: { announcement_id: id, active: nextValue },
+        });
+        actionResult = { success: true, message: nextValue ? "Đã kích hoạt lại thông báo." : "Đã tạm dừng thông báo." };
+      }
+    } else if (action === "delete" && id) {
+      const { error } = await supabase.from("site_announcements").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await logAdminAction(supabase, {
+        adminId: user.id,
+        action: "announcement_delete",
+        targetType: "profile",
+        targetId: user.id,
+        details: { announcement_id: id },
+      });
+      actionResult = { success: true, message: "Đã xóa vĩnh viễn thông báo." };
+    }
+  } catch (err: any) {
+    console.error("[ANNOUNCEMENTS] Mutation failed:", err.message);
+    actionResult = { success: false, message: "Sự cố hệ thống khi xử lý thông báo. Kiểm tra migration upgrade_v3 đã chạy chưa." };
+  }
+}
+
+// ── Danh sách thông báo (mọi trạng thái cho admin xem) ──
+const { data: announcements } = await supabase
+  .from("site_announcements")
+  .select("*")
+  .order("created_at", { ascending: false })
+  .limit(30);
+
+function formatAnnouncementDate(d: string | null) {
+  return d ? new Date(d).toLocaleString("vi-VN") : "—";
+}
+---
+
+<AdminLayout title="VAPORWAVE MAGAZINE // TRẠM PHÁT THÔNG BÁO" userProfile={userProfile} activePath="/admin/announcements">
+  {actionResult && (
+    <div class={`win95-container mb-5 font-retro text-xs ${actionResult.success ? "border-vapor-green" : "border-red-600"}`}>
+      <div class={`win95-header ${actionResult.success ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
+        <span>{actionResult.success ? "✅ WINPOPUP.SENT" : "❌ SYSTEM_ALERT.ERR"}</span>
+      </div>
+      <div class={`p-3 text-black font-bold ${actionResult.success ? "bg-green-100" : "bg-red-100"}`}>{actionResult.message}</div>
+    </div>
+  )}
+
+  <div class="text-center py-4 mb-4">
+    <h1 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-widest text-vapor-orange font-retro">
+      📣 WINPOPUP STATION
+    </h1>
+    <p class="text-[11px] tracking-wider text-text-secondary mt-1 font-retro uppercase">
+      -- Phát thông báo toàn站 kiểu WinPopUp 1995 --
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-10 items-start">
+
+    <!-- Form tạo mới -->
+    <form method="POST" action="/admin/announcements" class="lg:col-span-2 win95-container font-retro text-black">
+      <input type="hidden" name="action" value="create" />
+      <div class="win95-header"><span>✉️ NEW_BROADCAST.MSG</span></div>
+      <div class="p-4 bg-win-gray space-y-3">
+        <div>
+          <label for="ann-title" class="block text-[10px] font-bold uppercase mb-1">Tiêu đề (hiện trên banner) *</label>
+          <input id="ann-title" name="title" maxlength="120" required placeholder="VD: Triển lãm Mùa Hè Neon mở cửa!"
+            class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080;" />
+        </div>
+        <div>
+          <label for="ann-body" class="block text-[10px] font-bold uppercase mb-1">Nội dung phụ (tùy chọn)</label>
+          <textarea id="ann-body" name="body" rows="3" maxlength="300" placeholder="Chi tiết thêm hiển thị trong popup..."
+            class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080; resize: vertical;"></textarea>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label for="ann-type" class="block text-[10px] font-bold uppercase mb-1">Kiểu hiển thị</label>
+            <select id="ann-type" name="type" class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080;">
+              <option value="marquee">🎞️ Marquee — chữ chạy đầu trang</option>
+              <option value="banner">🚩 Banner — dải màu nổi bật</option>
+              <option value="popup">🪟 Popup — cửa sổ Win95 một lần</option>
+            </select>
+          </div>
+          <div class="w-28">
+            <label for="ann-days" class="block text-[10px] font-bold uppercase mb-1">Số ngày</label>
+            <input id="ann-days" name="days" type="number" min="1" max="365" value="7"
+              class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080;" />
+          </div>
+        </div>
+        <button type="submit" class="win95-btn w-full font-bold text-xs py-2 bg-vapor-orange/25">
+          📢 PHÁT THÔNG BÁO
+        </button>
+      </div>
+    </form>
+
+    <!-- Danh sách -->
+    <div class="lg:col-span-3 win95-container font-retro text-black">
+      <div class="win95-header"><span>📋 BROADCAST_HISTORY.LOG</span></div>
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] min-h-40">
+        {!announcements || announcements.length === 0 ? (
+          <p class="p-8 text-center text-win-dark font-bold text-xs">CHƯA CÓ THÔNG BÁO NÀO. SOẠN TIN ĐẦU TIÊN NGAY!</p>
+        ) : (
+          announcements.map((a: any) => {
+            const expired = a.end_at && new Date(a.end_at) < new Date();
+            return (
+              <div class={`p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 ${!a.is_active || expired ? "opacity-60" : ""}`}>
+                <span aria-hidden="true">{a.type === "popup" ? "🪟" : a.type === "banner" ? "🚩" : "🎞️"}</span>
+                <div class="min-w-0 flex-1">
+                  <p class="font-bold text-xs truncate">{a.title}</p>
+                  <p class="text-[9px] text-win-dark">
+                    Hết hạn: {formatAnnouncementDate(a.end_at)} · {expired ? "⚠️ CŨ" : a.is_active ? "🟢 ĐANG CHẠY" : "⏸ TẠM DỪNG"}
+                  </p>
+                </div>
+                <div class="flex gap-1.5 shrink-0">
+                  <form method="POST" class="m-0">
+                    <input type="hidden" name="action" value="toggle" />
+                    <input type="hidden" name="announcementId" value={a.id} />
+                    <button type="submit" class="win95-btn text-[10px] px-2 py-1 font-bold">{a.is_active ? "⏸ DỪNG" : "▶ CHẠY"}</button>
+                  </form>
+                  <form method="POST" class="m-0">
+                    <input type="hidden" name="action" value="delete" />
+                    <input type="hidden" name="announcementId" value={a.id} />
+                    <button type="submit" class="win95-btn btn-danger text-[10px] px-2 py-1 font-bold"
+                      onclick="return confirm('Xóa vĩnh viễn thông báo này?');">❌</button>
+                  </form>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  </div>
+</AdminLayout>

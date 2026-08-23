@@ -1,0 +1,153 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { listCloudinaryImages, type CloudinaryImageResource } from "../../lib/cloudinary";
+import { env } from "cloudflare:workers";
+
+const runtimeEnv: any = env;
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile: any = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+if (!user || !userProfile || userProfile.role !== "admin") {
+  return Astro.redirect("/admin?error=admin-only");
+}
+
+const url = new URL(Astro.request.url);
+const nextCursorParam = url.searchParams.get("cursor") || undefined;
+
+let resources: CloudinaryImageResource[] = [];
+let nextCursor: string | null = null;
+let listError: string | null = null;
+
+try {
+  const result = await listCloudinaryImages({ maxResults: 60, nextCursor: nextCursorParam }, runtimeEnv);
+  resources = result.resources;
+  nextCursor = result.nextCursor;
+  listError = result.error || null;
+} catch (err: any) {
+  listError = err.message || String(err);
+}
+
+function toThumb(secureUrl: string): string {
+  if (secureUrl.includes("/image/upload/")) {
+    return secureUrl.replace("/image/upload/", "/image/upload/w_320,h_240,c_fill,q_auto,f_auto/");
+  }
+  return secureUrl;
+}
+
+function formatBytes(bytes?: number): string {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+---
+
+<AdminLayout title="VAPORWAVE MAGAZINE // THƯ VIỆN ẢNH" userProfile={userProfile} activePath="/admin/media">
+  <div class="text-center py-4 mb-4">
+    <h1 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-widest text-vapor-purple font-retro">
+      🗃️ MEDIA LIBRARY
+    </h1>
+    <p class="text-[11px] tracking-wider text-text-secondary mt-1 font-retro uppercase">
+      -- KHO ẢNH CLOUDINARY · BẤM ĐỂ COPY LINK NHÚNG --
+    </p>
+  </div>
+
+  {listError && (
+    <div class="win95-container mb-5 max-w-3xl mx-auto font-retro text-xs border-red-600">
+      <div class="win95-header bg-gradient-to-r from-red-800 to-red-600"><span>❌ CLOUD_ERROR.ERR</span></div>
+      <div class="p-3 bg-red-100 text-black font-bold">{listError}</div>
+    </div>
+  )}
+
+  <div id="media-toast" hidden class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[var(--z-toast)] win95-container font-retro text-xs px-4 py-2 bg-win-gray text-black font-bold shadow-xl">
+    ✅ Đã copy vào clipboard!
+  </div>
+
+  {!listError && resources.length === 0 ? (
+    <div class="win95-container font-retro text-black max-w-xl mx-auto p-10 text-center">
+      <span class="text-4xl block mb-3" aria-hidden="true">🗃️</span>
+      <p class="font-bold text-sm text-black">Chưa có ảnh nào trong kho Cloudinary.</p>
+      <p class="text-[10px] text-black/70 mt-1">Ảnh tải lên qua Article Editor hoặc Submit sẽ xuất hiện tại đây.</p>
+    </div>
+  ) : (
+    <>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
+        {resources.map((img) => (
+          <div class="win95-container font-retro text-black" data-media-card data-url={img.secure_url}>
+            <div class="win95-header py-0.5 px-1.5">
+              <span class="font-mono text-[8px] truncate w-full" title={img.public_id}>{img.public_id.split("/").pop()}</span>
+            </div>
+            <a href={img.secure_url} target="_blank" rel="noopener" class="block aspect-4-3 overflow-hidden border-b border-win-dark bg-cosmic-black">
+              <img src={toThumb(img.secure_url)} alt={img.public_id} loading="lazy"
+                class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" style="filter:saturate(1.35);" />
+            </a>
+            <div class="p-1.5 space-y-1">
+              <p class="text-[8px] text-win-darkest flex justify-between">
+                <span>{formatBytes(img.bytes)}</span>
+                <span>{img.width && img.height ? `${img.width}×${img.height}` : ""}</span>
+              </p>
+              <button type="button" class="copy-url-btn win95-btn w-full text-[9px] py-1 font-bold">🔗 COPY URL</button>
+              <button type="button" class="copy-md-btn win95-btn w-full text-[9px] py-1 font-bold">📝 COPY MARKDOWN</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {nextCursor && (
+        <div class="pagination-bar mb-10">
+          <a href={`/admin/media?cursor=${encodeURIComponent(nextCursor)}`} class="win95-btn no-underline font-bold">
+            ⏭ TRANG SAU ▶
+          </a>
+        </div>
+      )}
+    </>
+  )}
+</AdminLayout>
+
+<script is:inline>
+  (function () {
+    var toast = document.getElementById("media-toast");
+    var toastTimer = null;
+
+    function showToast() {
+      if (!toast) return;
+      toast.hidden = false;
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toast.hidden = true;
+      }, 1800);
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showToast).catch(function () {});
+      }
+    }
+
+    document.querySelectorAll("[data-media-card]").forEach(function (card) {
+      var url = card.getAttribute("data-url") || "";
+      var urlBtn = card.querySelector(".copy-url-btn");
+      var mdBtn = card.querySelector(".copy-md-btn");
+
+      urlBtn && urlBtn.addEventListener("click", function () { copyText(url); });
+      mdBtn && mdBtn.addEventListener("click", function () {
+        copyText(`![Aesthetic image](${url})`);
+      });
+    });
+  })();
+</script>

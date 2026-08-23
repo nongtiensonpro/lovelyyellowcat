@@ -14,13 +14,12 @@ export const GET: APIRoute = async () => {
     JSON.stringify({
       success: true,
       hasKey: Boolean(apiKey),
-      apiKey: apiKey || "",
     }),
     {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "private, max-age=300",
+        "Cache-Control": "no-store",
       },
     }
   );

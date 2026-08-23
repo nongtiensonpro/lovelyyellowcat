@@ -123,6 +123,65 @@ async function createCloudinarySignature(params: Record<string, string>, apiSecr
   return sha1Hex(`${payload}${apiSecret}`);
 }
 
+export interface CloudinaryImageResource {
+  public_id: string;
+  secure_url: string;
+  created_at: string;
+  bytes?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface CloudinaryListResult {
+  resources: CloudinaryImageResource[];
+  nextCursor: string | null;
+  error?: string;
+}
+
+/**
+ * Liệt kê ảnh trong thư viện Cloudinary qua Admin API (signed request).
+ * Key/secret chỉ tồn tại phía server — không bao giờ xuống client.
+ */
+export async function listCloudinaryImages(
+  opts: { maxResults?: number; nextCursor?: string },
+  runtimeEnv?: CloudinaryRuntimeEnv
+): Promise<CloudinaryListResult> {
+  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig(runtimeEnv);
+  if (!cloudName || !apiKey || !apiSecret) {
+    return {
+      resources: [],
+      nextCursor: null,
+      error: "Thiếu cấu hình CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET trên server.",
+    };
+  }
+
+  try {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const paramsToSign: Record<string, string> = { timestamp };
+    if (opts.nextCursor) paramsToSign.next_cursor = opts.nextCursor;
+    if (opts.maxResults) paramsToSign.max_results = String(opts.maxResults);
+
+    const signature = await createCloudinarySignature(paramsToSign, apiSecret);
+    const query = new URLSearchParams({ ...paramsToSign, api_key: apiKey, signature });
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/resources/image?${query.toString()}`
+    );
+    const data: any = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return { resources: [], nextCursor: null, error: data?.error?.message || `HTTP ${response.status}` };
+    }
+
+    return {
+      resources: (data.resources || []) as CloudinaryImageResource[],
+      nextCursor: data.next_cursor || null,
+    };
+  } catch (error: any) {
+    return { resources: [], nextCursor: null, error: error.message || String(error) };
+  }
+}
+
 export async function deleteCloudinaryImages(publicIds: string[], runtimeEnv?: CloudinaryRuntimeEnv): Promise<CloudinaryDeleteSummary> {
   const ids = [...new Set(publicIds.filter(Boolean))];
   const summary: CloudinaryDeleteSummary = {

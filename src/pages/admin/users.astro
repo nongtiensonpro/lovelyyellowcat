@@ -1,5 +1,5 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminLayout from "../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
 import { UserManagementActions } from "../../components/UserManagementActions";
 
@@ -96,15 +96,7 @@ const { data: recentLogs } = await supabase
   .order("created_at", { ascending: false })
   .limit(5);
 
-// ── Đếm comments & submissions cho admin bar ──
-const { count: commentsCount } = await supabase
-  .from("comments")
-  .select("*", { count: "exact", head: true });
-
-const { count: pendingSubmissionsCount } = await supabase
-  .from("submissions")
-  .select("*", { count: "exact", head: true })
-  .eq("status", "pending");
+// ── Đếm comments & submissions cho admin bar ── (đã chuyển vào AdminLayout)
 
 // Hàm build URL giữ params
 function buildUrl(params: Record<string, string>) {
@@ -136,21 +128,7 @@ function formatAction(action: string) {
 }
 ---
 
-<BaseLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ NGƯỜI DÙNG" userProfile={userProfile}>
-  <!-- Menu Bar Quản Trị Viên -->
-  <div class="win95-container w-full mb-6 font-retro">
-    <div class="win95-header">
-      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
-    </div>
-    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
-      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
-      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
-      <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
-      <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
-      <a href="/admin/users" class="hover:underline no-underline text-black font-bold">👥 Quản Lý Người Dùng ({totalUsers || 0})</a>
-    </div>
-  </div>
-
+<AdminLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ NGƯỜI DÙNG" userProfile={userProfile} activePath="/admin/users">
   <!-- Header -->
   <div class="text-center py-6">
     <h1 class="text-3xl font-extrabold uppercase tracking-widest text-vapor-blue font-retro">
@@ -498,4 +476,4 @@ function formatAction(action: string) {
       )}
     </div>
   </div>
-</BaseLayout>
+</AdminLayout>

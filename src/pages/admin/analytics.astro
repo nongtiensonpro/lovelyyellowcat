@@ -1,0 +1,233 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile: any = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+if (!user || !userProfile || userProfile.role !== "admin") {
+  return Astro.redirect("/admin?error=admin-only");
+}
+
+// ── Export CSV ──
+const url = new URL(Astro.request.url);
+const exportKind = url.searchParams.get("export");
+
+if (exportKind === "top_articles") {
+  const { data: rows } = await supabase
+    .from("articles")
+    .select("title, slug, status, view_count, created_at")
+    .order("view_count", { ascending: false })
+    .limit(100);
+
+  const csvEscape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = ["title,slug,status,view_count,created_at"];
+  (rows || []).forEach((r: any) => {
+    lines.push([csvEscape(r.title), csvEscape(r.slug), csvEscape(r.status), r.view_count || 0, r.created_at].join(","));
+  });
+
+  return new Response("\uFEFF" + lines.join("\n"), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="lyc-top-articles-${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+// ── Leaderboards ──
+const { data: topArticles } = await supabase
+  .from("articles")
+  .select("title, slug, status, view_count")
+  .order("view_count", { ascending: false })
+  .limit(10);
+
+const { data: artistBoard } = await supabase
+  .from("artist_stats")
+  .select("id, full_name, avatar_url, artwork_count, total_reactions")
+  .order("total_reactions", { ascending: false })
+  .limit(8);
+
+// RPC top tranh yêu thích — bỏ qua lỗi nếu chưa chạy migration v3
+let topArtifacts: Array<{ submission_id: string; title: string; image_url: string; fav_count: number }> = [];
+try {
+  const rpc = await supabase.rpc("get_top_artifacts", { p_limit: 8 });
+  if (!rpc.error && Array.isArray(rpc.data)) topArtifacts = rpc.data;
+} catch {
+  // migration chưa chạy
+}
+
+// ── Growth stats 30 ngày + sparkline SVG ──
+interface DailyRow { day: string; new_users: number; new_articles: number; new_submissions: number; new_comments: number }
+let dailyStats: DailyRow[] = [];
+try {
+  const view = await supabase
+    .from("daily_stats")
+    .select("day, new_users, new_articles, new_submissions, new_comments")
+    .order("day", { ascending: true });
+  if (!view.error && Array.isArray(view.data)) dailyStats = view.data as DailyRow[];
+} catch {
+  // migration chưa chạy
+}
+
+function buildSparkline(values: number[]): { line: string; area: string; peak: number } {
+  const W = 280;
+  const H = 56;
+  const max = Math.max(...values, 1);
+  const stepX = values.length > 1 ? W / (values.length - 1) : W;
+  const points = values.map((v, i) => `${(i * stepX).toFixed(1)},${(H - (v / max) * (H - 6) - 3).toFixed(1)}`);
+  return {
+    line: `M${points.join(" L")}`,
+    area: `M0,${H} L${points.join(` L${""}`)} L${W},${H} Z`,
+    peak: max,
+  };
+}
+
+const seriesMeta = [
+  { key: "new_users" as const, label: "👤 Thành viên mới", color: "#ff71ce" },
+  { key: "new_articles" as const, label: "📰 Bài viết mới", color: "#01cdfe" },
+  { key: "new_submissions" as const, label: "🖼️ Tranh gửi về", color: "#05ffa1" },
+  { key: "new_comments" as const, label: "💬 Bình luận", color: "#b967ff" },
+];
+
+const hasDailyData = dailyStats.length > 0;
+---
+
+<AdminLayout title="VAPORWAVE MAGAZINE // TRUNG TÂM PHÂN TÍCH" userProfile={userProfile} activePath="/admin/analytics">
+  <div class="text-center py-4 mb-4">
+    <h1 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-widest text-vapor-blue font-retro">
+      📊 ANALYTICS CENTER
+    </h1>
+    <p class="text-[11px] tracking-wider text-text-secondary mt-1 font-retro uppercase">
+      -- NHẬN ĐỊNH HIỆU SUẤT NỘI DUNG & CỘNG ĐỒNG --
+    </p>
+  </div>
+
+  <!-- Growth sparklines -->
+  <div class="win95-container font-retro text-black mb-6">
+    <div class="win95-header"><span>📈 PERFORMANCE_MONITOR.EXE — 30 NGÀY</span></div>
+    {!hasDailyData ? (
+      <p class="p-8 text-center text-win-dark text-xs font-bold bg-win-gray">
+        Chưa có dữ liệu. Hãy chạy migration <code>supabase_upgrade_v3_admin.sql</code> để bật view daily_stats.
+      </p>
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-win-gray">
+        {seriesMeta.map((meta) => {
+          const values = dailyStats.map((d) => Number(d[meta.key] || 0));
+          const spark = buildSparkline(values);
+          const total = values.reduce((a, b) => a + b, 0);
+          return (
+            <div class="border-2 border-win-dark bg-white p-3">
+              <div class="flex justify-between items-baseline mb-1.5">
+                <span class="text-[10px] font-bold uppercase">{meta.label}</span>
+                <span class="font-mono font-bold" style={`color:${meta.color}`}>{total} / 30 ngày</span>
+              </div>
+              <svg viewBox="0 0 280 56" class="w-full h-14" role="img" aria-label={`Biểu đồ ${meta.label}`}>
+                <path d={spark.area} fill={meta.color} opacity="0.12" />
+                <path d={spark.line} fill="none" stroke={meta.color} stroke-width="2" />
+              </svg>
+              <p class="text-[8px] text-win-dark mt-1">Đỉnh: {spark.peak}/ngày · Dải: {dailyStats[0]?.day} → {dailyStats[dailyStats.length - 1]?.day}</p>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+    <!-- Top bài viết -->
+    <div class="win95-container font-retro text-black mb-6">
+      <div class="win95-header">
+        <span>🏆 TOP_ARTICLES.DLL</span>
+        <a href="/admin/analytics?export=top_articles" class="win95-btn text-[9px] font-bold py-0 px-2 no-underline text-black">⬇ CSV</a>
+      </div>
+      <div class="m-1 border-2 border-win-dark bg-white overflow-x-auto p-1">
+        <table class="win-table compact">
+          <thead><tr><th>#</th><th>Tiêu đề</th><th class="w-16 text-right">👁 Xem</th></tr></thead>
+          <tbody>
+            {!topArticles || topArticles.length === 0 ? (
+              <tr><td colspan="3" class="text-center p-6 text-win-dark font-bold">CHƯA CÓ DỮ LIỆU.</td></tr>
+            ) : (
+              topArticles.map((a: any, i: number) => (
+                <tr>
+                  <td class={`font-mono ${i < 3 ? "font-black" : ""}`}>{["🥇", "🥈", "🥉"][i] || i + 1}</td>
+                  <td>
+                    <a href={`/articles/${a.slug}`} target="_blank" rel="noopener" class="no-underline hover:underline line-clamp-1">{a.title}</a>
+                    {a.status !== "published" && <span class="badge badge-warning ml-1">{a.status}</span>}
+                  </td>
+                  <td class="text-right font-mono">{(a.view_count || 0).toLocaleString("vi-VN")}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Nghệ sĩ tích cực -->
+    <div class="win95-container font-retro text-black mb-6">
+      <div class="win95-header"><span>🎨 ARTIST_LEADERBOARD.EXE</span></div>
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] p-1">
+        {!artistBoard || artistBoard.length === 0 ? (
+          <p class="text-center p-6 text-win-dark font-bold text-xs">CHƯA CÓ NGHỆ SĨ NÀO ĐÓNG GÓP.</p>
+        ) : (
+          artistBoard.map((a: any, i: number) => (
+            <div class="flex items-center gap-2.5 px-2 py-2 hover:bg-[#f0f0f0]">
+              <span class="font-mono w-7 text-center shrink-0">{["🥇", "🥈", "🥉"][i] || i + 1}</span>
+              <img src={a.avatar_url || "/images/default-avatar.png"} alt="" loading="lazy"
+                class="w-8 h-8 object-cover border border-win-dark shrink-0" style="filter:saturate(1.4);" />
+              <a href={`/profile/${a.id}`} target="_blank" rel="noopener" class="flex-1 min-w-0 no-underline">
+                <span class="block font-bold text-xs text-black truncate hover:underline">{a.full_name || "Anonymous"}</span>
+                <span class="block text-[9px] text-win-dark">{a.artwork_count} tác phẩm</span>
+              </a>
+              <span class="badge badge-error shrink-0">💖 {(Number(a.total_reactions) || 0).toLocaleString("vi-VN")}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+
+    <!-- Top tranh yêu thích -->
+    <div class="win95-container font-retro text-black mb-10 lg:col-span-2">
+      <div class="win95-header"><span>💾 MOST_SAVED_ARTWORKS.DB — TRANH ĐƯỢC YÊU THÍCH NHẤT</span></div>
+      {topArtifacts.length === 0 ? (
+        <p class="p-8 text-center text-win-dark text-xs font-bold bg-win-gray">
+          Chưa có dữ liệu (yêu cầu RPC get_top_artifacts từ migration upgrade_v3).
+        </p>
+      ) : (
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-win-gray">
+          {topArtifacts.map((t, i) => (
+            <div class="border-2 border-win-dark bg-white relative group">
+              <span class="absolute top-1 left-1 z-10 text-sm" aria-hidden="true">{["🥇", "🥈", "🥉"][i] || "⭐"}</span>
+              <a href={`/gallery/${t.submission_id}`} target="_blank" rel="noopener" class="block aspect-square overflow-hidden">
+                {t.image_url && (
+                  <img src={t.image_url} alt={t.title || "Tác phẩm"} loading="lazy"
+                    class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    style="filter: saturate(1.4) contrast(1.05);" />
+                )}
+              </a>
+              <div class="p-2">
+                <p class="text-[10px] font-bold truncate" title={t.title}>{t.title || "Tác phẩm không tên"}</p>
+                <p class="text-[9px] text-win-dark">🔖 {Number(t.fav_count).toLocaleString("vi-VN")} lượt lưu</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</AdminLayout>

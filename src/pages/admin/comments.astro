@@ -1,9 +1,12 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminLayout from "../../layouts/AdminLayout.astro";
 import { deleteCommentThread } from "../../lib/adminModeration";
+import { logAdminAction } from "../../lib/adminAudit";
 import { sendCommentDeletedEmail } from "../../lib/emailNotification";
 import { createSupabaseServerClient } from "../../lib/supabase";
 import { env } from "cloudflare:workers";
+
+const PAGE_SIZE = 20;
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -20,6 +23,20 @@ if (user) {
     .eq("id", user.id)
     .single();
   userProfile = data;
+}
+
+// ── Query params: tìm kiếm + phân trang ──
+const url = new URL(Astro.request.url);
+const search = url.searchParams.get("search")?.trim() || "";
+const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+
+function buildUrl(params: Record<string, string>) {
+  const u = new URL("/admin/comments", Astro.url.origin);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) u.searchParams.set(k, v);
+    else u.searchParams.delete(k);
+  });
+  return u.pathname + u.search;
 }
 
 // Xử lý các hành động POST từ Admin (Xóa bình luận)
@@ -49,6 +66,17 @@ if (Astro.request.method === "POST") {
       actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
     }
 
+    // Ghi audit log cho thao tác xóa bình luận
+    if (actionResult?.success && user) {
+      await logAdminAction(supabase, {
+        adminId: user.id,
+        action: "comment_delete",
+        targetType: "comment",
+        targetId: commentId,
+        details: { reason: deleteReason || null },
+      });
+    }
+
     // Gửi email thông báo nếu xóa thành công
     if (actionResult?.success && commentData?.profiles) {
       const profile = commentData.profiles as any;
@@ -71,8 +99,8 @@ if (Astro.request.method === "POST") {
   }
 }
 
-// Lấy danh sách bình luận
-const { data: comments, error: fetchError } = await supabase
+// Lấy danh sách bình luận (phân trang + tìm kiếm nội dung/tác giả)
+let commentsQuery = supabase
   .from("comments")
   .select(`
     id,
@@ -84,36 +112,41 @@ const { data: comments, error: fetchError } = await supabase
       full_name,
       avatar_url
     )
-  `)
-  .order("created_at", { ascending: false });
+  `, { count: "exact" });
 
-const { count: commentsCount } = await supabase
-  .from("comments")
-  .select("*", { count: "exact", head: true });
+if (search) {
+  commentsQuery = commentsQuery.or(`content.ilike.%${search}%,profiles.full_name.ilike.%${search}%`);
+}
 
-const { count: pendingSubmissionsCount } = await supabase
-  .from("submissions")
-  .select("*", { count: "exact", head: true })
-  .eq("status", "pending");
+commentsQuery = commentsQuery.order("created_at", { ascending: false });
+
+const from = (page - 1) * PAGE_SIZE;
+const { data: comments, count: commentsCount, error: fetchError } =
+  await commentsQuery.range(from, from + PAGE_SIZE - 1);
+
+const totalPages = Math.max(1, Math.ceil((commentsCount || 0) / PAGE_SIZE));
+
+// Tra tiêu đề bài viết cho các bình luận trong trang hiện tại
+// (comments.article_id là TEXT — có thể là uuid hoặc slug cũ)
+const articleLookup = new Map<string, { title: string; slug: string }>();
+if (comments && comments.length > 0) {
+  const rawIds = Array.from(new Set(comments.map((c: any) => String(c.article_id)).filter(Boolean)));
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidIds = rawIds.filter((id) => UUID_RE.test(id));
+  const slugIds = rawIds.filter((id) => !UUID_RE.test(id));
+
+  if (uuidIds.length > 0) {
+    const { data } = await supabase.from("articles").select("id, title, slug").in("id", uuidIds);
+    (data || []).forEach((a: any) => articleLookup.set(a.id, a));
+  }
+  if (slugIds.length > 0) {
+    const { data } = await supabase.from("articles").select("id, title, slug").in("slug", slugIds);
+    (data || []).forEach((a: any) => articleLookup.set(a.slug, a));
+  }
+}
 ---
 
-<BaseLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ BÌNH LUẬN" userProfile={userProfile}>
-  <!-- Menu Bar Quản Trị Viên -->
-  <div class="win95-container w-full mb-6 font-retro">
-    <div class="win95-header">
-      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
-    </div>
-    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
-      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
-      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
-      <a href="/admin/comments" class="hover:underline no-underline text-black font-bold">Duyệt Bình Luận ({commentsCount || 0})</a>
-      <a href="/admin/submissions" class="hover:underline no-underline text-black">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
-      {userProfile?.role === 'admin' && (
-        <a href="/admin/users" class="hover:underline no-underline text-black">👥 Quản Lý Người Dùng</a>
-      )}
-    </div>
-  </div>
-
+<AdminLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ BÌNH LUẬN" userProfile={userProfile} activePath="/admin/comments">
   <!-- Thông báo kết quả hành động -->
   {actionResult && (
     <div class={`win95-container mb-6 font-retro text-xs ${actionResult.success ? "border-vapor-green" : "border-red-600"}`}>
@@ -150,11 +183,29 @@ const { count: pendingSubmissionsCount } = await supabase
     </p>
   </div>
 
+  <!-- Thanh tìm kiếm -->
+  <form method="GET" action="/admin/comments" class="win95-container font-retro text-black mb-4">
+    <div class="win95-header"><span>🔍 SEARCH_COMMENTS.DLL</span></div>
+    <div class="p-3 bg-win-gray flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[220px]">
+        <label for="search" class="block text-[10px] font-bold uppercase mb-1">Tìm theo nội dung bình luận / tên tác giả</label>
+        <input id="search" name="search" value={search} placeholder="Nhập từ khóa..."
+          class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080;" />
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="win95-btn font-bold text-xs px-4 py-1.5">🔍 TÌM</button>
+        {search && (
+          <a href="/admin/comments" class="win95-btn font-bold text-xs px-3 py-1.5 no-underline">🔄 RESET</a>
+        )}
+      </div>
+    </div>
+  </form>
+
   <!-- Comments Moderation Table Area -->
-  <div class="win95-container font-retro text-black mb-10">
+  <div class="win95-container font-retro text-black mb-6">
     <div class="win95-header">
       <span>COMMENTS_DATABASE.DB</span>
-      <span class="text-[10px] text-vapor-green">TOTAL: {commentsCount || 0} ITEMS</span>
+      <span class="text-[10px] text-vapor-green">TỔNG: {commentsCount || 0} BẢN GHI · TRANG {page}/{totalPages}</span>
     </div>
 
     <div class="bg-white overflow-x-auto border-2 border-win-dark p-1">
@@ -162,7 +213,7 @@ const { count: pendingSubmissionsCount } = await supabase
         <thead>
           <tr class="bg-[#c0c0c0] border-b border-win-dark">
             <th class="p-2 border-r border-win-dark font-bold w-48">NGƯỜI GỬI</th>
-            <th class="p-2 border-r border-win-dark font-bold w-44">BÀI VIẾT (ID)</th>
+            <th class="p-2 border-r border-win-dark font-bold w-52">BÀI VIẾT</th>
             <th class="p-2 border-r border-win-dark font-bold">NỘI DUNG BÌNH LUẬN</th>
             <th class="p-2 border-r border-win-dark font-bold w-36">NGÀY GỬI</th>
             <th class="p-2 font-bold w-32 text-center">HÀNH ĐỘNG</th>
@@ -186,9 +237,18 @@ const { count: pendingSubmissionsCount } = await supabase
                   </div>
                 </td>
                 <td class="p-2 border-r border-[#e0e0e0]">
-                  <a href={`/articles/${comment.article_id}`} class="font-mono text-[10px] text-vapor-purple hover:underline no-underline break-all" target="_blank">
-                    {comment.article_id}
-                  </a>
+                  {(() => {
+                    const art = articleLookup.get(String(comment.article_id));
+                    return art ? (
+                      <a href={`/articles/${art.slug}`} class="text-[10px] font-bold text-vapor-purple hover:underline no-underline" target="_blank" rel="noopener">
+                        📄 {art.title}
+                      </a>
+                    ) : (
+                      <a href={`/articles/${comment.article_id}`} class="font-mono text-[9px] text-win-dark hover:underline no-underline break-all" target="_blank" rel="noopener">
+                        #{String(comment.article_id).slice(0, 12)}…
+                      </a>
+                    );
+                  })()}
                 </td>
                 <td class="p-2 border-r border-[#e0e0e0] text-black italic max-w-md">
                   <div class="break-words line-clamp-3">"{comment.content}"</div>
@@ -230,10 +290,27 @@ const { count: pendingSubmissionsCount } = await supabase
       </table>
     </div>
 
+    <!-- Pagination -->
+    {totalPages > 1 && (
+      <nav class="pagination-bar my-4" aria-label="Phân trang bình luận">
+        {page > 1 ? (
+          <a href={buildUrl({ page: String(page - 1), search })} class="win95-btn no-underline font-bold">◀ Trước</a>
+        ) : (
+          <span class="win95-btn text-win-dark">◀ Trước</span>
+        )}
+        <span class="page-info">Trang {page} / {totalPages}</span>
+        {page < totalPages ? (
+          <a href={buildUrl({ page: String(page + 1), search })} class="win95-btn no-underline font-bold">Sau ▶</a>
+        ) : (
+          <span class="win95-btn text-win-dark">Sau ▶</span>
+        )}
+      </nav>
+    )}
+
     <!-- Status Bar -->
     <div class="p-1.5 bg-win-gray border-t border-white text-[8px] text-win-dark font-retro flex justify-between">
-      <span>COMMENT_MODERATION.SYS v1.0</span>
+      <span>COMMENT_MODERATION.SYS v3.0</span>
       <span>{commentsCount || 0} bình luận | Cập nhật: {new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</span>
     </div>
   </div>
-</BaseLayout>
+</AdminLayout>

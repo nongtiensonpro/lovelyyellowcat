@@ -5,6 +5,7 @@ import RetroSticker from "../../components/RetroSticker.astro";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../../lib/supabase";
 import { RealtimeComments } from "../../components/RealtimeComments";
 import { ReactionBar } from "../../components/ReactionBar";
+import { BookmarkButton } from "../../components/BookmarkButton";
 import { parseMarkdownToHtml } from "../../lib/markdown";
 
 const { slug } = Astro.params;
@@ -170,10 +171,36 @@ if (dbArticle && relatedData && relatedData.length > 0) {
       &lt;&lt; QUAY LẠI TRANG CHỦ
     </a>
 
-    <div class="flex items-center gap-2">
-      <button id="share-article-btn" class="win95-btn text-black px-3 py-1.5 font-bold" style="min-height: 32px;">
-        🔗 CHIA SẺ
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      <BookmarkButton client:load articleId={article.id} isLoggedIn={!!currentUser} />
+      <button id="native-share-btn" hidden class="win95-btn text-black px-3 py-1.5 font-bold" style="min-height: 32px;" aria-label="Chia sẻ qua ứng dụng thiết bị">
+        📤 CHIA SẺ
       </button>
+      <button id="share-article-btn" class="win95-btn text-black px-3 py-1.5 font-bold" style="min-height: 32px;">
+        🔗 COPY
+      </button>
+      <a
+        id="share-facebook"
+        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="win95-btn text-black px-3 py-1.5 font-bold no-underline"
+        style="min-height: 32px;"
+        aria-label="Chia sẻ lên Facebook"
+      >
+        📘 FB
+      </a>
+      <a
+        id="share-x"
+        href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(Astro.url.href)}&text=${encodeURIComponent((article.title || "") + " — LOVELYYELLOWCAT")}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="win95-btn text-black px-3 py-1.5 font-bold no-underline"
+        style="min-height: 32px;"
+        aria-label="Chia sẻ lên X / Twitter"
+      >
+        𝕏 POST
+      </a>
       <button onclick="window.print()" class="win95-btn text-black px-3 py-1.5 font-bold no-print" style="min-height: 32px;">
         🖨️ IN BÀI
       </button>
@@ -188,10 +215,10 @@ if (dbArticle && relatedData && relatedData.length > 0) {
         <span>📝</span>
         <span class="truncate font-bold text-xs">WORDPAD.EXE - [{article.title}.DOC]</span>
       </div>
-      <div class="flex gap-1 shrink-0">
-        <button class="win95-btn py-0 px-1 text-[9px]">_</button>
-        <button class="win95-btn py-0 px-1 text-[9px]">□</button>
-        <button class="win95-btn py-0 px-1 text-[9px]">✕</button>
+      <div class="flex gap-1 shrink-0" aria-hidden="true">
+        <button class="win95-btn py-0 px-1 text-[9px]" tabindex="-1" aria-label="Thu nhỏ (trang trí)">_</button>
+        <button class="win95-btn py-0 px-1 text-[9px]" tabindex="-1" aria-label="Phóng to (trang trí)">□</button>
+        <button class="win95-btn py-0 px-1 text-[9px]" tabindex="-1" aria-label="Đóng (trang trí)">✕</button>
       </div>
     </div>
 
@@ -444,7 +471,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
 
   <!-- Reaction Bar -->
   <div class="mb-8">
-    <ReactionBar client:load articleId={slug || "unknown"} currentUser={currentUser} />
+    <ReactionBar client:visible articleId={slug || "unknown"} currentUser={currentUser} />
   </div>
 
   <!-- Related Articles Stack -->
@@ -483,11 +510,11 @@ if (dbArticle && relatedData && relatedData.length > 0) {
         💬 DIỄN ĐÀN THẢO LUẬN NGHỆ THUẬT // REALTIME STREAM
       </h3>
     </div>
-    <RealtimeComments 
-      client:load 
-      articleId={slug || "unknown"} 
-      initialComments={initialComments} 
-      currentUser={currentUser} 
+    <RealtimeComments
+      client:visible
+      articleId={slug || "unknown"}
+      initialComments={initialComments}
+      currentUser={currentUser}
     />
   </div>
 </BaseLayout>
@@ -503,7 +530,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     }
   });
 
-  // ─── Share Article Button (Copy Link) ───
+  // ─── Share Article: Web Share API + Copy Link ───
   const shareBtn = document.getElementById("share-article-btn");
   if (shareBtn) {
     shareBtn.addEventListener("click", async () => {
@@ -516,6 +543,28 @@ if (dbArticle && relatedData && relatedData.length > 0) {
         }, 2000);
       } catch (err) {
         alert("Đường dẫn: " + window.location.href);
+      }
+    });
+  }
+
+  // Nút chia sẻ hệ thống (hiện trên mobile / trình duyệt hỗ trợ Web Share API)
+  const nativeShareBtn = document.getElementById("native-share-btn");
+  if (nativeShareBtn && typeof navigator.share === "function") {
+    nativeShareBtn.hidden = false;
+    nativeShareBtn.addEventListener("click", async () => {
+      try {
+        await navigator.share({
+          title: document.title,
+          url: window.location.href,
+        });
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          try {
+            await navigator.clipboard.writeText(window.location.href);
+            nativeShareBtn.textContent = "✅ ĐÃ COPY!";
+            setTimeout(() => { nativeShareBtn.textContent = "📤 CHIA SẺ"; }, 2000);
+          } catch {}
+        }
       }
     });
   }

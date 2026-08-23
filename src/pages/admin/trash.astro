@@ -1,0 +1,213 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { deleteArticleWithRelations, deleteSubmissionWithRelations } from "../../lib/adminModeration";
+import { logAdminAction } from "../../lib/adminAudit";
+import { env } from "cloudflare:workers";
+
+const runtimeEnv: any = env;
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile: any = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+if (!user || !userProfile || userProfile.role !== "admin") {
+  return Astro.redirect("/admin?error=admin-only");
+}
+
+let actionResult: { success: boolean; message: string } | null = null;
+
+// ── Mutations ──
+if (Astro.request.method === "POST" && user) {
+  const formData = await Astro.request.formData();
+  const action = String(formData.get("action") || "");
+  const articleId = String(formData.get("articleId") || "");
+  const submissionId = String(formData.get("submissionId") || "");
+
+  try {
+    if (action === "restore_article" && articleId) {
+      const { data: art } = await supabase
+        .from("articles")
+        .select("title")
+        .eq("id", articleId)
+        .single();
+      const { error } = await supabase
+        .from("articles")
+        .update({ deleted_at: null, status: "draft" })
+        .eq("id", articleId);
+      if (error) throw new Error(error.message);
+      await logAdminAction(supabase, { adminId: user.id, action: "article_restore", targetType: "article", targetId: articleId });
+      actionResult = { success: true, message: `Đã khôi phục "${art?.title || "bài viết"}" về bản nháp.` };
+    } else if (action === "restore_submission" && submissionId) {
+      const { error } = await supabase
+        .from("submissions")
+        .update({ deleted_at: null, status: "pending" })
+        .eq("id", submissionId);
+      if (error) throw new Error(error.message);
+      await logAdminAction(supabase, { adminId: user.id, action: "submission_restore", targetType: "submission", targetId: submissionId });
+      actionResult = { success: true, message: "Đã khôi phục tranh về hàng chờ duyệt." };
+    } else if ((action === "purge_article" || action === "purge_submission") && (articleId || submissionId)) {
+      // XÓA VĨNH VIỄN: dọn sạch comments/reactions/ảnh Cloudinary liên quan
+      if (action === "purge_article") {
+        const result = await deleteArticleWithRelations(supabase, articleId, runtimeEnv);
+        await logAdminAction(supabase, { adminId: user.id, action: "article_purge", targetType: "article", targetId: articleId, details: { success: result.success } });
+        actionResult = result;
+      } else {
+        const result = await deleteSubmissionWithRelations(supabase, submissionId, runtimeEnv);
+        await logAdminAction(supabase, { adminId: user.id, action: "submission_purge", targetType: "submission", targetId: submissionId, details: { success: result.success } });
+        actionResult = result;
+      }
+    } else if (action === "purge_old") {
+      // Dọn các món đã nằm trong thùng quá 30 ngày
+      const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
+
+      const { data: oldArticles } = await supabase
+        .from("articles")
+        .select("id")
+        .lt("deleted_at", cutoff);
+      let purgedCount = 0;
+      let failCount = 0;
+      for (const row of oldArticles || []) {
+        const res = await deleteArticleWithRelations(supabase, row.id, runtimeEnv);
+        if (res.success) purgedCount++; else failCount++;
+      }
+
+      const { data: oldSubs } = await supabase
+        .from("submissions")
+        .select("id")
+        .lt("deleted_at", cutoff);
+      for (const row of oldSubs || []) {
+        const res = await deleteSubmissionWithRelations(supabase, row.id, runtimeEnv);
+        if (res.success) purgedCount++; else failCount++;
+      }
+
+      await logAdminAction(supabase, { adminId: user.id, action: "trash_purge_old", targetType: "profile", targetId: user.id, details: { purged: purgedCount, failed: failCount } });
+      actionResult = { success: failCount === 0, message: `Đã dọn vĩnh viễn ${purgedCount} mục${failCount > 0 ? `, ${failCount} mục lỗi` : ""}.` };
+    }
+  } catch (err: any) {
+    console.error("[TRASH] Mutation failed:", err.message);
+    actionResult = { success: false, message: "Sự cố hệ thống khi xử lý Thùng Rác." };
+  }
+}
+
+// ── Danh sách rác ──
+const { data: trashedArticles } = await supabase
+  .from("articles")
+  .select("id, title, slug, deleted_at, profiles(full_name)")
+  .not("deleted_at", "is", null)
+  .order("deleted_at", { ascending: false });
+
+const { data: trashedSubmissions } = await supabase
+  .from("submissions")
+  .select("id, title, image_url, deleted_at, profiles:profiles!author_id(full_name)")
+  .not("deleted_at", "is", null)
+  .order("deleted_at", { ascending: false });
+
+function daysLeft(deletedAt: string): number {
+  return Math.max(0, 30 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000));
+}
+---
+
+<AdminLayout title="VAPORWAVE MAGAZINE // THÙNG RÁC HỆ THỐNG" userProfile={userProfile} activePath="/admin/trash">
+  {actionResult && (
+    <div class={`win95-container mb-5 font-retro text-xs ${actionResult.success ? "border-vapor-green" : "border-red-600"}`}>
+      <div class={`win95-header ${actionResult.success ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
+        <span>{actionResult.success ? "✅ RECYCLE_BIN.OK" : "❌ SYSTEM_ALERT.ERR"}</span>
+      </div>
+      <div class={`p-3 text-black font-bold ${actionResult.success ? "bg-green-100" : "bg-red-100"}`}>{actionResult.message}</div>
+    </div>
+  )}
+
+  <div class="text-center py-4 mb-4">
+    <h1 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-widest text-vapor-pink font-retro">
+      🗑️ RECYCLE BIN
+    </h1>
+    <p class="text-[11px] tracking-wider text-text-secondary mt-1 font-retro uppercase">
+      Mọi thứ bỏ vào đây còn phục hồi được trong 30 ngày
+    </p>
+  </div>
+
+  <form method="POST" action="/admin/trash" class="max-w-4xl mx-auto mb-4 flex justify-end">
+    <input type="hidden" name="action" value="purge_old" />
+    <button type="submit" class="win95-btn btn-danger font-bold text-xs px-4 py-2"
+      onclick="return confirm('🧹 Dọn VĨNH VIỄN mọi mục đã nằm trong thùng quá 30 ngày (kèm ảnh Cloudinary)?');">
+      🧹 DỌN MỤC CŨ HƠN 30 NGÀY
+    </button>
+  </form>
+
+  <form method="POST" action="/admin/trash">
+    <input type="hidden" name="articleId" value="" />
+    <input type="hidden" name="submissionId" value="" />
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto mb-10 items-start">
+
+    <!-- Bài viết đã bỏ -->
+    <div class="win95-container font-retro text-black">
+      <div class="win95-header"><span>📄 TRASH_ARTICLES ({trashedArticles?.length || 0})</span></div>
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] min-h-32 p-1">
+        {!trashedArticles || trashedArticles.length === 0 ? (
+          <p class="p-8 text-center text-win-dark font-bold text-xs">Thùng rác bài viết đang trống. ✨</p>
+        ) : (
+          trashedArticles.map((a: any) => (
+            <div class="flex items-center gap-3 px-2 py-2 hover:bg-[#f0f0f0]">
+              <span aria-hidden="true">📄</span>
+              <div class="min-w-0 flex-1">
+                <p class="font-bold text-xs truncate">{a.title}</p>
+                <p class="text-[9px] text-win-dark">
+                  {a.profiles?.full_name || "—"} · còn <strong class={daysLeft(a.deleted_at) <= 7 ? "text-red-700" : ""}>{daysLeft(a.deleted_at)} ngày</strong>
+                </p>
+              </div>
+              <button type="submit" name="action" value="restore_article" formnovalidate
+                onclick={`this.form.articleId.value='${a.id}'`}
+                class="win95-btn text-[10px] px-2 py-1 font-bold shrink-0">♻️ KHÔI PHỤC</button>
+              <button type="submit" name="action" value="purge_article" formnovalidate
+                onclick={`if(!confirm('Xóa VĨNH VIỄN "${a.title}" cùng bình luận + ảnh?')) return false; this.form.articleId.value='${a.id}';`}
+                class="win95-btn btn-danger text-[10px] px-2 py-1 font-bold shrink-0">❌</button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+
+    <!-- Tranh đã bỏ -->
+    <div class="win95-container font-retro text-black">
+      <div class="win95-header"><span>🖼️ TRASH_SUBMISSIONS ({trashedSubmissions?.length || 0})</span></div>
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] min-h-32 p-1">
+        {!trashedSubmissions || trashedSubmissions.length === 0 ? (
+          <p class="p-8 text-center text-win-dark font-bold text-xs">Thùng rác tranh đang trống. ✨</p>
+        ) : (
+          trashedSubmissions.map((s: any) => (
+            <div class="flex items-center gap-3 px-2 py-2 hover:bg-[#f0f0f0]">
+              <img src={s.image_url} alt="" loading="lazy" class="w-10 h-8 object-cover border border-win-dark shrink-0" />
+              <div class="min-w-0 flex-1">
+                <p class="font-bold text-xs truncate">{s.title || "Tác phẩm không tên"}</p>
+                <p class="text-[9px] text-win-dark">
+                  {s.profiles?.full_name || "—"} · còn <strong class={daysLeft(s.deleted_at) <= 7 ? "text-red-700" : ""}>{daysLeft(s.deleted_at)} ngày</strong>
+                </p>
+              </div>
+              <button type="submit" name="action" value="restore_submission" formnovalidate
+                onclick={`this.form.submissionId.value='${s.id}'`}
+                class="win95-btn text-[10px] px-2 py-1 font-bold shrink-0">♻️ KHÔI PHỤC</button>
+              <button type="submit" name="action" value="purge_submission" formnovalidate
+                onclick={`if(!confirm('Xóa VĨNH VIỄN tranh này kèm ảnh Cloudinary?')) return false; this.form.submissionId.value='${s.id}';`}
+                class="win95-btn btn-danger text-[10px] px-2 py-1 font-bold shrink-0">❌</button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+  </form>
+</AdminLayout>

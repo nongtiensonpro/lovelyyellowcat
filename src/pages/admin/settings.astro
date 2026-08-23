@@ -1,0 +1,176 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { createSupabaseServerClient } from "../../lib/supabase";
+import { logAdminAction } from "../../lib/adminAudit";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// Xác thực (middleware đã chặn, đây là lớp phòng thủ thứ hai)
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile: any = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+if (!user || !userProfile || userProfile.role !== "admin") {
+  return Astro.redirect("/admin?error=admin-only");
+}
+
+// Đọc toàn bộ settings hiện tại
+const { data: settingRows } = await supabase
+  .from("site_settings")
+  .select("key, value");
+
+const settingsMap: Record<string, any> = {};
+(settingRows || []).forEach((row) => {
+  settingsMap[row.key] = row.value || {};
+});
+
+const maintenanceEnabled = settingsMap.maintenance_mode?.enabled === true;
+const submissionsOpen = settingsMap.submissions_open?.enabled !== false;
+const commentMinLength = Number(settingsMap.comment_min_length?.value ?? 2);
+
+let savedOk = false;
+const url = new URL(Astro.request.url);
+savedOk = url.searchParams.get("saved") === "1";
+
+// Xử lý lưu cài đặt
+if (Astro.request.method === "POST" && user) {
+  try {
+    const formData = await Astro.request.formData();
+
+    const nextMaintenance = formData.get("maintenance_mode") === "on";
+    const nextSubmissionsOpen = formData.get("submissions_open") === "on";
+    const rawMinLength = parseInt(String(formData.get("comment_min_length") || "2"));
+    const nextMinLength = Math.min(500, Math.max(1, isNaN(rawMinLength) ? 2 : rawMinLength));
+
+    const changes: Record<string, unknown> = {};
+
+    if (nextMaintenance !== maintenanceEnabled) {
+      changes.maintenance_mode = { enabled: nextMaintenance };
+    }
+    if (nextSubmissionsOpen !== submissionsOpen) {
+      changes.submissions_open = { enabled: nextSubmissionsOpen };
+    }
+    if (nextMinLength !== commentMinLength) {
+      changes.comment_min_length = { value: nextMinLength };
+    }
+
+    for (const [key, value] of Object.entries(changes)) {
+      const { error } = await supabase
+        .from("site_settings")
+        .upsert({ key, value, updated_by: user.id, updated_at: new Date().toISOString() });
+      if (error) throw new Error(error.message);
+    }
+
+    if (Object.keys(changes).length > 0) {
+      await logAdminAction(supabase, {
+        adminId: user.id,
+        action: "settings_change",
+        targetType: "profile",
+        targetId: user.id,
+        details: changes,
+      });
+    }
+
+    return Astro.redirect("/admin/settings?saved=1", 303);
+  } catch (err: any) {
+    console.error("[SETTINGS] Save failed:", err.message);
+    return Astro.redirect("/admin/settings?saved=0", 303);
+  }
+}
+---
+
+<AdminLayout title="VAPORWAVE MAGAZINE // CÀI ĐẶT HỆ THỐNG" userProfile={userProfile} activePath="/admin/settings">
+  {url.searchParams.has("saved") && (
+    <div class={`win95-container mb-6 font-retro text-xs ${savedOk ? "border-vapor-green" : "border-red-600"}`}>
+      <div class={`win95-header ${savedOk ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
+        <span>{savedOk ? "✅ CONFIG.SYS SAVED" : "❌ SYSTEM_ALERT.ERR"}</span>
+      </div>
+      <div class={`p-3 text-black font-bold ${savedOk ? "bg-green-100" : "bg-red-100"}`}>
+        {savedOk ? "Đã lưu cài đặt hệ thống thành công. Thay đổi có hiệu lực ngay lập tức." : "Không thể lưu cài đặt. Kiểm tra Cloudflare Workers Logs để biết chi tiết."}
+      </div>
+    </div>
+  )}
+
+  <div class="text-center py-4 mb-4">
+    <h1 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-widest text-vapor-yellow font-retro">
+      ⚙️ SYSTEM SETTINGS
+    </h1>
+    <p class="text-[11px] tracking-wider text-text-secondary mt-1 font-retro uppercase">
+      -- BẢNG ĐIỀU KHIỂN CẤU HÌNH TOÀN TRANG --
+    </p>
+  </div>
+
+  <form method="POST" action="/admin/settings" class="space-y-5 max-w-3xl mx-auto mb-10">
+
+    <!-- Maintenance Mode -->
+    <fieldset class="win95-container font-retro text-black">
+      <legend class="win95-header w-full">🛠️ MAINTENANCE_MODE.DLL</legend>
+      <label class="flex items-start gap-3 p-4 bg-win-gray cursor-pointer">
+        <input type="checkbox" name="maintenance_mode" class="checkbox-vapor mt-0.5" checked={maintenanceEnabled} />
+        <span class="min-w-0">
+          <strong class="block text-xs uppercase">Bật chế độ bảo trì toàn trang</strong>
+          <span class="block text-[10px] text-black/70 leading-relaxed mt-1">
+            Khi bật, mọi khách truy cập (kể cả reader đã đăng nhập) sẽ thấy màn hình
+            "HỆ THỐNG ĐANG BẢO TRÌ" màu xanh Win95 kèm mã lỗi 503. Chỉ admin & editor
+            mới vào được khu vực nội dung. API công khai vẫn hoạt động.
+          </span>
+        </span>
+      </label>
+    </fieldset>
+
+    <!-- Submissions Gate -->
+    <fieldset class="win95-container font-retro text-black">
+      <legend class="win95-header w-full">🖼️ SUBMISSIONS_GATE.EXE</legend>
+      <label class="flex items-start gap-3 p-4 bg-win-gray cursor-pointer">
+        <input type="checkbox" name="submissions_open" class="checkbox-vapor mt-0.5" checked={submissionsOpen} />
+        <span class="min-w-0">
+          <strong class="block text-xs uppercase">Mở cửa nhận tranh cộng đồng</strong>
+          <span class="block text-[10px] text-black/70 leading-relaxed mt-1">
+            Tắt tạm thời khi hàng đợi kiểm duyệt quá tải hoặc cần dọn dẹp archive.
+            Trang /submit vẫn xem được nhưng không gửi tranh mới được.
+          </span>
+        </span>
+      </label>
+    </fieldset>
+
+    <!-- Comment Rules -->
+    <fieldset class="win95-container font-retro text-black">
+      <legend class="win95-header w-full">💬 COMMENT_RULES.INI</legend>
+      <div class="p-4 bg-win-gray">
+        <label for="comment_min_length" class="block text-[10px] font-bold uppercase mb-1">
+          Độ dài bình luận tối thiểu (ký tự, 1–500)
+        </label>
+        <input
+          type="number"
+          id="comment_min_length"
+          name="comment_min_length"
+          min="1"
+          max="500"
+          value={commentMinLength}
+          class="w-28 px-2 py-1.5 border-2 bg-white text-xs font-retro"
+          style="border-color: #808080 #fff #fff #808080;"
+        />
+        <p class="text-[10px] text-black/70 mt-2">
+          Chặn bình luận lặp ("+", "ok"...). Giá trị khuyến nghị: 2–5.
+        </p>
+      </div>
+    </fieldset>
+
+    <div class="flex justify-end gap-2">
+      <a href="/admin/settings" class="win95-btn no-underline font-bold text-xs px-4 py-2 text-black">🔄 HOÀN TÁC</a>
+      <button type="submit" class="win95-btn font-bold text-xs px-6 py-2 bg-vapor-green/25">
+        💾 LƯU CẤU HÌNH
+      </button>
+    </div>
+  </form>
+</AdminLayout>

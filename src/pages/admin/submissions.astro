@@ -1,15 +1,16 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import { deleteSubmissionWithRelations } from "../../lib/adminModeration";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { logAdminAction } from "../../lib/adminAudit";
 import { createSupabaseServerClient } from "../../lib/supabase";
 import { sendSubmissionApprovedEmail, sendSubmissionRejectedEmail } from "../../lib/emailNotification";
 import { env } from "cloudflare:workers";
+
+const runtimeEnv = env;
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
   cookies: Astro.cookies
 });
-const runtimeEnv = env;
 
 // Lấy thông tin người dùng hiện tại
 const { data: { user } } = await supabase.auth.getUser();
@@ -35,17 +36,29 @@ if (Astro.request.method === "POST" && user) {
   if (submissionId && (action === "approve" || action === "reject")) {
     const status = action === "approve" ? "approved" : "rejected";
     
-    // Cập nhật trạng thái duyệt tranh
+    // Cập nhật trạng thái duyệt tranh (lưu luôn rejection_reason khi từ chối)
     const { data: updatedSubmission, error: errUpdate } = await supabase
       .from("submissions")
       .update({
         status,
         reviewed_by: user.id,
-        reviewed_at: new Date().toISOString()
+        reviewed_at: new Date().toISOString(),
+        ...(status === "rejected" ? { rejection_reason: rejectReason || null } : {})
       })
       .eq("id", submissionId)
       .select("id, author_id, title")
       .maybeSingle<{ id: string; author_id: string | null; title: string }>();
+
+    // Ghi audit log cho thao tác duyệt / từ chối
+    if (!errUpdate && updatedSubmission && user) {
+      await logAdminAction(supabase, {
+        adminId: user.id,
+        action: action === "approve" ? "submission_approve" : "submission_reject",
+        targetType: "submission",
+        targetId: submissionId,
+        details: { title: updatedSubmission.title || null, reason: status === "rejected" ? rejectReason || null : undefined },
+      });
+    }
 
     if (errUpdate) {
       actionResult = { success: false, message: `Lỗi khi ${action === "approve" ? "duyệt" : "từ chối"} tranh: ${errUpdate.message}` };
@@ -165,17 +178,77 @@ if (Astro.request.method === "POST" && user) {
           : "Đã từ chối tác phẩm. Tác giả đã được thông báo qua hệ thống và email."
       };
     }
-  } else if (submissionId && action === "delete") {
+  } else if (submissionId && action === "toggle_featured" && user) {
+    const { data: current } = await supabase
+      .from("submissions")
+      .select("is_featured, title, author_id")
+      .eq("id", submissionId)
+      .single();
+
+    if (current) {
+      const nextValue = !(current.is_featured ?? false);
+      const { error } = await supabase
+        .from("submissions")
+        .update({ is_featured: nextValue })
+        .eq("id", submissionId);
+
+      if (!error) {
+        await logAdminAction(supabase, {
+          adminId: user.id,
+          action: "submission_feature_toggle",
+          targetType: "submission",
+          targetId: submissionId,
+          details: { featured: nextValue, title: current.title },
+        });
+        actionResult = { success: true, message: nextValue
+          ? `Đã đưa "${current.title || "tác phẩm"}" vào mục 🏆 TRANH NỔI BẬT trang chủ.`
+          : `Đã gỡ khỏi mục nổi bật.` };
+      } else {
+        actionResult = { success: false, message: `Lỗi cập nhật: ${error.message}` };
+      }
+    }
+  } else if (submissionId && action === "delete" && user) {
     try {
-      actionResult = await deleteSubmissionWithRelations(supabase, submissionId, runtimeEnv);
+      // Soft-delete: gạt status rejected + đóng dấu deleted_at → khôi phục được từ Thùng Rác
+      const { error } = await supabase
+        .from("submissions")
+        .update({ deleted_at: new Date().toISOString(), status: "rejected" })
+        .eq("id", submissionId);
+
+      if (!error) {
+        await logAdminAction(supabase, {
+          adminId: user.id,
+          action: "submission_soft_delete",
+          targetType: "submission",
+          targetId: submissionId,
+        });
+        actionResult = { success: true, message: "Đã đưa tranh vào Thùng Rác (khôi phục được trong 30 ngày)." };
+      } else {
+        actionResult = { success: false, message: `Lỗi khi xóa: ${error.message}` };
+      }
     } catch (err: any) {
       actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
     }
   }
 }
 
-// Lấy danh sách toàn bộ tác phẩm gửi lên
-const { data: submissions } = await supabase
+// ── Tab trạng thái + phân trang ──
+const listUrl = new URL(Astro.request.url);
+const statusTab = listUrl.searchParams.get("status") || "pending";
+const page = Math.max(1, parseInt(listUrl.searchParams.get("page") || "1"));
+const PAGE_SIZE = 12;
+
+function buildSubmissionUrl(params: Record<string, string>) {
+  const u = new URL("/admin/submissions", Astro.url.origin);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) u.searchParams.set(k, v);
+    else u.searchParams.delete(k);
+  });
+  return u.pathname + u.search;
+}
+
+// Lấy danh sách tác phẩm theo tab hiện tại
+let submissionsQuery = supabase
   .from("submissions")
   .select(`
     id,
@@ -183,41 +256,45 @@ const { data: submissions } = await supabase
     description,
     image_url,
     status,
+    rejection_reason,
+    is_featured,
     created_at,
     profiles:profiles!author_id (
       full_name,
       avatar_url
     )
-  `)
-  .order("created_at", { ascending: false });
+  `, { count: "exact" });
 
-const { count: commentsCount } = await supabase
-  .from("comments")
-  .select("*", { count: "exact", head: true });
+if (["pending", "approved", "rejected"].includes(statusTab)) {
+  submissionsQuery = submissionsQuery.eq("status", statusTab);
+}
+submissionsQuery = submissionsQuery.isNull("deleted_at");
+submissionsQuery = submissionsQuery.order("created_at", { ascending: true });
 
+const subFrom = (page - 1) * PAGE_SIZE;
+const { data: submissions, count: tabTotal } =
+  await submissionsQuery.range(subFrom, subFrom + PAGE_SIZE - 1);
+
+const subTotalPages = Math.max(1, Math.ceil((tabTotal || 0) / PAGE_SIZE));
+
+// Đếm nhanh từng nhãn cho tab bar
 const { count: pendingSubmissionsCount } = await supabase
   .from("submissions")
   .select("*", { count: "exact", head: true })
   .eq("status", "pending");
+
+const { count: approvedCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "approved");
+
+const { count: rejectedCount } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "rejected");
 ---
 
-<BaseLayout title="VAPORWAVE MAGAZINE // DUYỆT TRANH CỘNG ĐỒNG" userProfile={userProfile}>
-  <!-- Menu Bar Quản Trị Viên -->
-  <div class="win95-container w-full mb-6 font-retro">
-    <div class="win95-header">
-      <span>⚙️ ADMIN_CONTROL_PANEL.EXE</span>
-    </div>
-    <div class="flex gap-4 flex-wrap px-3 py-2 text-black text-xs bg-win-gray">
-      <a href="/admin" class="hover:underline no-underline text-black">Bảng Điều Khiển</a>
-      <a href="/admin/articles/new" class="hover:underline no-underline text-black">Viết Bài Mới</a>
-      <a href="/admin/comments" class="hover:underline no-underline text-black">Duyệt Bình Luận ({commentsCount || 0})</a>
-      <a href="/admin/submissions" class="hover:underline no-underline text-black font-bold">Duyệt Tranh Cộng Đồng ({pendingSubmissionsCount || 0})</a>
-      {userProfile?.role === 'admin' && (
-        <a href="/admin/users" class="hover:underline no-underline text-black">👥 Quản Lý Người Dùng</a>
-      )}
-    </div>
-  </div>
-
+<AdminLayout title="VAPORWAVE MAGAZINE // DUYỆT TRANH CỘNG ĐỒNG" userProfile={userProfile} activePath="/admin/submissions">
   <!-- Thông báo kết quả hành động -->
   {actionResult && (
     <div class={`win95-container mb-6 font-retro text-xs ${actionResult.success ? "border-vapor-green" : "border-red-600"}`}>
@@ -241,18 +318,44 @@ const { count: pendingSubmissionsCount } = await supabase
     </p>
   </div>
 
+  <!-- Tab lọc theo trạng thái -->
+  <div class="flex flex-wrap gap-1 mb-4 font-retro text-[11px]" role="tablist" aria-label="Lọc theo trạng thái">
+    {[
+      { key: "pending", label: "⏳ Chờ duyệt", count: pendingSubmissionsCount },
+      { key: "approved", label: "🟢 Đã duyệt", count: approvedCount },
+      { key: "rejected", label: "🔴 Đã từ chối", count: rejectedCount },
+      { key: "", label: "🗂 Tất cả", count: (pendingSubmissionsCount || 0) + (approvedCount || 0) + (rejectedCount || 0) },
+    ].map((tab) => (
+      <a
+        href={buildSubmissionUrl({ status: tab.key })}
+        aria-current={statusTab === tab.key ? "true" : undefined}
+        class:list={[
+          "win95-btn no-underline font-bold",
+          statusTab === tab.key ? "active" : "",
+        ]}
+      >
+        {tab.label} ({tab.count ?? 0})
+      </a>
+    ))}
+    <span class="ml-auto self-center text-[10px] text-text-secondary">Sắp xếp: cũ nhất trước để duyệt công bằng theo thứ tự gửi</span>
+  </div>
+
   <!-- Submissions Gallery Layout -->
-  <div class="win95-container font-retro text-black mb-10">
+  <div class="win95-container font-retro text-black mb-6">
     <div class="win95-header">
       <span>SUBMISSION_ARCHIVE.DB</span>
-      <span class="text-[10px] text-vapor-yellow font-bold uppercase">⏳ CHỜ DUYỆT: {pendingSubmissionsCount || 0}</span>
+      <span class="text-[10px] text-vapor-yellow font-bold uppercase">
+        {statusTab === "" ? "TẤT CẢ" : statusTab.toUpperCase()}: {tabTotal || 0} · TRANG {page}/{subTotalPages}
+      </span>
     </div>
 
     <div class="p-4 bg-[#c0c0c0] grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {!submissions || submissions.length === 0 ? (
         <div class="col-span-full p-12 text-center text-win-dark font-bold bg-white border border-win-dark shadow-inner">
           <span class="text-4xl block mb-2">📼</span>
-          CHƯA CÓ TÁC PHẨM CỘNG ĐỒNG NÀO ĐƯỢC GỬI LÊN.
+          {statusTab === "pending"
+            ? "KHÔNG CÒN TRANH NÀO CHỜ DUYỆT. TUYỆT VỜI!"
+            : "KHÔNG CÓ TÁC PHẨM NÀO TRONG NHÃN NÀY."}
         </div>
       ) : (
         submissions.map((sub: any) => (
@@ -260,14 +363,17 @@ const { count: pendingSubmissionsCount } = await supabase
             <div>
               <div class="win95-header mb-2">
                 <span class="break-all font-mono text-[9px]">{sub.id}</span>
-                <span class={`px-1.5 py-0.2 border text-[8px] font-bold uppercase ${
-                  sub.status === 'approved' 
-                    ? 'bg-green-100 text-green-800 border-green-300' 
-                    : sub.status === 'pending' 
-                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300' 
-                    : 'bg-red-100 text-red-800 border-red-300'
-                }`}>
-                  {sub.status}
+                <span class="flex items-center gap-1">
+                  {sub.is_featured && <span class="text-vapor-yellow text-[10px]" title="Đang nổi bật trên trang chủ">★</span>}
+                  <span class={`px-1.5 py-0.2 border text-[8px] font-bold uppercase ${
+                    sub.status === 'approved'
+                      ? 'bg-green-100 text-green-800 border-green-300'
+                      : sub.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                      : 'bg-red-100 text-red-800 border-red-300'
+                  }`}>
+                    {sub.status}
+                  </span>
                 </span>
               </div>
               <div class="relative overflow-hidden border border-win-dark bg-black h-48 flex items-center justify-center">
@@ -283,9 +389,14 @@ const { count: pendingSubmissionsCount } = await supabase
                   {sub.description || "Không có mô tả..."}
                 </p>
                 <div class="border-t border-dashed border-win-dark/30 pt-2 flex items-center gap-1.5 text-[10px]">
-                  <img src={sub.profiles?.avatar_url || "/images/default-avatar.png"} class="w-4 h-4 border border-win-dark" />
+                  <img src={sub.profiles?.avatar_url || "/images/default-avatar.png"} class="w-4 h-4 border border-win-dark" alt="" />
                   <span class="text-win-dark truncate">Tác giả: <strong>{sub.profiles?.full_name || "Anonymous"}</strong></span>
                 </div>
+                {sub.status === "rejected" && sub.rejection_reason && (
+                  <p class="mt-1 p-1.5 bg-red-50 border border-red-200 text-[9px] text-red-800 leading-snug">
+                    📋 Lý do từ chối: {sub.rejection_reason}
+                  </p>
+                )}
               </div>
             </div>
             
@@ -330,12 +441,19 @@ const { count: pendingSubmissionsCount } = await supabase
             )}
 
             {sub.status !== 'pending' && (
-              <div class="p-2 bg-[#f0f0f0] border-t border-win-dark flex justify-end">
+              <div class="p-2 bg-[#f0f0f0] border-t border-win-dark flex justify-between gap-2">
+                <form method="POST" class="m-0">
+                  <input type="hidden" name="submissionId" value={sub.id} />
+                  <input type="hidden" name="action" value="toggle_featured" />
+                  <button type="submit" class={`win95-btn text-[10px] px-2 py-1 font-bold ${sub.is_featured ? "text-vapor-purple" : ""}`}>
+                    {sub.is_featured ? "★ Bỏ nổi bật" : "☆ Nổi bật"}
+                  </button>
+                </form>
                 <form method="POST" class="m-0" onsubmit="return confirm('⚠️ Xóa vĩnh viễn tranh này cùng toàn bộ dữ liệu liên quan?');">
                   <input type="hidden" name="submissionId" value={sub.id} />
                   <input type="hidden" name="action" value="delete" />
                   <button type="submit" class="win95-btn font-bold text-red-900 text-[10px] py-1 px-3 bg-red-200 border-red-500">
-                    ❌ XÓA VĨNH VIỄN
+                    ❌ XÓA
                   </button>
                 </form>
               </div>
@@ -345,4 +463,21 @@ const { count: pendingSubmissionsCount } = await supabase
       )}
     </div>
   </div>
-</BaseLayout>
+
+  <!-- Pagination -->
+  {subTotalPages > 1 && (
+    <nav class="pagination-bar mb-8" aria-label="Phân trang tranh cộng đồng">
+      {page > 1 ? (
+        <a href={buildSubmissionUrl({ page: String(page - 1), status: statusTab })} class="win95-btn no-underline font-bold">◀ Trước</a>
+      ) : (
+        <span class="win95-btn text-win-dark">◀ Trước</span>
+      )}
+      <span class="page-info">Trang {page} / {subTotalPages}</span>
+      {page < subTotalPages ? (
+        <a href={buildSubmissionUrl({ page: String(page + 1), status: statusTab })} class="win95-btn no-underline font-bold">Sau ▶</a>
+      ) : (
+        <span class="win95-btn text-win-dark">Sau ▶</span>
+      )}
+    </nav>
+  )}
+</AdminLayout>

@@ -151,9 +151,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
       {/* Nút bấm Chuông */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        aria-label={`Thông báo${unreadCount > 0 ? ` — ${unreadCount} chưa đọc` : ""}`}
         className="win95-btn flex items-center justify-center p-1.5 font-bold text-xs relative"
       >
-        <span className="text-sm">🔔</span>
+        <span className="text-sm" aria-hidden="true">🔔</span>
         {unreadCount > 0 && (
           <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white font-mono text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white animate-pulse">
             {unreadCount}

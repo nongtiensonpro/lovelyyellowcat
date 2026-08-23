@@ -1,0 +1,263 @@
+---
+import "../styles/global.css";
+import { createSupabaseServerClient } from "../lib/supabase";
+
+interface NavItem {
+  href: string;
+  icon: string;
+  label: string;
+  section: string;
+  badge?: number | null;
+  adminOnly?: boolean;
+}
+
+interface Props {
+  title: string;
+  userProfile?: any;
+  activePath?: string;
+}
+
+const { title, userProfile = null, activePath = "/admin" } = Astro.props;
+
+const role = userProfile?.role || "editor";
+const isAdmin = role === "admin";
+
+// Badge đếm live cho sidebar (2 head-count rẻ — thay cho menubar copy-paste cũ)
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+const { count: pendingSubmissions } = await supabase
+  .from("submissions")
+  .select("*", { count: "exact", head: true })
+  .eq("status", "pending");
+
+const { count: totalComments } = await supabase
+  .from("comments")
+  .select("*", { count: "exact", head: true });
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/admin",               icon: "🏠", label: "Tổng Quan",    section: "MISSION_CONTROL" },
+  { href: "/admin/articles",      icon: "📚", label: "Bài Viết",     section: "ARTICLE_MANAGER" },
+  { href: "/admin/articles/new",  icon: "📰", label: "Viết Bài Mới", section: "ARTICLE_EDITOR" },
+  { href: "/admin/submissions",   icon: "🖼️", label: "Duyệt Tranh",  section: "GALLERY_QUEUE", badge: pendingSubmissions || 0 },
+  { href: "/admin/comments",      icon: "💬", label: "Bình Luận",    section: "COMMENT_DB",    badge: totalComments || 0 },
+  { href: "/admin/users",         icon: "👥", label: "Người Dùng",   section: "USER_MANAGER",  adminOnly: true },
+  { href: "/admin/analytics",     icon: "📊", label: "Phân Tích",    section: "ANALYTICS_CENTER", adminOnly: true },
+  { href: "/admin/announcements", icon: "📣", label: "Thông Báo",    section: "ANNOUNCEMENTS",    adminOnly: true },
+  { href: "/admin/trash",         icon: "🗑️", label: "Thùng Rác",    section: "RECYCLE_BIN",      adminOnly: true },
+  { href: "/admin/media",         icon: "🗃️", label: "Thư Viện Ảnh", section: "MEDIA_LIBRARY",    adminOnly: true },
+  { href: "/admin/settings",      icon: "⚙️", label: "Cài Đặt",      section: "SYSTEM_SETTINGS",  adminOnly: true },
+];
+
+const visibleNav = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+const activeItem = visibleNav.find((item) => item.href === activePath) || null;
+const crumbSection = activeItem?.section || "MISSION_CONTROL";
+---
+
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen text-white font-body antialiased bg-cosmic-black">
+    <!-- Lớp phủ CRT toàn trang -->
+    <div id="crt-overlay-layer" class="crt-overlay" aria-hidden="true">
+      <div class="crt-scanlines"></div>
+      <div class="crt-vignette"></div>
+    </div>
+    <div id="crt-animated-line" class="crt-scanline-animated" aria-hidden="true"></div>
+
+    <a class="skip-link" href="#admin-main">⏭ Bỏ qua tới nội dung chính</a>
+
+    <div class="min-h-screen flex flex-col bg-cosmic-black">
+      <!-- Thanh tiêu đề hệ thống (mobile + desktop chung) -->
+      <header class="win95-window m-2 mb-0 shrink-0">
+        <div class="win95-header px-2">
+          <span class="truncate">📼 LYC CONTROL PANEL 98 // LOVELYYELLOWCAT ADMIN</span>
+          <span class="hidden sm:inline text-[9px] opacity-80 shrink-0 ml-2">
+            {isAdmin ? "👑 ADMIN SESSION" : "✏️ EDITOR SESSION"}
+          </span>
+        </div>
+        <!-- Nav ngang cho mobile -->
+        <nav class="lg:hidden flex gap-1 overflow-x-auto p-1.5 bg-win-gray font-retro text-[11px] text-black" aria-label="Điều hướng quản trị">
+          {visibleNav.map((item) => (
+            <a
+              href={item.href}
+              aria-current={item.href === activePath ? "page" : undefined}
+              class:list={[
+                "shrink-0 px-2 py-1 no-underline whitespace-nowrap border",
+                item.href === activePath
+                  ? "bg-win-titlebar text-white border-win-darkest font-bold"
+                  : "bg-win-gray text-black border-transparent hover:bg-win-light",
+              ]}
+            >
+              {item.icon} {item.label}{(item.badge ?? 0) > 0 && <strong class="ml-1">[{item.badge}]</strong>}
+            </a>
+          ))}
+          <a href="/" class="shrink-0 px-2 py-1 no-underline text-black/60 hover:text-black ml-auto">↩ Site</a>
+        </nav>
+      </header>
+
+      <div class="flex flex-1 min-h-0">
+        <!-- Sidebar Explorer (desktop) -->
+        <aside
+          class="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col win95-window m-2 mr-0 sticky top-2 self-start"
+          style="max-height: calc(100vh - 1rem);"
+          aria-label="Cây thư mục quản trị"
+        >
+          <div class="win95-menubar px-1" aria-hidden="true">
+            <span>File</span><span>Edit</span><span>View</span><span>Help</span>
+          </div>
+
+          <p class="px-3 py-1.5 text-[10px] font-retro font-bold uppercase tracking-wider text-black/70 border-b border-win-dark">
+            📁 C:\ADMIN
+          </p>
+
+          <nav class="flex-1 overflow-y-auto p-1.5 space-y-0.5 font-retro text-[12px]" aria-label="Điều hướng quản trị">
+            {visibleNav.map((item) => (
+              <a
+                href={item.href}
+                aria-current={item.href === activePath ? "page" : undefined}
+                class:list={[
+                  "flex items-center gap-2 px-2 py-1.5 no-underline rounded-none",
+                  item.href === activePath
+                    ? "bg-win-titlebar text-white font-bold"
+                    : "text-black hover:bg-win-titlebar/15",
+                ]}
+              >
+                <span aria-hidden="true">{item.icon}</span>
+                <span class="truncate">{item.label}</span>
+                {(item.badge ?? 0) > 0 && (
+                  <span class="ml-auto win95-statusbar-panel text-[10px] font-bold min-w-[26px] text-center">
+                    {item.badge}
+                  </span>
+                )}
+              </a>
+            ))}
+            {!isAdmin && (
+              <p class="px-2 pt-2 text-[9px] text-black/50">🔒 Người dùng & Cài đặt: chỉ dành cho admin</p>
+            )}
+          </nav>
+
+          <!-- Statusbar của shell -->
+          <div class="win95-statusbar border-t border-win-dark">
+            <span class="win95-statusbar-panel" id="admin-role-chip">
+              {isAdmin ? "👑 ADMIN" : "✏️ EDITOR"}
+            </span>
+            <span class="win95-statusbar-panel" id="admin-net" role="status">▲ ONLINE</span>
+            <button id="toggle-crt-btn" class="win95-btn text-[9px] py-0 px-1.5 font-bold" style="min-height:20px;" aria-pressed="true">
+              📺 CRT
+            </button>
+            <span class="win95-statusbar-panel ml-auto" id="admin-clock">--:--:--</span>
+          </div>
+          <p class="text-center text-[8px] font-mono text-black/40 pb-1 pt-0.5 bg-win-gray">
+            SHELL v3.0 · $0 BUDGET EDITION
+          </p>
+        </aside>
+
+        <!-- Vùng nội dung chính -->
+        <main id="admin-main" class="flex-1 min-w-0 p-2 sm:p-4">
+          <!-- Titlebar breadcrumb kiểu cửa sổ Explorer -->
+          <div class="win95-window mb-3 sm:mb-4 hidden lg:block">
+            <div class="win95-header px-2">
+              <span class="font-display tracking-wider text-sm">C:\ADMIN\{crumbSection}</span>
+              <span class="flex gap-0.5" aria-hidden="true">
+                <button tabindex="-1" class="win95-btn text-[9px] leading-none w-[16px] h-[14px] p-0 font-bold">_</button>
+                <button tabindex="-1" class="win95-btn text-[9px] leading-none w-[16px] h-[14px] p-0 font-bold">□</button>
+                <button tabindex="-1" class="win95-btn text-[9px] leading-none w-[16px] h-[14px] p-0 font-bold" disabled>✕</button>
+              </span>
+            </div>
+          </div>
+
+          <slot />
+
+          <footer class="mt-8 mb-2 text-center font-mono text-[9px] text-text-muted">
+            📼 LOVELY YELLOW CAT CONTROL PANEL · MIT LICENSE · BEST VIEWED AT 1024x768
+          </footer>
+        </main>
+      </div>
+    </div>
+
+    <!-- Script đồng hồ (tự tạm dừng khi tab ẩn để tiết kiệm CPU) -->
+    <script>
+      const clockEl = document.getElementById("admin-clock");
+      let clockTimer: ReturnType<typeof setInterval> | null = null;
+
+      function tickClock() {
+        if (clockEl) {
+          clockEl.textContent = new Date().toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+        }
+      }
+      function startClock() {
+        if (!clockTimer) {
+          tickClock();
+          clockTimer = setInterval(tickClock, 1000);
+        }
+      }
+      function stopClock() {
+        if (clockTimer) {
+          clearInterval(clockTimer);
+          clockTimer = null;
+        }
+      }
+      document.addEventListener("visibilitychange", () => {
+        document.hidden ? stopClock() : startClock();
+      });
+      startClock();
+    </script>
+
+    <!-- Script chỉ báo mạng -->
+    <script>
+      const netEl = document.getElementById("admin-net");
+      function updateNetStatus() {
+        if (!netEl) return;
+        const online = navigator.onLine;
+        netEl.textContent = online ? "▲ ONLINE" : "▼ OFFLINE";
+        netEl.style.color = online ? "#067a52" : "#b91c1c";
+        netEl.style.fontWeight = "bold";
+      }
+      window.addEventListener("online", updateNetStatus);
+      window.addEventListener("offline", updateNetStatus);
+      updateNetStatus();
+    </script>
+
+    <!-- Script điều khiển CRT Overlay Toggle -->
+    <script>
+      const crtBtn = document.getElementById("toggle-crt-btn");
+      const crtLayer = document.getElementById("crt-overlay-layer");
+      const crtLine = document.getElementById("crt-animated-line");
+
+      let crtEnabled = localStorage.getItem("vapor_crt_mode") !== "disabled";
+
+      function updateAdminCrt() {
+        if (crtLayer && crtLine && crtBtn) {
+          crtLayer.classList.toggle("crt-disabled", !crtEnabled);
+          crtLine.classList.toggle("hidden", !crtEnabled);
+          crtBtn.textContent = crtEnabled ? "📺 CRT: BẬT" : "📺 CRT: TẮT";
+          crtBtn.setAttribute("aria-pressed", String(crtEnabled));
+        }
+      }
+
+      crtBtn?.addEventListener("click", () => {
+        crtEnabled = !crtEnabled;
+        localStorage.setItem("vapor_crt_mode", crtEnabled ? "enabled" : "disabled");
+        updateAdminCrt();
+      });
+
+      updateAdminCrt();
+    </script>
+  </body>
+</html>

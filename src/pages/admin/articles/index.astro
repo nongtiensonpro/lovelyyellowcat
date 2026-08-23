@@ -1,0 +1,569 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { createSupabaseServerClient } from "../../../lib/supabase";
+import { logAdminAction } from "../../../lib/adminAudit";
+
+const PAGE_SIZE = 20;
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+// ── Xác thực & phân quyền ──
+const { data: { user } } = await supabase.auth.getUser();
+let userProfile: any = null;
+if (user) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+  userProfile = data;
+}
+
+if (!user || !userProfile) {
+  return Astro.redirect("/?error=unauthorized");
+}
+
+const currentUserId: string = user.id;
+const isAdmin = userProfile.role === "admin";
+
+// ── Đọc query params ──
+const url = new URL(Astro.request.url);
+const search = url.searchParams.get("search")?.trim() || "";
+const statusFilter = url.searchParams.get("status") || "";
+const sortKey = url.searchParams.get("sort") || "newest";
+const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+
+const msgType = url.searchParams.get("type");
+const msgText = url.searchParams.get("msg");
+
+function buildUrl(params: Record<string, string>) {
+  const u = new URL("/admin/articles", Astro.url.origin);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) u.searchParams.set(k, v);
+    else u.searchParams.delete(k);
+  });
+  return u.pathname + u.search;
+}
+
+const redirectWithResult = (ok: boolean, message: string) => {
+  const u = new URL("/admin/articles", Astro.url.origin);
+  if (search) u.searchParams.set("search", search);
+  if (statusFilter) u.searchParams.set("status", statusFilter);
+  if (sortKey !== "newest") u.searchParams.set("sort", sortKey);
+  if (page > 1) u.searchParams.set("page", String(page));
+  u.searchParams.set("type", ok ? "ok" : "err");
+  u.searchParams.set("msg", message.slice(0, 200));
+  return Astro.redirect(u.pathname + u.search, 303);
+};
+
+const canTouch = (article: { author_id?: string | null }) =>
+  isAdmin || article?.author_id === currentUserId;
+
+const loadArticle = async (id: string) => {
+  const { data } = await supabase
+    .from("articles")
+    .select("id, title, slug, status, author_id")
+    .eq("id", id)
+    .maybeSingle();
+  return data as any;
+};
+
+// ── Xử lý các mutation (PRG pattern) ──
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const action = String(formData.get("action") || "");
+
+  try {
+    if (action === "toggle_status") {
+      const id = String(formData.get("articleId") || "");
+      const art = await loadArticle(id);
+
+      if (!art || !canTouch(art)) {
+        return redirectWithResult(false, "Không tìm thấy bài viết hoặc bạn không có quyền thao tác.");
+      }
+
+      const nextStatus = art.status === "published" ? "draft" : "published";
+      const patch: Record<string, unknown> = { status: nextStatus };
+      if (nextStatus === "published") patch.published_at = new Date().toISOString();
+
+      const { error } = await supabase.from("articles").update(patch).eq("id", id);
+      if (error) throw new Error(error.message);
+
+      await logAdminAction(supabase, {
+        adminId: currentUserId,
+        action: "article_status_change",
+        targetType: "article",
+        targetId: id,
+        details: { from: art.status, to: nextStatus, title: art.title },
+      });
+
+      return redirectWithResult(
+        true,
+        `Đã chuyển "${art.title}" sang chế độ ${nextStatus === "published" ? "ĐÃ ĐĂNG" : "NHÁP"}.`
+      );
+    }
+
+    if (action === "toggle_featured") {
+      const id = String(formData.get("articleId") || "");
+      const art = await loadArticle(id);
+
+      if (!art || !canTouch(art)) {
+        return redirectWithResult(false, "Không tìm thấy bài viết hoặc bạn không có quyền thao tác.");
+      }
+
+      const { data: current } = await supabase
+        .from("articles")
+        .select("is_featured, title")
+        .eq("id", id)
+        .single();
+
+      const nextValue = !(current?.is_featured ?? false);
+      const { error } = await supabase.from("articles").update({ is_featured: nextValue }).eq("id", id);
+      if (error) throw new Error(error.message);
+
+      await logAdminAction(supabase, {
+        adminId: currentUserId,
+        action: "article_feature_toggle",
+        targetType: "article",
+        targetId: id,
+        details: { featured: nextValue, title: current?.title },
+      });
+
+      return redirectWithResult(true, nextValue
+        ? `Đã đưa "${current?.title}" vào mục ★ BÀI CHỌN LỌC trên trang chủ.`
+        : `Đã gỡ "${current?.title}" khỏi mục chọn lọc.`);
+    }
+
+    if (action === "duplicate") {
+      const id = String(formData.get("articleId") || "");
+      const { data: src } = await supabase
+        .from("articles")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (!src || !canTouch(src)) {
+        return redirectWithResult(false, "Không tìm thấy bài viết hoặc bạn không có quyền nhân bản.");
+      }
+
+      const suffix = Date.now().toString(36).slice(-5);
+      const { data: dup, error } = await supabase
+        .from("articles")
+        .insert({
+          title: `${src.title} (Bản sao)`,
+          slug: `${src.slug}-copy-${suffix}`.slice(0, 120),
+          excerpt: src.excerpt ?? null,
+          body_md: src.body_md ?? "",
+          cover_url: src.cover_url ?? null,
+          tags: src.tags ?? [],
+          status: "draft",
+          author_id: currentUserId,
+        })
+        .select("id")
+        .single();
+
+      if (error) throw new Error(error.message);
+
+      await logAdminAction(supabase, {
+        adminId: currentUserId,
+        action: "article_duplicate",
+        targetType: "article",
+        targetId: dup.id,
+        details: { source_id: id },
+      });
+
+      return redirectWithResult(true, "Đã nhân bản thành một bản nháp mới.");
+    }
+
+    if (action === "delete_single") {
+      const id = String(formData.get("articleId") || "");
+      const art = await loadArticle(id);
+
+      if (!art || !canTouch(art)) {
+        return redirectWithResult(false, "Không tìm thấy bài viết hoặc bạn không có quyền thao tác.");
+      }
+
+      // Soft-delete: ẩn khỏi mọi danh sách nhưng còn khôi phục được từ Thùng Rác
+      const { error } = await supabase
+        .from("articles")
+        .update({ deleted_at: new Date().toISOString(), status: "archived" })
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+
+      await logAdminAction(supabase, {
+        adminId: currentUserId,
+        action: "article_soft_delete",
+        targetType: "article",
+        targetId: id,
+        details: { title: art.title },
+      });
+
+      return redirectWithResult(true, `Đã đưa "${art.title}" vào Thùng Rác (có thể khôi phục trong 30 ngày).`);
+    }
+
+    if (action.startsWith("bulk_")) {
+      const ids = Array.from(formData.getAll("selectedIds")).map(String).filter(Boolean);
+      if (ids.length === 0) {
+        return redirectWithResult(false, "Chưa tick chọn bài viết nào trong bảng.");
+      }
+
+      let done = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (const id of ids) {
+        const art = await loadArticle(id);
+        if (!art || !canTouch(art)) {
+          skipped++;
+          continue;
+        }
+
+        if (action === "bulk_publish" || action === "bulk_unpublish") {
+          const nextStatus = action === "bulk_publish" ? "published" : "draft";
+          const patch: Record<string, unknown> = { status: nextStatus };
+          if (nextStatus === "published") patch.published_at = new Date().toISOString();
+          const { error } = await supabase.from("articles").update(patch).eq("id", id);
+          if (error) {
+            errors.push(`${art.title}: ${error.message}`);
+            continue;
+          }
+          await logAdminAction(supabase, {
+            adminId: currentUserId,
+            action: "article_status_change",
+            targetType: "article",
+            targetId: id,
+            details: { from: art.status, to: nextStatus, bulk: true },
+          });
+          done++;
+        } else if (action === "bulk_archive") {
+          const { error } = await supabase.from("articles").update({ status: "archived" }).eq("id", id);
+          if (error) {
+            errors.push(`${art.title}: ${error.message}`);
+            continue;
+          }
+          await logAdminAction(supabase, {
+            adminId: currentUserId,
+            action: "article_status_change",
+            targetType: "article",
+            targetId: id,
+            details: { from: art.status, to: "archived", bulk: true },
+          });
+          done++;
+        } else if (action === "bulk_delete") {
+          const art = await loadArticle(id);
+          if (!art || !canTouch(art)) {
+            skipped++;
+            continue;
+          }
+          const { error } = await supabase
+            .from("articles")
+            .update({ deleted_at: new Date().toISOString(), status: "archived" })
+            .eq("id", id);
+          if (error) {
+            errors.push(`${art.title}: ${error.message}`);
+            continue;
+          }
+          await logAdminAction(supabase, {
+            adminId: currentUserId,
+            action: "article_soft_delete",
+            targetType: "article",
+            targetId: id,
+            details: { bulk: true, title: art.title },
+          });
+          done++;
+        }
+      }
+
+      let summary = `Hoàn tất trên ${done}/${ids.length} bài.`;
+      if (skipped > 0) summary += ` Bỏ qua ${skipped} bài ngoài phạm vi quyền của bạn.`;
+      if (errors.length > 0) summary += ` Lỗi: ${errors[0]}`;
+      return redirectWithResult(done > 0, summary);
+    }
+
+    return redirectWithResult(false, "Hành động không hợp lệ.");
+  } catch (err: any) {
+    console.error("[ARTICLES] Mutation failed:", err.message);
+    return redirectWithResult(false, "Sự cố hệ thống khi xử lý hành động. Vui lòng thử lại.");
+  }
+}
+
+// ── Truy vấn danh sách (server-side pagination) ──
+let query = supabase
+  .from("articles")
+  .select("id, title, slug, status, view_count, created_at, published_at, tags, author_id, is_featured, profiles(full_name)", { count: "exact" })
+  .isNull("deleted_at");
+
+if (search) {
+  query = query.or(`title.ilike.%${search}%,slug.ilike.%${search}%`);
+}
+if (["published", "draft", "archived"].includes(statusFilter)) {
+  query = query.eq("status", statusFilter);
+}
+query = query.order(
+  sortKey === "views" ? "view_count" : "created_at",
+  { ascending: sortKey === "oldest" }
+);
+
+const from = (page - 1) * PAGE_SIZE;
+const { data: articles, count: totalArticles } = await query.range(from, from + PAGE_SIZE - 1);
+
+const totalPages = Math.max(1, Math.ceil((totalArticles || 0) / PAGE_SIZE));
+
+const statusCounts = { published: 0, draft: 0, archived: 0 };
+const { data: allStatuses } = await supabase
+  .from("articles")
+  .select("status")
+  .isNull("deleted_at");
+(allStatuses || []).forEach((a: any) => {
+  if (a.status in statusCounts) (statusCounts as any)[a.status]++;
+});
+---
+
+<AdminLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ BÀI VIẾT" userProfile={userProfile} activePath="/admin/articles">
+  {msgText && (
+    <div class={`win95-container mb-6 font-retro text-xs ${msgType === "ok" ? "border-vapor-green" : "border-red-600"}`}>
+      <div class={`win95-header ${msgType === "ok" ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
+        <span>{msgType === "ok" ? "✅ SYSTEM_LOG.OK" : "❌ SYSTEM_ALERT.ERR"}</span>
+      </div>
+      <div class={`p-3 text-black font-bold ${msgType === "ok" ? "bg-green-100" : "bg-red-100"}`}>
+        {msgText}
+      </div>
+    </div>
+  )}
+
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold uppercase tracking-widest text-vapor-green font-retro">
+        📚 ARTICLE MANAGER
+      </h1>
+      <p class="text-[11px] tracking-wider text-text-secondary mt-1 font-retro uppercase">
+        Tổng: {totalArticles ?? 0} bài · 🟢 Đã đăng {statusCounts.published} · 🟡 Nháp {statusCounts.draft} · ⚪ Lưu trữ {statusCounts.archived}
+      </p>
+    </div>
+    <a href="/admin/articles/new" class="win95-btn font-bold text-xs px-3 py-2 no-underline text-black">
+      + VIẾT BÀI MỚI
+    </a>
+  </div>
+
+  {!isAdmin && (
+    <div class="win95-container mb-5 font-retro">
+      <div class="win95-header win95-header-inactive">
+        <span>ℹ️ QUYỀN HẠN EDITOR</span>
+      </div>
+      <div class="p-2.5 bg-win-gray text-black text-[11px] font-bold">
+        Bạn có toàn quyền soạn thảo với bài viết của chính mình. Bài của tác giả khác chỉ đọc được nếu đã đăng công khai; việc xóa thuộc thẩm quyền admin.
+      </div>
+    </div>
+  )}
+
+  <form method="GET" action="/admin/articles" class="win95-container font-retro text-black mb-4">
+    <div class="win95-header"><span>🔍 SEARCH_FILTER.DLL</span></div>
+    <div class="p-3 bg-win-gray flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[200px]">
+        <label for="search" class="block text-[10px] font-bold uppercase mb-1">Tìm theo tiêu đề / slug</label>
+        <input id="search" name="search" value={search} placeholder="Nhập từ khóa..."
+          class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080;" />
+      </div>
+      <div class="w-40">
+        <label for="status" class="block text-[10px] font-bold uppercase mb-1">Trạng thái</label>
+        <select id="status" name="status" class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080;">
+          <option value="" selected={!statusFilter}>Tất cả</option>
+          <option value="published" selected={statusFilter === "published"}>🟢 Đã đăng</option>
+          <option value="draft" selected={statusFilter === "draft"}>🟡 Nháp</option>
+          <option value="archived" selected={statusFilter === "archived"}>⚪ Lưu trữ</option>
+        </select>
+      </div>
+      <div class="w-44">
+        <label for="sort" class="block text-[10px] font-bold uppercase mb-1">Sắp xếp</label>
+        <select id="sort" name="sort" class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro" style="border-color: #808080 #fff #fff #808080;">
+          <option value="newest" selected={sortKey === "newest"}>Mới nhất</option>
+          <option value="oldest" selected={sortKey === "oldest"}>Cũ nhất</option>
+          <option value="views" selected={sortKey === "views"}>Xem nhiều nhất</option>
+        </select>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="win95-btn font-bold text-xs px-4 py-1.5">🔍 LỌC</button>
+        <a href="/admin/articles" class="win95-btn font-bold text-xs px-3 py-1.5 no-underline">🔄 RESET</a>
+      </div>
+    </div>
+  </form>
+
+  <form method="POST" action={`/admin/articles${url.search}`} id="bulk-form" class="win95-container font-retro text-black mb-6">
+    <input type="hidden" name="articleId" id="single-article-id" value="" />
+    <div class="win95-header">
+      <span>ARTICLE_DATABASE.EXE</span>
+      <span class="text-[10px] text-vapor-yellow font-bold">Trang {page}/{totalPages} · {totalArticles ?? 0} kết quả</span>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 p-2 bg-[#d4d0c8] border-b border-win-dark text-[11px]">
+      <span class="font-bold">Đã chọn: <strong id="bulk-count">0</strong></span>
+      <button type="submit" name="action" value="bulk_publish" disabled class="win95-btn bulk-action font-bold text-[10px] py-1 px-2">🟢 ĐĂNG NHIỀU BÀI</button>
+      <button type="submit" name="action" value="bulk_unpublish" disabled class="win95-btn bulk-action font-bold text-[10px] py-1 px-2">🟡 CHUYỂN NHÁP</button>
+      <button type="submit" name="action" value="bulk_archive" disabled class="win95-btn bulk-action font-bold text-[10px] py-1 px-2">⚪ LƯU TRỮ</button>
+      <button type="submit" name="action" value="bulk_delete" disabled class="win95-btn bulk-action font-bold text-[10px] py-1 px-2 btn-danger">🗑 BỎ VÀO THÙNG RÁC</button>
+    </div>
+
+    <div class="bg-white overflow-x-auto border-2 border-win-dark p-1">
+      <table class="win-table compact">
+        <thead>
+          <tr>
+            <th class="w-8 text-center">
+              <input type="checkbox" id="check-all" class="checkbox-vapor" aria-label="Chọn tất cả bài có thể thao tác" />
+            </th>
+            <th>TIÊU ĐỀ</th>
+            <th class="w-36">TÁC GIẢ</th>
+            <th class="w-28">TRẠNG THÁI</th>
+            <th class="w-16 text-center">👁</th>
+            <th class="w-24">NGÀY TẠO</th>
+            <th class="w-60 text-center">HÀNH ĐỘNG</th>
+          </tr>
+        </thead>
+        <tbody>
+          {!articles || articles.length === 0 ? (
+            <tr>
+              <td colspan="7" class="p-8 text-center text-win-dark font-bold">
+                {search || statusFilter
+                  ? "KHÔNG CÓ BÀI VIẾT NÀO KHỚP BỘ LỌC."
+                  : "CHƯA CÓ BÀI VIẾT NÀO. NHẤN \u201cVIẾT BÀI MỚI\u201d ĐỂ BẮT ĐẦU."}
+              </td>
+            </tr>
+          ) : (
+            articles.map((article: any) => {
+              const own = article.author_id === currentUserId;
+              const editable = isAdmin || own;
+              return (
+                <tr>
+                  <td class="text-center align-middle">
+                    {editable ? (
+                      <input type="checkbox" name="selectedIds" value={article.id} class="checkbox-vapor row-check" aria-label={`Chọn ${article.title}`} />
+                    ) : (
+                      <span title="Bài của tác giả khác — chỉ đọc" aria-hidden="true">🔒</span>
+                    )}
+                  </td>
+                  <td>
+                    <a href={`/articles/${article.slug}`} target="_blank" rel="noopener" class="font-bold text-black no-underline hover:underline">
+                      {article.title}
+                    </a>
+                    <div class="font-mono text-[9px] text-win-dark break-all">{article.slug}</div>
+                  </td>
+                  <td class="text-[10px]">
+                    {article.profiles?.full_name || "—"}
+                    {own && <span class="ml-1 text-vapor-pink font-bold">(Bạn)</span>}
+                  </td>
+                  <td>
+                    {article.status === "published" && <span class="badge badge-success">🟢 Published</span>}
+                    {article.status === "draft" && <span class="badge badge-warning">🟡 Draft</span>}
+                    {article.status === "archived" && <span class="badge badge-info">⚪ Archived</span>}
+                  </td>
+                  <td class="text-center font-mono">{article.view_count || 0}</td>
+                  <td class="text-[10px] text-win-dark whitespace-nowrap">
+                    {new Date(article.created_at).toLocaleDateString("vi-VN")}
+                  </td>
+                  <td>
+                    {editable ? (
+                      <div class="flex justify-center flex-wrap gap-1">
+                        <a href={`/admin/articles/${article.id}/edit`} class="win95-btn text-[10px] px-1.5 py-0.5 no-underline font-bold">
+                          ⚙️ Sửa
+                        </a>
+                        <button
+                          type="submit"
+                          name="action"
+                          value="toggle_status"
+                          class="win95-btn text-[10px] px-1.5 py-0.5 font-bold"
+                        >
+                          {article.status === "published" ? "⏸ Ngừng đăng" : "▶ Đăng bài"}
+                        </button>
+                        <button
+                          type="submit"
+                          name="action"
+                          value="toggle_featured"
+                          class="win95-btn text-[10px] px-1.5 py-0.5 font-bold"
+                          title={article.is_featured ? "Gỡ khỏi trang chủ" : "Đưa lên mục chọn lọc trang chủ"}
+                        >
+                          {article.is_featured ? "★ Nổi bật" : "☆ Chọn lọc"}
+                        </button>
+                        <button
+                          type="submit"
+                          name="action"
+                          value="duplicate"
+                          class="win95-btn text-[10px] px-1.5 py-0.5 font-bold"
+                        >
+                          ⧉ Nhân bản
+                        </button>
+                      </div>
+                    ) : (
+                      <span class="text-[9px] text-win-dark">— chỉ đọc —</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    <script is:inline>
+      (function () {
+        var singleId = document.getElementById("single-article-id");
+        document.querySelectorAll("#bulk-form button[name='action']").forEach(function (btn) {
+          var value = btn.value || "";
+          if (value === "toggle_status" || value === "duplicate" || value === "toggle_featured") {
+            btn.addEventListener("click", function () {
+              var row = btn.closest("tr");
+              var check = row ? row.querySelector("input.row-check") : null;
+              if (check) singleId.value = check.value;
+            });
+          }
+          if (value === "bulk_delete") {
+            btn.addEventListener("click", function (e) {
+              if (!confirm("🗑 Bỏ các bài đã chọn vào THÙNG RÁC? (Có thể khôi phục sau)")) e.preventDefault();
+            });
+          }
+        });
+
+        var checkAll = document.getElementById("check-all");
+        var countEl = document.getElementById("bulk-count");
+        function refreshBulk() {
+          var boxes = Array.prototype.slice.call(document.querySelectorAll("input.row-check"));
+          var selected = boxes.filter(function (b) { return b.checked; }).length;
+          if (countEl) countEl.textContent = String(selected);
+          document.querySelectorAll(".bulk-action").forEach(function (b) {
+            b.disabled = selected === 0;
+          });
+        }
+        if (checkAll) {
+          checkAll.addEventListener("change", function () {
+            document.querySelectorAll("input.row-check").forEach(function (b) {
+              b.checked = checkAll.checked;
+            });
+            refreshBulk();
+          });
+        }
+        document.querySelectorAll("input.row-check").forEach(function (b) {
+          b.addEventListener("change", refreshBulk);
+        });
+        refreshBulk();
+      })();
+    </script>
+  </form>
+
+  {totalPages > 1 && (
+    <nav class="pagination-bar mb-8" aria-label="Phân trang bài viết">
+      {page > 1 ? (
+        <a href={buildUrl({ page: String(page - 1), search, status: statusFilter, sort: sortKey })} class="win95-btn no-underline font-bold">◀ Trước</a>
+      ) : (
+        <span class="win95-btn text-win-dark">◀ Trước</span>
+      )}
+      <span class="page-info">Trang {page} / {totalPages}</span>
+      {page < totalPages ? (
+        <a href={buildUrl({ page: String(page + 1), search, status: statusFilter, sort: sortKey })} class="win95-btn no-underline font-bold">Sau ▶</a>
+      ) : (
+        <span class="win95-btn text-win-dark">Sau ▶</span>
+      )}
+    </nav>
+  )}
+</AdminLayout>
