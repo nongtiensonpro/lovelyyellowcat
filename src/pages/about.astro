@@ -1,0 +1,713 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+
+const userProfile = await getCurrentUserProfile(supabase);
+
+const pillars = [
+  {
+    icon: "🎨",
+    label: "THE GALLERY",
+    title: "Sân chơi nghệ thuật",
+    copy: "Một phòng triển lãm cộng đồng sống động: masonry vô tận, lightbox shader và những tác phẩm được gửi về từ khắp nơi.",
+    tone: "pink"
+  },
+  {
+    icon: "📰",
+    label: "THE JOURNAL",
+    title: "Tạp chí có hồn",
+    copy: "Bài viết mở ra trong khung WordPad, có mục lục scrollspy, bookmark, RSS và những đoạn văn dành cho việc đọc chậm.",
+    tone: "blue"
+  },
+  {
+    icon: "⚡",
+    label: "THE SIGNAL",
+    title: "Realtime toàn phần",
+    copy: "Bình luận lồng nhau, reaction nổ hạt neon, thông báo 8-bit và kết nối tự phục hồi bằng exponential backoff.",
+    tone: "green"
+  },
+  {
+    icon: "🕹",
+    label: "THE CONTROL ROOM",
+    title: "Admin = hệ điều hành",
+    copy: "Control Panel 98 với moderation hub, recycle bin, media explorer và audit log — quản trị cũng là một trải nghiệm.",
+    tone: "purple"
+  }
+];
+
+const stack = [
+  {
+    id: "edge",
+    icon: "⚡",
+    title: "Cloudflare Workers",
+    short: "ASTRO SSR / EDGE",
+    copy: "Request được kết xuất tại edge gần người đọc nhất. Astro giữ trải nghiệm nhẹ, nhanh và có thể sống tốt trên free tier.",
+    metric: "100K req / ngày",
+    tone: "orange"
+  },
+  {
+    id: "data",
+    icon: "🐘",
+    title: "Supabase",
+    short: "POSTGRES / RLS / REALTIME",
+    copy: "Database giữ phần logic nặng: 14 bảng, trigger XP, recursive comments, full-text search và WebSocket realtime.",
+    metric: "14 bảng dữ liệu",
+    tone: "green"
+  },
+  {
+    id: "media",
+    icon: "🖼",
+    title: "Cloudinary",
+    short: "IMAGE CDN / VAULT",
+    copy: "Kho ảnh chuyên biệt cho upload, transform f_auto và q_auto. Ảnh đi thẳng đến người xem từ CDN, không đi vòng qua app.",
+    metric: "25GB media vault",
+    tone: "blue"
+  },
+  {
+    id: "cat",
+    icon: "🐱",
+    title: "CAT_AI.EXE",
+    short: "GEMINI / SERVER PROXY",
+    copy: "Bốn persona AI cùng tồn tại trong trạm mèo vàng. API key hệ thống ở lại server; BYOK là lựa chọn riêng của người dùng.",
+    metric: "4 persona AI",
+    tone: "purple"
+  }
+];
+
+const experiences = [
+  {
+    number: "01",
+    icon: "🖼",
+    title: "Phòng triển lãm",
+    copy: "Explorer, List hoặc CRT. Chạm vào tác phẩm để mở lightbox với 7 bộ lọc: CRT, VHS, GameBoy, Cyberpunk, PC-98 và Vapor Marble.",
+    link: "/gallery",
+    action: "Vào triển lãm",
+    accent: "pink"
+  },
+  {
+    number: "02",
+    icon: "📼",
+    title: "WordPad Journal",
+    copy: "Những bài viết về thẩm mỹ số, retro-computing và văn hóa Internet được đặt trong một cửa sổ đọc như bước ra từ năm 1996.",
+    link: "/#journal",
+    action: "Đọc tạp chí",
+    accent: "blue"
+  },
+  {
+    number: "03",
+    icon: "🐱",
+    title: "Trạm CAT_AI",
+    copy: "Gặp mèo vàng cybernetic, giáo sư V.A.P.O.R, CYBER_GHOST_95 hoặc DJ NEON PULSE — mỗi persona có một nhịp nói riêng.",
+    link: "/ai",
+    action: "Mở trạm AI",
+    accent: "yellow"
+  }
+];
+
+const modules = [
+  {
+    id: "mission",
+    icon: "🏠",
+    name: "Mission Control",
+    tag: "OVERVIEW",
+    copy: "Sparkline 30 ngày, activity feed realtime và các quick action cho phiên trực đầu tiên.",
+    tasks: ["Xem nhịp tăng trưởng", "Theo dõi activity", "Mở nhanh queue"]
+  },
+  {
+    id: "articles",
+    icon: "📚",
+    name: "Article Manager",
+    tag: "PUBLISHING",
+    copy: "Lọc, sort, phân trang server-side; bulk publish/archive; nhân bản và chọn bài lên trang chủ.",
+    tasks: ["Lọc & phân trang", "Bulk publish", "Curate trang chủ"]
+  },
+  {
+    id: "moderation",
+    icon: "🖼",
+    name: "Moderation Hub",
+    tag: "OUTLOOK EXPRESS",
+    copy: "Duyệt tranh theo trạng thái, lưu lý do từ chối, gắn sao nổi bật và trao XP tự động.",
+    tasks: ["A / R / X bằng phím tắt", "Lưu lý do từ chối", "Xem preview tác phẩm"]
+  },
+  {
+    id: "media",
+    icon: "🗃",
+    name: "Media Explorer",
+    tag: "CLOUDINARY",
+    copy: "Quét tham chiếu tranh, bài viết và hồ sơ để tìm ảnh mồ côi trước khi dọn kho.",
+    tasks: ["Search media API", "Lọc ảnh mồ côi", "Xóa hàng loạt có kiểm soát"]
+  },
+  {
+    id: "trash",
+    icon: "🗑",
+    name: "Recycle Bin",
+    tag: "RECOVERY",
+    copy: "Soft-delete và khôi phục một chạm. Những bản ghi quá hạn mới bị purge sau 30 ngày.",
+    tasks: ["Restore 1-click", "Theo dõi thời hạn", "Purge có lịch"]
+  }
+];
+
+const security = [
+  {
+    layer: "LAYER 01",
+    icon: "🚪",
+    title: "Middleware",
+    copy: "Kiểm session, role và maintenance gate trước mọi route /admin. UI không được quyền tự quyết định ai là admin.",
+    tone: "pink"
+  },
+  {
+    layer: "LAYER 02",
+    icon: "🛡",
+    title: "Postgres RLS",
+    copy: "Policy nằm cạnh dữ liệu. Editor chỉ sửa bài của mình; audit log chỉ được đọc và ghi bởi admin.",
+    tone: "blue"
+  },
+  {
+    layer: "LAYER 03",
+    icon: "🔒",
+    title: "Database triggers",
+    copy: "Trigger chặn client tự sửa role hoặc ban, tính XP, chống spam và bảo vệ admin cuối cùng.",
+    tone: "green"
+  }
+];
+---
+
+<BaseLayout
+  title="SYSTEM MAP // LOVELYYELLOWCAT"
+  description="Bản đồ tương tác của LovelyYellowCat — tạp chí nghệ thuật Vaporwave, phòng triển lãm cộng đồng và cybernetic oasis chạy trên Edge."
+  userProfile={userProfile}
+  showMarquee={false}
+>
+  <div class="about-shell">
+    <div class="about-noise" aria-hidden="true"></div>
+
+    <section class="about-hero" id="top" aria-labelledby="about-title">
+      <div class="about-hero-grid" aria-hidden="true"></div>
+      <div class="about-hero-sun" aria-hidden="true"></div>
+      <div class="about-hero-glow about-hero-glow-one" aria-hidden="true"></div>
+      <div class="about-hero-glow about-hero-glow-two" aria-hidden="true"></div>
+
+      <div class="about-hero-copy">
+        <div class="about-eyebrow"><span class="about-pulse"></span> PROJECT DOSSIER / PUBLIC CHANNEL</div>
+        <p class="about-kicker">EST. 1995 · BUDGET: $0 · EDGE-RENDERED</p>
+        <h1 id="about-title"><span>Lovely</span><span>YellowCat</span></h1>
+        <p class="about-lede">
+          Một cybernetic oasis cho nghệ thuật số — nơi gallery, tạp chí, cộng đồng và một chú mèo AI cùng chạy trong chiếc máy tính tưởng tượng năm 1995.
+        </p>
+        <div class="about-hero-actions">
+          <a class="about-primary-action" href="/gallery"><span>▶</span> BƯỚC VÀO TRIỂN LÃM</a>
+          <a class="about-secondary-action" href="https://github.com/nongtiensonpro/lovelyyellowcat" target="_blank" rel="noopener noreferrer"><span>⌘</span> XEM SOURCE ↗</a>
+        </div>
+        <div class="about-stat-row" aria-label="Thông số dự án">
+          <div><strong>14</strong><span>DB TABLES</span></div>
+          <div><strong>03</strong><span>SECURITY LAYERS</span></div>
+          <div><strong>04</strong><span>AI PERSONAS</span></div>
+          <div><strong>$0</strong><span>MONTHLY COST</span></div>
+        </div>
+      </div>
+
+      <div class="about-terminal" aria-label="Trình mô phỏng khởi động hệ thống">
+        <div class="about-terminal-titlebar">
+          <span><span class="about-terminal-icon">▣</span> LOVELYYELLOWCAT.BIOS</span>
+          <span class="about-window-buttons"><i>_</i><i>□</i><i>×</i></span>
+        </div>
+        <div class="about-terminal-meta"><span>FILE</span><span>EDIT</span><span>VIEW</span><span>HELP</span><b>● ONLINE</b></div>
+        <div class="about-terminal-screen">
+          <div class="about-terminal-logo">L<span>Y</span>C<span class="about-cat-pixel">🐱</span></div>
+          <p class="about-terminal-line"><em>[BOOT]</em> VAPORWAVE.SYS ................ <strong>OK</strong></p>
+          <p class="about-terminal-line"><em>[LINK]</em> SUPABASE REALTIME ........... <strong>OK</strong></p>
+          <p class="about-terminal-line"><em>[VAULT]</em> CLOUDINARY MEDIA .......... <strong>OK</strong></p>
+          <p class="about-terminal-line"><em>[MEOW]</em> CAT_AI.EXE ................ <strong>READY</strong></p>
+          <div class="about-terminal-divider"></div>
+          <p class="about-terminal-prompt">C:\CYBER_OASIS&gt; <span>run welcome.exe</span><b>▋</b></p>
+        </div>
+        <div class="about-terminal-status"><span>MEM 640K OK</span><span>CPU: VIBE CORE</span><span>NET: EDGE</span></div>
+      </div>
+    </section>
+
+    <nav class="about-jumpbar" aria-label="Điều hướng trong bản đồ hệ thống">
+      <span class="about-jump-label">EXPLORE DOSSIER</span>
+      <a href="#origin" class="is-active">01 ORIGIN</a>
+      <a href="#architecture">02 ARCHITECTURE</a>
+      <a href="#experience">03 EXPERIENCE</a>
+      <a href="#control-panel">04 CONTROL PANEL</a>
+      <a href="#security">05 SECURITY</a>
+    </nav>
+
+    <section class="about-section about-origin" id="origin" aria-labelledby="origin-title">
+      <div class="about-section-heading">
+        <span class="about-section-number">01</span>
+        <div><p>THE ORIGIN STORY</p><h2 id="origin-title">Không chỉ là một website.</h2></div>
+        <span class="about-heading-line"></span>
+      </div>
+
+      <div class="about-origin-layout">
+        <div class="about-manifesto">
+          <div class="about-manifesto-stamp">A CYBERNETIC<br />OASIS</div>
+          <p class="about-quote">“Hãy tưởng tượng bạn bước vào một tiệm điện tử bỏ hoang năm 1995 — CRT còn sáng, băng VHS vẫn quay, và trên tường là tranh do cộng đồng gửi về.”</p>
+          <p class="about-body-copy">LovelyYellowCat được xây như một nơi chốn, không phải một trang danh sách. Mọi màn hình đều có một chút ma sát, một chút bất ngờ và đủ khoảng trống để người xem muốn ở lại lâu hơn.</p>
+          <div class="about-manifesto-footer"><span>MANIFESTO.TXT</span><span>READ TIME: 01:30</span></div>
+        </div>
+        <div class="about-pillars">
+          {pillars.map((pillar, index) => (
+            <article class={`about-pillar about-tone-${pillar.tone}`} style={`--item-delay: ${index * 90}ms`}>
+              <div class="about-pillar-top"><span class="about-pillar-icon">{pillar.icon}</span><span>{pillar.label}</span></div>
+              <h3>{pillar.title}</h3>
+              <p>{pillar.copy}</p>
+              <span class="about-pillar-arrow">↗</span>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="about-section" id="architecture" aria-labelledby="architecture-title">
+      <div class="about-section-heading">
+        <span class="about-section-number">02</span>
+        <div><p>THE FREE-TIER ENGINE</p><h2 id="architecture-title">Mọi thứ kết nối ở Edge.</h2></div>
+        <span class="about-heading-line"></span>
+      </div>
+
+      <div class="about-architecture-window">
+        <div class="about-window-header"><span>🛰️ ARCHITECTURE.EXE</span><span class="about-window-path">C:\SYSTEM\NETWORK\TOPOLOGY</span><span>×</span></div>
+        <div class="about-architecture-body">
+          <div class="about-architecture-intro">
+            <p class="about-label">CLICK A NODE TO INSPECT</p>
+            <p class="about-body-copy">Không một dịch vụ nào cần gánh cả thế giới. Mỗi nhánh làm đúng việc của mình — nhẹ, chuyên biệt và nằm gọn trong hạn mức miễn phí.</p>
+            <div class="about-architecture-legend"><span><i class="legend-dot legend-live"></i> LIVE LINK</span><span><i class="legend-dot legend-secure"></i> SERVER-SIDE</span></div>
+          </div>
+          <div class="about-node-map" aria-label="Sơ đồ kiến trúc hệ thống">
+            <div class="about-node-connector connector-one"></div><div class="about-node-connector connector-two"></div><div class="about-node-connector connector-three"></div>
+            <div class="about-browser-node"><span>🖥️</span><b>YOUR BROWSER</b><small>HTTPS / WEBSOCKET</small></div>
+            <div class="about-stack-nodes">
+              {stack.map((node, index) => (
+                <button
+                  type="button"
+                  class={`about-stack-node about-tone-${node.tone} ${index === 0 ? "is-selected" : ""}`}
+                  data-node={node.id}
+                  data-title={node.title}
+                  data-copy={node.copy}
+                  data-metric={node.metric}
+                  aria-pressed={index === 0 ? "true" : "false"}
+                >
+                  <span class="about-stack-node-icon">{node.icon}</span><span><b>{node.title}</b><small>{node.short}</small></span><i>↗</i>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div class="about-architecture-console" id="architecture-console" aria-live="polite">
+            <span class="about-label">NODE INSPECTOR / ACTIVE</span>
+            <h3 id="architecture-console-title">Cloudflare Workers</h3>
+            <p id="architecture-console-copy">Request được kết xuất tại edge gần người đọc nhất. Astro giữ trải nghiệm nhẹ, nhanh và có thể sống tốt trên free tier.</p>
+            <strong id="architecture-console-metric">100K req / ngày</strong>
+          </div>
+        </div>
+        <div class="about-window-status"><span>● 4 NODES ONLINE</span><span>LATENCY: LOW</span><span>DEPENDENCY: LOOSE</span></div>
+      </div>
+    </section>
+
+    <section class="about-section" id="experience" aria-labelledby="experience-title">
+      <div class="about-section-heading">
+        <span class="about-section-number">03</span>
+        <div><p>THE PUBLIC INTERFACE</p><h2 id="experience-title">Một tạp chí để chạm vào.</h2></div>
+        <span class="about-heading-line"></span>
+      </div>
+      <div class="about-experience-grid">
+        {experiences.map((experience, index) => (
+          <article class={`about-experience-card about-tone-${experience.accent}`} style={`--item-delay: ${index * 110}ms`}>
+            <div class="about-experience-top"><span class="about-experience-number">{experience.number}</span><span class="about-experience-icon">{experience.icon}</span></div>
+            <div class="about-experience-visual" aria-hidden="true"><span></span><span></span><span></span></div>
+            <h3>{experience.title}</h3>
+            <p>{experience.copy}</p>
+            <a href={experience.link}>{experience.action} <span>↗</span></a>
+          </article>
+        ))}
+      </div>
+      <div class="about-shortcuts"><span class="about-label">SYSTEM SHORTCUTS</span><kbd>CTRL</kbd><b>+</b><kbd>K</kbd><span>Tìm kiếm toàn cục</span><span class="shortcut-separator">·</span><kbd>ESC</kbd><span>Đóng overlay</span><span class="shortcut-separator">·</span><kbd>←</kbd><kbd>→</kbd><span>Chuyển ảnh</span></div>
+    </section>
+
+    <section class="about-section" id="control-panel" aria-labelledby="control-title">
+      <div class="about-section-heading">
+        <span class="about-section-number">04</span>
+        <div><p>THE CONTROL ROOM</p><h2 id="control-title">Admin cũng là một thế giới.</h2></div>
+        <span class="about-heading-line"></span>
+      </div>
+
+      <div class="about-control-window">
+        <div class="about-window-header about-control-header"><span>🪟 CONTROL PANEL 98</span><span class="about-window-path">C:\ADMIN\MISSION_CONTROL</span><span>×</span></div>
+        <div class="about-control-layout">
+          <aside class="about-control-sidebar" aria-label="Các module Control Panel">
+            <div class="about-control-user"><span class="about-avatar">YC</span><span><b>ADMINISTRATOR</b><small>CYBER_OASIS</small></span></div>
+            <p class="about-label">MODULES</p>
+            <div class="about-module-list" role="tablist" aria-label="Module quản trị">
+              {modules.map((module, index) => (
+                <button type="button" class={`about-module-button ${index === 0 ? "is-active" : ""}`} data-module={module.id} role="tab" aria-selected={index === 0 ? "true" : "false"} aria-controls={`module-panel-${module.id}`}>
+                  <span>{module.icon}</span>{module.name}<i>{index === 0 ? "●" : ""}</i>
+                </button>
+              ))}
+            </div>
+          </aside>
+          <div class="about-control-content">
+            <div class="about-control-toolbar"><span>▣ MISSION CONTROL</span><span class="about-toolbar-filter">FILTER: <b>ALL ACTIVITY</b> ▾</span></div>
+            {modules.map((module, index) => (
+              <article class="about-module-panel" id={`module-panel-${module.id}`} data-module-panel={module.id} role="tabpanel" hidden={index !== 0}>
+                <div class="about-module-heading"><div><span class="about-label">{module.tag}</span><h3>{module.icon} {module.name}</h3></div><span class="about-module-live">● LIVE</span></div>
+                <p class="about-module-copy">{module.copy}</p>
+                <div class="about-module-tasks">{module.tasks.map((task, taskIndex) => <div><span>0{taskIndex + 1}</span><b>{task}</b><i>✓</i></div>)}</div>
+                <div class="about-fake-graph"><div class="about-graph-grid"></div><svg viewBox="0 0 600 110" preserveAspectRatio="none" aria-label="Sparkline activity"><polyline points="0,88 44,76 78,82 118,56 160,67 202,43 244,52 286,25 332,44 368,20 415,35 452,16 495,28 540,9 600,18" fill="none" stroke="currentColor" stroke-width="3" vector-effect="non-scaling-stroke" /></svg><span>ACTIVITY // 30 DAYS</span></div>
+              </article>
+            ))}
+          </div>
+        </div>
+        <div class="about-window-status"><span>▣ 10 MODULES AVAILABLE</span><span>DB SYNC: OK</span><span>LAST AUDIT: JUST NOW</span></div>
+      </div>
+    </section>
+
+    <section class="about-section about-security-section" id="security" aria-labelledby="security-title">
+      <div class="about-section-heading">
+        <span class="about-section-number">05</span>
+        <div><p>THE TRUST LAYER</p><h2 id="security-title">Đẹp ở ngoài. Chắc ở bên trong.</h2></div>
+        <span class="about-heading-line"></span>
+      </div>
+      <div class="about-security-grid">
+        {security.map((item, index) => (
+          <article class={`about-security-card about-tone-${item.tone}`}>
+            <span class="about-security-layer">{item.layer}</span>
+            <div class="about-security-icon">{item.icon}</div>
+            <h3>{item.title}</h3>
+            <p>{item.copy}</p>
+            <div class="about-security-bar"><span style={`--bar-width: ${70 + index * 10}%`}></span></div>
+          </article>
+        ))}
+      </div>
+      <div class="about-security-note"><span>✓</span><p><b>KEY RULE:</b> API key hệ thống không bao giờ rời server. Mọi mutation quản trị đều để lại dấu vết trong audit log đa đối tượng.</p></div>
+    </section>
+
+    <section class="about-final-cta" aria-labelledby="cta-title">
+      <div class="about-final-sun" aria-hidden="true"></div>
+      <div class="about-final-copy"><p class="about-kicker">THE OASIS IS LIVE</p><h2 id="cta-title">Ready to enter<br /><span>the signal?</span></h2><p>Không cần đọc hết bản đồ. Chọn một cánh cửa và để hệ thống dẫn đường.</p></div>
+      <div class="about-final-actions"><a class="about-primary-action" href="/gallery"><span>▶</span> ENTER GALLERY</a><a class="about-secondary-action" href="/ai"><span>🐱</span> MEET CAT_AI</a><button type="button" class="about-copy-button" id="copy-install"><span>⌘</span> COPY INSTALL</button><small id="copy-feedback" aria-live="polite">npm install · npm run dev</small></div>
+    </section>
+
+    <div class="about-bottom-line"><span>LOVELYYELLOWCAT // SYSTEM MAP v1.0</span><span>MADE WITH ART, CODE &amp; A LITTLE NOSTALGIA 🐱</span><a href="#top">BACK TO TOP ↑</a></div>
+  </div>
+</BaseLayout>
+
+<script>
+  const archButtons = document.querySelectorAll<HTMLButtonElement>(".about-stack-node");
+  const archTitle = document.getElementById("architecture-console-title");
+  const archCopy = document.getElementById("architecture-console-copy");
+  const archMetric = document.getElementById("architecture-console-metric");
+
+  archButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      archButtons.forEach((node) => {
+        node.classList.remove("is-selected");
+        node.setAttribute("aria-pressed", "false");
+      });
+      button.classList.add("is-selected");
+      button.setAttribute("aria-pressed", "true");
+      if (archTitle) archTitle.textContent = button.dataset.title || "";
+      if (archCopy) archCopy.textContent = button.dataset.copy || "";
+      if (archMetric) archMetric.textContent = button.dataset.metric || "";
+    });
+  });
+
+  const moduleButtons = document.querySelectorAll<HTMLButtonElement>(".about-module-button");
+  const modulePanels = document.querySelectorAll<HTMLElement>("[data-module-panel]");
+
+  moduleButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.module;
+      moduleButtons.forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-selected", String(active));
+        const dot = item.querySelector("i");
+        if (dot) dot.textContent = active ? "●" : "";
+      });
+      modulePanels.forEach((panel) => {
+        panel.hidden = panel.dataset.modulePanel !== target;
+      });
+    });
+  });
+
+  const jumpLinks = document.querySelectorAll<HTMLAnchorElement>(".about-jumpbar a");
+  const jumpSections = document.querySelectorAll<HTMLElement>(".about-section");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      jumpLinks.forEach((link) => link.classList.toggle("is-active", link.getAttribute("href") === `#${entry.target.id}`));
+    });
+  }, { rootMargin: "-25% 0px -60% 0px", threshold: 0 });
+  jumpSections.forEach((section) => observer.observe(section));
+
+  const copyButton = document.getElementById("copy-install");
+  const copyFeedback = document.getElementById("copy-feedback");
+  copyButton?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText("npm install && npm run dev");
+      if (copyFeedback) copyFeedback.textContent = "✓ COMMAND COPIED TO CLIPBOARD";
+    } catch {
+      if (copyFeedback) copyFeedback.textContent = "npm install && npm run dev";
+    }
+    window.setTimeout(() => {
+      if (copyFeedback) copyFeedback.textContent = "npm install · npm run dev";
+    }, 2400);
+  });
+</script>
+
+<style>
+  .about-shell {
+    --about-border: rgba(185, 103, 255, 0.32);
+    --about-panel: rgba(18, 0, 36, 0.88);
+    --about-soft: rgba(232, 213, 255, 0.72);
+    position: relative;
+    isolation: isolate;
+    max-width: 1500px;
+    margin: 0 auto;
+    overflow: hidden;
+    color: var(--color-text-primary);
+  }
+
+  .about-noise {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E");
+  }
+
+  .about-hero {
+    min-height: 620px;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+    align-items: center;
+    gap: 4rem;
+    padding: clamp(2.5rem, 6vw, 6rem) clamp(1.25rem, 5vw, 5rem);
+    border: 1px solid var(--about-border);
+    background: linear-gradient(125deg, rgba(11, 0, 26, 0.96), rgba(36, 0, 80, 0.84));
+    box-shadow: 0 0 0 1px rgba(1, 205, 254, 0.08), 0 24px 80px rgba(0, 0, 0, 0.35);
+  }
+
+  .about-hero-grid {
+    position: absolute;
+    inset: 42% -10% -18%;
+    opacity: 0.32;
+    transform: perspective(400px) rotateX(54deg) scale(1.3);
+    transform-origin: bottom;
+    background-image: linear-gradient(rgba(1, 205, 254, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(1, 205, 254, 0.3) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, transparent, black 40%, black);
+  }
+
+  .about-hero-sun,
+  .about-final-sun {
+    position: absolute;
+    width: clamp(220px, 33vw, 480px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: repeating-linear-gradient(to bottom, var(--color-vapor-orange) 0 10px, transparent 10px 16px), linear-gradient(180deg, var(--color-vapor-yellow), var(--color-vapor-pink) 58%, var(--color-vapor-purple));
+    box-shadow: 0 0 70px rgba(255, 113, 206, 0.22);
+    opacity: 0.5;
+    filter: saturate(1.25);
+  }
+
+  .about-hero-sun { right: 17%; bottom: -20%; }
+  .about-hero-glow { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; }
+  .about-hero-glow-one { width: 260px; height: 260px; right: -100px; top: 15%; background: rgba(185, 103, 255, 0.26); }
+  .about-hero-glow-two { width: 180px; height: 180px; left: 25%; bottom: 5%; background: rgba(1, 205, 254, 0.1); }
+
+  .about-hero-copy, .about-terminal { position: relative; z-index: 2; }
+  .about-hero-copy { animation: about-rise 0.8s ease both; }
+  .about-eyebrow, .about-kicker, .about-label, .about-section-heading p, .about-stat-row span, .about-pillar-top, .about-security-layer, .about-terminal-meta, .about-terminal-status, .about-window-status, .about-control-toolbar, .about-bottom-line {
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .about-eyebrow { color: var(--color-vapor-green); font-size: 0.72rem; display: flex; align-items: center; gap: 0.55rem; margin-bottom: 1.5rem; }
+  .about-pulse { width: 8px; height: 8px; display: inline-block; border-radius: 50%; background: var(--color-vapor-green); box-shadow: 0 0 14px var(--color-vapor-green); animation: about-blink 1.6s ease-in-out infinite; }
+  .about-kicker { color: var(--color-vapor-blue); font-size: 0.72rem; margin: 0 0 1rem; }
+  .about-hero h1 { font-family: var(--font-display); font-size: clamp(4.6rem, 10vw, 9rem); line-height: 0.72; letter-spacing: -0.06em; margin: 0; text-transform: uppercase; text-shadow: 4px 4px 0 rgba(1, 205, 254, 0.55), -4px -3px 0 rgba(255, 113, 206, 0.48); }
+  .about-hero h1 span { display: block; }
+  .about-hero h1 span:last-child { color: var(--color-vapor-pink); margin-left: clamp(1.5rem, 6vw, 6rem); }
+  .about-lede { max-width: 600px; margin: 2rem 0 1.75rem; color: var(--about-soft); font-family: var(--font-body); font-size: clamp(1rem, 1.5vw, 1.2rem); line-height: 1.65; }
+  .about-hero-actions, .about-final-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; }
+  .about-primary-action, .about-secondary-action, .about-copy-button { min-height: 42px; display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.65rem 0.85rem; border: 1px solid; font-family: var(--font-mono); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.07em; text-decoration: none; transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+  .about-primary-action { color: var(--color-cosmic-black); border-color: var(--color-vapor-pink); background: var(--color-vapor-pink); box-shadow: 4px 4px 0 rgba(1, 205, 254, 0.36); }
+  .about-primary-action:hover, .about-secondary-action:hover, .about-copy-button:hover { transform: translate(-2px, -2px); }
+  .about-primary-action:hover { box-shadow: 6px 6px 0 rgba(1, 205, 254, 0.55); }
+  .about-secondary-action, .about-copy-button { color: var(--color-vapor-blue); border-color: rgba(1, 205, 254, 0.6); background: rgba(1, 205, 254, 0.06); }
+  .about-secondary-action:hover, .about-copy-button:hover { background: rgba(1, 205, 254, 0.16); box-shadow: 0 0 18px rgba(1, 205, 254, 0.16); }
+  .about-copy-button { cursor: pointer; }
+  .about-stat-row { display: grid; grid-template-columns: repeat(4, max-content); gap: clamp(1rem, 3vw, 2.2rem); margin-top: 3rem; }
+  .about-stat-row div { display: flex; flex-direction: column; gap: 0.15rem; }
+  .about-stat-row strong { color: var(--color-vapor-yellow); font: 2rem/1 var(--font-display); letter-spacing: 0.03em; }
+  .about-stat-row span { color: var(--color-text-muted); font-size: 0.55rem; white-space: nowrap; }
+
+  .about-terminal { max-width: 520px; width: 100%; justify-self: end; padding: 4px; background: var(--color-win-gray); color: black; box-shadow: 12px 14px 0 rgba(0, 0, 0, 0.42), inset -2px -2px 0 var(--color-win-darkest), inset 2px 2px 0 var(--color-win-light); transform: rotate(1.4deg); animation: about-float 5s ease-in-out infinite; }
+  .about-terminal-titlebar, .about-terminal-meta, .about-terminal-status { display: flex; justify-content: space-between; align-items: center; }
+  .about-terminal-titlebar { min-height: 27px; padding: 0.2rem 0.4rem; color: white; background: linear-gradient(90deg, var(--color-win-titlebar), #1084d0); font: 700 0.7rem var(--font-retro); }
+  .about-terminal-icon { color: var(--color-vapor-yellow); }
+  .about-window-buttons { display: flex; gap: 3px; }
+  .about-window-buttons i { display: grid; place-items: center; width: 17px; height: 16px; color: black; background: var(--color-win-gray); box-shadow: inset -1px -1px var(--color-win-darkest), inset 1px 1px var(--color-win-light); font: 700 0.65rem Arial; font-style: normal; }
+  .about-terminal-meta { gap: 0.8rem; justify-content: flex-start; padding: 0.22rem 0.5rem; color: #151515; background: #d9d9d9; font-size: 0.55rem; }
+  .about-terminal-meta b { margin-left: auto; color: #087a42; font-size: 0.52rem; }
+  .about-terminal-screen { min-height: 340px; padding: 1.5rem clamp(1rem, 3vw, 2rem); color: var(--color-vapor-green); background: #05040c; background-image: linear-gradient(rgba(5, 255, 161, 0.045) 1px, transparent 1px); background-size: 100% 4px; font: 0.78rem/1.8 var(--font-mono); box-shadow: inset 0 0 36px rgba(5, 255, 161, 0.1); }
+  .about-terminal-logo { margin: 0 0 1.1rem; color: var(--color-vapor-pink); font: 3.8rem/0.8 var(--font-display); letter-spacing: 0.1em; text-shadow: 2px 0 var(--color-vapor-blue); }
+  .about-terminal-logo span { color: var(--color-vapor-blue); }
+  .about-cat-pixel { display: inline-block; margin-left: 0.3rem; font-size: 1.6rem; filter: saturate(1.5); }
+  .about-terminal-line { margin: 0; color: var(--color-text-secondary); }
+  .about-terminal-line em { color: var(--color-vapor-blue); font-style: normal; }
+  .about-terminal-line strong { float: right; color: var(--color-vapor-green); }
+  .about-terminal-divider { height: 1px; margin: 1rem 0; background: linear-gradient(90deg, transparent, var(--color-vapor-purple), transparent); }
+  .about-terminal-prompt { margin: 0; color: var(--color-vapor-yellow); }
+  .about-terminal-prompt span { color: white; }
+  .about-terminal-prompt b { color: var(--color-vapor-pink); animation: about-blink 1s step-end infinite; }
+  .about-terminal-status { padding: 0.32rem 0.5rem 0.18rem; color: #333; background: var(--color-win-gray); font-size: 0.5rem; }
+
+  .about-jumpbar { position: sticky; top: 0.5rem; z-index: 20; display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin: 1.2rem 0 4rem; padding: 0.4rem; border: 1px solid rgba(1, 205, 254, 0.32); background: rgba(11, 0, 26, 0.9); box-shadow: 0 8px 25px rgba(11, 0, 26, 0.45); backdrop-filter: blur(16px); }
+  .about-jump-label { padding: 0.5rem 0.7rem; color: var(--color-vapor-pink); font: 700 0.62rem var(--font-mono); letter-spacing: 0.12em; }
+  .about-jumpbar a { padding: 0.5rem 0.62rem; color: var(--color-text-secondary); font: 0.62rem var(--font-mono); letter-spacing: 0.06em; text-decoration: none; transition: color 140ms ease, background 140ms ease; }
+  .about-jumpbar a:hover, .about-jumpbar a.is-active { color: var(--color-cosmic-black); background: var(--color-vapor-blue); }
+
+  .about-section { position: relative; padding: 0 clamp(0.3rem, 1vw, 1rem); margin-bottom: clamp(5rem, 10vw, 9rem); scroll-margin-top: 5rem; }
+  .about-section-heading { display: flex; align-items: flex-end; gap: 1rem; margin-bottom: 2rem; }
+  .about-section-number { color: var(--color-vapor-pink); font: 4rem/0.8 var(--font-display); text-shadow: 2px 2px 0 rgba(1, 205, 254, 0.45); }
+  .about-section-heading p { margin: 0 0 0.25rem; color: var(--color-vapor-blue); font-size: 0.65rem; }
+  .about-section-heading h2 { margin: 0; color: white; font: clamp(2rem, 4.2vw, 3.7rem)/0.95 var(--font-display); letter-spacing: -0.02em; }
+  .about-heading-line { flex: 1; height: 1px; margin-bottom: 0.3rem; background: linear-gradient(90deg, var(--color-vapor-purple), transparent); }
+  .about-origin-layout { display: grid; grid-template-columns: minmax(260px, 0.82fr) minmax(0, 1.18fr); gap: 1.3rem; }
+  .about-manifesto { position: relative; min-height: 330px; display: flex; flex-direction: column; justify-content: center; padding: clamp(1.4rem, 4vw, 3.5rem); border: 1px solid rgba(255, 113, 206, 0.42); background: radial-gradient(circle at 90% 10%, rgba(185, 103, 255, 0.2), transparent 40%), var(--about-panel); overflow: hidden; }
+  .about-manifesto::after { content: ""; position: absolute; right: -15%; bottom: -30%; width: 230px; aspect-ratio: 1; border: 1px solid rgba(255, 113, 206, 0.4); border-radius: 50%; box-shadow: 0 0 0 20px rgba(255, 113, 206, 0.04), 0 0 0 40px rgba(255, 113, 206, 0.04), 0 0 0 60px rgba(255, 113, 206, 0.04); }
+  .about-manifesto-stamp { align-self: flex-start; margin-bottom: 1.7rem; padding: 0.45rem 0.6rem; color: var(--color-vapor-yellow); border: 1px solid var(--color-vapor-yellow); font: 0.58rem/1.35 var(--font-mono); letter-spacing: 0.1em; transform: rotate(-4deg); }
+  .about-quote { position: relative; z-index: 1; margin: 0; color: white; font: clamp(1.35rem, 2.5vw, 2rem)/1.15 var(--font-display); }
+  .about-body-copy { color: var(--color-text-secondary); font-size: 0.88rem; line-height: 1.7; }
+  .about-manifesto .about-body-copy { position: relative; z-index: 1; max-width: 470px; margin: 1.5rem 0 0; }
+  .about-manifesto-footer { display: flex; justify-content: space-between; gap: 1rem; margin-top: auto; padding-top: 1.5rem; color: var(--color-text-muted); font: 0.57rem var(--font-mono); letter-spacing: 0.08em; }
+  .about-pillars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .about-pillar { position: relative; min-height: 160px; padding: 1.25rem; border: 1px solid rgba(232, 213, 255, 0.16); background: rgba(36, 0, 80, 0.46); transition: transform 160ms ease, border-color 160ms ease, background 160ms ease; animation: about-rise 0.6s ease both; animation-delay: var(--item-delay); }
+  .about-pillar:hover { transform: translateY(-5px); border-color: var(--tone); background: rgba(36, 0, 80, 0.82); }
+  .about-tone-pink { --tone: var(--color-vapor-pink); }
+  .about-tone-blue { --tone: var(--color-vapor-blue); }
+  .about-tone-green { --tone: var(--color-vapor-green); }
+  .about-tone-purple { --tone: var(--color-vapor-purple); }
+  .about-tone-orange { --tone: var(--color-vapor-orange); }
+  .about-tone-yellow { --tone: var(--color-vapor-yellow); }
+  .about-pillar-top { display: flex; align-items: center; gap: 0.55rem; color: var(--tone); font-size: 0.53rem; }
+  .about-pillar-icon { font-size: 1.35rem; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tone) 60%, transparent)); }
+  .about-pillar h3, .about-experience-card h3, .about-security-card h3 { margin: 0.95rem 0 0.5rem; color: white; font: 1.55rem/0.95 var(--font-display); }
+  .about-pillar p { margin: 0; color: var(--color-text-secondary); font-size: 0.76rem; line-height: 1.5; }
+  .about-pillar-arrow { position: absolute; right: 0.8rem; bottom: 0.6rem; color: var(--tone); font-size: 1rem; }
+
+  .about-architecture-window, .about-control-window { border: 1px solid rgba(192, 192, 192, 0.55); background: var(--color-win-gray); color: black; box-shadow: 8px 10px 0 rgba(0, 0, 0, 0.3); }
+  .about-window-header { display: grid; grid-template-columns: 1fr auto 20px; align-items: center; gap: 1rem; min-height: 31px; padding: 0.3rem 0.5rem; color: white; background: linear-gradient(90deg, var(--color-win-titlebar), #1084d0); font: 700 0.69rem var(--font-retro); }
+  .about-window-path { overflow: hidden; color: rgba(255,255,255,0.7); font: 0.55rem var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+  .about-architecture-body { display: grid; grid-template-columns: minmax(170px, 0.42fr) minmax(340px, 1.2fr) minmax(170px, 0.5fr); align-items: center; gap: 1.2rem; padding: clamp(1rem, 3vw, 2.2rem); background: var(--color-cosmic-black); }
+  .about-architecture-intro { align-self: start; }
+  .about-label { display: block; margin: 0; color: var(--color-vapor-pink); font-size: 0.56rem; }
+  .about-architecture-intro .about-body-copy { margin-top: 0.7rem; font-size: 0.76rem; }
+  .about-architecture-legend { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.6rem; color: var(--color-text-muted); font: 0.54rem var(--font-mono); }
+  .about-architecture-legend span { display: flex; align-items: center; gap: 0.3rem; }
+  .legend-dot { width: 7px; height: 7px; display: inline-block; border-radius: 50%; }
+  .legend-live { background: var(--color-vapor-green); box-shadow: 0 0 7px var(--color-vapor-green); }
+  .legend-secure { background: var(--color-vapor-purple); box-shadow: 0 0 7px var(--color-vapor-purple); }
+  .about-node-map { position: relative; min-height: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.5rem; padding: 1.3rem 0; }
+  .about-node-connector { position: absolute; top: 77px; left: 12%; right: 12%; height: 1px; background: linear-gradient(90deg, var(--color-vapor-blue), var(--color-vapor-pink), var(--color-vapor-purple)); opacity: 0.56; }
+  .about-node-connector::after { content: ""; position: absolute; inset: -3px 0; background: inherit; filter: blur(4px); opacity: 0.6; }
+  .connector-two { top: 50%; transform: rotate(90deg); left: 44%; right: 44%; opacity: 0.25; }
+  .connector-three { top: auto; bottom: 76px; opacity: 0.22; }
+  .about-browser-node, .about-stack-node { position: relative; z-index: 2; border: 1px solid; background: rgba(18, 0, 36, 0.92); box-shadow: 0 0 14px rgba(1, 205, 254, 0.09); }
+  .about-browser-node { display: flex; align-items: center; gap: 0.55rem; padding: 0.6rem 1rem; color: var(--color-vapor-yellow); border-color: rgba(255, 251, 150, 0.6); }
+  .about-browser-node b, .about-stack-node b { display: block; font: 0.65rem var(--font-mono); letter-spacing: 0.05em; }
+  .about-browser-node small, .about-stack-node small { display: block; margin-top: 0.2rem; color: var(--color-text-muted); font: 0.52rem var(--font-mono); }
+  .about-stack-nodes { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+  .about-stack-node { display: flex; align-items: center; gap: 0.55rem; min-height: 72px; padding: 0.65rem; color: var(--tone); border-color: color-mix(in srgb, var(--tone) 48%, transparent); text-align: left; cursor: pointer; transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease; }
+  .about-stack-node:hover, .about-stack-node.is-selected { transform: translateY(-3px); background: color-mix(in srgb, var(--tone) 13%, var(--color-cosmic-deep)); border-color: var(--tone); box-shadow: 0 0 20px color-mix(in srgb, var(--tone) 22%, transparent); }
+  .about-stack-node-icon { font-size: 1.45rem; }
+  .about-stack-node i { margin-left: auto; color: var(--color-text-muted); font-style: normal; }
+  .about-architecture-console { align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding: 1rem; border-left: 1px solid rgba(185, 103, 255, 0.35); }
+  .about-architecture-console h3 { margin: 0.8rem 0 0.5rem; color: white; font: 1.8rem/0.9 var(--font-display); }
+  .about-architecture-console p { margin: 0 0 1.2rem; color: var(--color-text-secondary); font-size: 0.72rem; line-height: 1.6; }
+  .about-architecture-console strong { color: var(--color-vapor-green); font: 0.82rem var(--font-mono); }
+  .about-window-status { display: flex; justify-content: space-between; gap: 1rem; padding: 0.32rem 0.55rem; color: #333; border-top: 1px solid var(--color-win-dark); font-size: 0.52rem; }
+
+  .about-experience-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+  .about-experience-card { position: relative; min-height: 380px; display: flex; flex-direction: column; padding: 1.35rem; border: 1px solid color-mix(in srgb, var(--tone) 44%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--tone) 10%, var(--color-cosmic-deep)), var(--color-cosmic-deep)); overflow: hidden; animation: about-rise 0.65s ease both; animation-delay: var(--item-delay); }
+  .about-experience-card::before { content: ""; position: absolute; inset: auto -30% -24% 28%; height: 220px; border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent); border-radius: 50%; transform: rotate(-18deg); box-shadow: 0 0 0 14px color-mix(in srgb, var(--tone) 5%, transparent), 0 0 0 28px color-mix(in srgb, var(--tone) 5%, transparent); }
+  .about-experience-top { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; color: var(--tone); }
+  .about-experience-number { font: 1.4rem var(--font-display); }
+  .about-experience-icon { font-size: 2rem; filter: drop-shadow(0 0 9px color-mix(in srgb, var(--tone) 48%, transparent)); }
+  .about-experience-visual { position: relative; z-index: 1; height: 95px; margin: 1.4rem 0 1.6rem; overflow: hidden; border: 1px solid color-mix(in srgb, var(--tone) 44%, transparent); background: repeating-linear-gradient(0deg, transparent 0 9px, color-mix(in srgb, var(--tone) 28%, transparent) 10px 11px), radial-gradient(ellipse at 50% 110%, color-mix(in srgb, var(--tone) 55%, transparent), transparent 56%); }
+  .about-experience-visual::before { content: ""; position: absolute; left: 16%; right: 16%; bottom: -60%; aspect-ratio: 2; border-radius: 50%; border: 1px solid var(--tone); box-shadow: 0 0 18px color-mix(in srgb, var(--tone) 50%, transparent); }
+  .about-experience-visual span { position: absolute; bottom: 0; width: 1px; height: 100%; background: color-mix(in srgb, var(--tone) 45%, transparent); transform-origin: bottom; }
+  .about-experience-visual span:nth-child(1) { left: 22%; transform: rotate(28deg); }.about-experience-visual span:nth-child(2) { left: 50%; }.about-experience-visual span:nth-child(3) { right: 22%; transform: rotate(-28deg); }
+  .about-experience-card h3 { position: relative; z-index: 1; font-size: 2rem; }
+  .about-experience-card p { position: relative; z-index: 1; margin: 0; color: var(--color-text-secondary); font-size: 0.8rem; line-height: 1.65; }
+  .about-experience-card a { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 1.5rem; color: var(--tone); font: 0.7rem var(--font-mono); text-decoration: none; text-transform: uppercase; }
+  .about-experience-card a:hover { text-decoration: underline; }
+  .about-shortcuts { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; margin-top: 1rem; padding: 0.6rem 0.75rem; color: var(--color-text-secondary); border: 1px dashed rgba(232, 213, 255, 0.25); font: 0.62rem var(--font-mono); }
+  .about-shortcuts .about-label { margin-right: 0.45rem; }
+  kbd { padding: 0.2rem 0.35rem; color: var(--color-cosmic-black); background: var(--color-win-gray); border: 1px solid var(--color-win-light); box-shadow: 1px 1px 0 var(--color-win-darkest); font: 700 0.6rem var(--font-retro); }
+  .shortcut-separator { color: var(--color-vapor-purple); margin: 0 0.3rem; }
+
+  .about-control-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 430px; background: var(--color-cosmic-black); }
+  .about-control-sidebar { padding: 1rem 0.65rem; color: black; background: var(--color-win-gray); border-right: 1px solid var(--color-win-darkest); }
+  .about-control-user { display: flex; gap: 0.55rem; align-items: center; padding: 0.45rem; margin-bottom: 1.3rem; color: black; background: rgba(255,255,255,0.45); box-shadow: inset 1px 1px var(--color-win-light), inset -1px -1px var(--color-win-dark); }
+  .about-avatar { display: grid; place-items: center; width: 35px; height: 35px; color: white; background: var(--color-win-titlebar); font: 0.9rem var(--font-display); }
+  .about-control-user b, .about-control-user small { display: block; }.about-control-user b { font: 0.6rem var(--font-retro); }.about-control-user small { margin-top: 0.2rem; color: var(--color-win-darkest); font: 0.52rem var(--font-mono); }
+  .about-control-sidebar > .about-label { margin: 0.4rem 0; color: var(--color-win-darkest); font-size: 0.58rem; }
+  .about-module-list { display: grid; gap: 0.25rem; }
+  .about-module-button { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.55rem 0.45rem; color: black; border: 1px solid transparent; background: transparent; font: 700 0.67rem var(--font-retro); text-align: left; cursor: pointer; }
+  .about-module-button:hover, .about-module-button.is-active { border-color: var(--color-win-dark); background: rgba(255,255,255,0.72); box-shadow: inset 1px 1px white; }
+  .about-module-button span { font-size: 1rem; }.about-module-button i { margin-left: auto; color: #087a42; font-style: normal; font-size: 0.55rem; }
+  .about-control-content { min-width: 0; padding: 1rem clamp(1rem, 3vw, 2rem); color: white; }
+  .about-control-toolbar { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 0.75rem; color: var(--color-text-secondary); border-bottom: 1px solid rgba(232, 213, 255, 0.15); font-size: 0.59rem; }
+  .about-toolbar-filter { color: var(--color-vapor-blue); }
+  .about-module-panel[hidden] { display: none; }
+  .about-module-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin: 1.5rem 0 0.7rem; }
+  .about-module-heading h3 { margin: 0.35rem 0 0; color: white; font: 2.7rem/0.9 var(--font-display); }
+  .about-module-live { padding: 0.35rem 0.45rem; color: var(--color-vapor-green); border: 1px solid rgba(5,255,161,0.45); font: 0.58rem var(--font-mono); }
+  .about-module-copy { max-width: 660px; color: var(--color-text-secondary); font-size: 0.85rem; line-height: 1.65; }
+  .about-module-tasks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 1.4rem 0; }
+  .about-module-tasks div { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem; border: 1px solid rgba(1, 205, 254, 0.22); background: rgba(1, 205, 254, 0.05); }
+  .about-module-tasks span { color: var(--color-vapor-blue); font: 0.62rem var(--font-mono); }.about-module-tasks b { overflow: hidden; color: var(--color-text-primary); font: 0.64rem var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }.about-module-tasks i { margin-left: auto; color: var(--color-vapor-green); font-style: normal; }
+  .about-fake-graph { position: relative; height: 135px; margin-top: 1.8rem; padding: 0.7rem 0.7rem 1.2rem; color: var(--color-vapor-green); border: 1px solid rgba(5,255,161,0.3); background: rgba(5,255,161,0.035); overflow: hidden; }
+  .about-fake-graph svg { position: absolute; inset: 0.5rem 0.65rem 1.4rem; width: calc(100% - 1.3rem); height: calc(100% - 1.9rem); }
+  .about-graph-grid { position: absolute; inset: 0; opacity: 0.24; background: linear-gradient(rgba(5,255,161,0.32) 1px, transparent 1px), linear-gradient(90deg, rgba(5,255,161,0.25) 1px, transparent 1px); background-size: 12.5% 25%; }
+  .about-fake-graph > span { position: absolute; left: 0.7rem; bottom: 0.35rem; color: var(--color-text-muted); font: 0.5rem var(--font-mono); }
+
+  .about-security-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+  .about-security-card { position: relative; min-height: 260px; padding: 1.35rem; border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent); background: linear-gradient(160deg, color-mix(in srgb, var(--tone) 11%, var(--color-cosmic-deep)), var(--color-cosmic-deep)); overflow: hidden; }
+  .about-security-card::after { content: attr(data-layer); position: absolute; right: -0.3rem; bottom: -0.9rem; color: color-mix(in srgb, var(--tone) 18%, transparent); font: 6rem var(--font-display); }
+  .about-security-layer { color: var(--tone); font-size: 0.56rem; }.about-security-icon { margin: 1.3rem 0 0.8rem; color: var(--tone); font-size: 2.15rem; }.about-security-card h3 { margin: 0 0 0.55rem; font-size: 2rem; }.about-security-card p { position: relative; z-index: 1; margin: 0; color: var(--color-text-secondary); font-size: 0.78rem; line-height: 1.6; }.about-security-bar { position: absolute; right: 1.35rem; bottom: 1.25rem; left: 1.35rem; height: 3px; background: rgba(232, 213, 255, 0.12); }.about-security-bar span { display: block; width: var(--bar-width); height: 100%; background: var(--tone); box-shadow: 0 0 10px var(--tone); }.about-security-note { display: flex; gap: 0.6rem; align-items: center; margin-top: 1rem; padding: 0.75rem 1rem; color: var(--color-vapor-yellow); border: 1px solid rgba(255, 251, 150, 0.3); background: rgba(255, 251, 150, 0.05); }.about-security-note > span { font-size: 1.2rem; }.about-security-note p { margin: 0; color: var(--color-text-secondary); font-size: 0.74rem; }.about-security-note b { color: var(--color-vapor-yellow); font-family: var(--font-mono); }
+
+  .about-final-cta { position: relative; min-height: 350px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 2rem; padding: clamp(2rem, 6vw, 5rem); margin-bottom: 2rem; border: 1px solid rgba(255, 113, 206, 0.4); background: radial-gradient(circle at 75% 35%, rgba(185, 103, 255, 0.25), transparent 38%), linear-gradient(135deg, rgba(255, 113, 206, 0.08), rgba(1, 205, 254, 0.08)); overflow: hidden; }
+  .about-final-sun { right: 16%; bottom: -45%; width: 310px; opacity: 0.38; }
+  .about-final-copy, .about-final-actions { position: relative; z-index: 1; }.about-final-copy h2 { margin: 0.6rem 0 1.1rem; color: white; font: clamp(3.5rem, 7vw, 6.5rem)/0.72 var(--font-display); text-transform: uppercase; text-shadow: 3px 3px 0 rgba(1, 205, 254, 0.42); }.about-final-copy h2 span { color: var(--color-vapor-pink); }.about-final-copy > p:last-child { max-width: 390px; margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; }.about-final-actions { justify-content: center; }.about-final-actions small { flex-basis: 100%; color: var(--color-text-muted); font: 0.62rem var(--font-mono); text-align: center; }.about-bottom-line { display: flex; justify-content: space-between; gap: 1rem; padding: 0.8rem 0.25rem 0.2rem; color: var(--color-text-muted); border-top: 1px solid rgba(232, 213, 255, 0.14); font-size: 0.56rem; }.about-bottom-line a { color: var(--color-vapor-blue); text-decoration: none; }.about-bottom-line a:hover { text-decoration: underline; }
+
+  @keyframes about-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes about-float { 0%, 100% { transform: rotate(1.4deg) translateY(0); } 50% { transform: rotate(0deg) translateY(-8px); } }
+  @keyframes about-blink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: 0.35; } }
+
+  @media (max-width: 1100px) {
+    .about-hero { grid-template-columns: minmax(0, 1fr) minmax(310px, 0.8fr); gap: 2rem; }
+    .about-architecture-body { grid-template-columns: 0.7fr 1.4fr; }.about-architecture-console { grid-column: 1 / -1; border-top: 1px solid rgba(185, 103, 255, 0.35); border-left: 0; }.about-architecture-intro { grid-row: span 2; }
+  }
+  @media (max-width: 820px) {
+    .about-hero { display: block; min-height: 0; padding: 3rem 1.3rem 4.5rem; }.about-hero-copy { margin-bottom: 3.5rem; }.about-hero-sun { right: -12%; bottom: 30%; opacity: 0.25; }.about-terminal { max-width: 580px; margin: 0 auto; transform: rotate(0.8deg); }.about-stat-row { gap: 1.1rem; }.about-jumpbar { top: 0; margin-bottom: 4rem; }.about-jump-label { width: 100%; padding-bottom: 0.2rem; }.about-jumpbar a { flex: 1; text-align: center; }.about-origin-layout { grid-template-columns: 1fr; }.about-manifesto { min-height: 290px; }.about-experience-grid, .about-security-grid { grid-template-columns: 1fr; }.about-experience-card { min-height: 330px; }.about-control-layout { grid-template-columns: 1fr; }.about-control-sidebar { border-right: 0; border-bottom: 1px solid var(--color-win-darkest); }.about-module-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }.about-module-button { min-height: 42px; }.about-final-cta { grid-template-columns: 1fr; }.about-final-sun { right: -5%; bottom: -30%; }.about-final-actions { justify-content: flex-start; }
+  }
+  @media (max-width: 560px) {
+    .about-hero h1 { font-size: clamp(3.6rem, 17vw, 5.6rem); }.about-lede { font-size: 0.9rem; }.about-stat-row { grid-template-columns: repeat(2, max-content); margin-top: 2.2rem; }.about-section-heading { gap: 0.6rem; }.about-section-number { font-size: 3rem; }.about-section-heading h2 { font-size: 2.2rem; }.about-heading-line { display: none; }.about-pillars { grid-template-columns: 1fr; }.about-pillar { min-height: 145px; }.about-architecture-body { display: block; }.about-architecture-intro { margin-bottom: 1.5rem; }.about-node-map { min-height: 390px; }.about-stack-nodes { grid-template-columns: 1fr; }.about-node-connector { display: none; }.about-architecture-console { margin-top: 1.5rem; border-top: 1px solid rgba(185, 103, 255, 0.35); border-left: 0; }.about-window-path { display: none; }.about-window-header { grid-template-columns: 1fr 20px; }.about-window-header > span:nth-child(3) { grid-column: 2; grid-row: 1; }.about-module-list { grid-template-columns: 1fr; }.about-module-heading h3 { font-size: 2.2rem; }.about-module-tasks { grid-template-columns: 1fr; }.about-control-content { padding: 1rem; }.about-window-status { flex-wrap: wrap; }.about-shortcuts { line-height: 2; }.about-security-note { align-items: flex-start; }.about-bottom-line { flex-direction: column; gap: 0.4rem; }.about-bottom-line a { order: -1; }.about-final-actions > * { width: 100%; justify-content: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .about-hero-copy, .about-terminal, .about-pillar, .about-experience-card { animation: none; }.about-pulse, .about-terminal-prompt b { animation: none; }.about-primary-action, .about-secondary-action, .about-copy-button, .about-pillar, .about-stack-node { transition: none; }
+  }
+</style>

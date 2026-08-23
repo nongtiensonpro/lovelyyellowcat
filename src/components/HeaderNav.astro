@@ -73,6 +73,13 @@ const currentPath = Astro.url.pathname;
         >
           <span>🐱</span> Mèo Vàng AI
         </a>
+        <a
+          href="/about"
+          class={`win95-btn font-bold px-3 py-1 flex items-center gap-1 text-black no-underline ${currentPath.startsWith('/about') ? 'win95-sunken bg-vapor-blue/20 text-black font-extrabold border-2 border-black' : ''}`}
+          style="min-height: 32px;"
+        >
+          <span>🛰️</span> Hệ Thống
+        </a>
         {userProfile && (
           <a
             href="/favorites"
@@ -217,6 +224,9 @@ const currentPath = Astro.url.pathname;
         </a>
         <a href="/ai" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/ai') ? 'bg-vapor-yellow/40 border-2 border-black text-black font-extrabold' : 'bg-win-gray text-black'}`}>
           🐱 TRẠM AI MÈO VÀNG (1995)
+        </a>
+        <a href="/about" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/about') ? 'bg-vapor-blue/30 border-2 border-black text-black font-extrabold' : 'bg-win-gray text-black'}`}>
+          🛰️ BẢN ĐỒ HỆ THỐNG
         </a>
         {userProfile && (
           <a href="/favorites" class={`block win95-btn text-black font-bold py-2.5 w-full text-center no-underline ${currentPath.startsWith('/favorites') ? 'bg-vapor-purple/20 border-vapor-purple text-white font-extrabold' : 'bg-win-gray text-black'}`}>
