@@ -138,6 +138,12 @@ export interface CloudinaryListResult {
   error?: string;
 }
 
+/** Che giấu khóa: chỉ hiện 4 ký tự cuối để đối chiếu mà không lộ secret */
+function maskKey(value?: string): string {
+  if (!value) return "(trống)";
+  return value.length <= 4 ? "****" : `••••${value.slice(-4)}`;
+}
+
 /**
  * Liệt kê ảnh trong thư viện Cloudinary qua Admin API (signed request).
  * Key/secret chỉ tồn tại phía server — không bao giờ xuống client.
@@ -147,13 +153,22 @@ export async function listCloudinaryImages(
   runtimeEnv?: CloudinaryRuntimeEnv
 ): Promise<CloudinaryListResult> {
   const { cloudName, apiKey, apiSecret } = getCloudinaryConfig(runtimeEnv);
+
   if (!cloudName || !apiKey || !apiSecret) {
+    const missing = [
+      !cloudName ? "cloud_name" : null,
+      !apiKey ? "api_key" : null,
+      !apiSecret ? "api_secret" : null,
+    ].filter(Boolean).join(", ");
     return {
       resources: [],
       nextCursor: null,
-      error: "Thiếu cấu hình CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET trên server.",
+      error: `Thiếu cấu hình Cloudinary trên server: ${missing}. `
+        + `CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET phải khai báo trong Cloudflare Dashboard (Variables & Secrets của Worker), không phải trong .env local.`,
     };
   }
+
+  const diag = `[cloud=${cloudName}, api_key=${maskKey(apiKey)}, secret=${maskKey(apiSecret)}]`;
 
   try {
     const timestamp = Math.floor(Date.now() / 1000).toString();
@@ -170,7 +185,11 @@ export async function listCloudinaryImages(
     const data: any = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      return { resources: [], nextCursor: null, error: data?.error?.message || `HTTP ${response.status}` };
+      const apiMsg = data?.error?.message || `HTTP ${response.status}`;
+      const hint = /credential|signature|auth/i.test(apiMsg)
+        ? ` → Cặp api_key ↔ api_secret KHÔNG khớp với tài khoản Cloudinary "${cloudName}". Hãy vào Cloudinary Console → Settings → Access Keys lấy đúng cặp hiện tại, rồi cập nhật 2 biến CLOUDINARY_API_KEY & CLOUDINARY_API_SECRET trong Cloudflare Dashboard → Worker lovelyyellowcat → Settings → Variables & Secrets.`
+        : "";
+      return { resources: [], nextCursor: null, error: `${apiMsg} ${diag}.${hint}` };
     }
 
     return {
@@ -178,7 +197,7 @@ export async function listCloudinaryImages(
       nextCursor: data.next_cursor || null,
     };
   } catch (error: any) {
-    return { resources: [], nextCursor: null, error: error.message || String(error) };
+    return { resources: [], nextCursor: null, error: `${error.message || String(error)} ${diag}` };
   }
 }
 
