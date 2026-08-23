@@ -38,6 +38,13 @@ function cdnUrl(publicId: string, transform?: string): string {
   return `https://res.cloudinary.com/${cloudName}/image/upload/${transform ? transform + "/" : ""}${encoded}`;
 }
 
+function formatBytes(bytes?: number): string {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(2)} MB`;
+}
+
 // ── Query params: lọc + phân trang con trỏ hai chiều ──
 const url = new URL(Astro.request.url);
 const q = url.searchParams.get("q")?.trim() || "";
