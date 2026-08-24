@@ -184,7 +184,7 @@ function formatAnnouncementDate(d: string | null) {
                 <span aria-hidden="true">{a.type === "popup" ? "🪟" : a.type === "banner" ? "🚩" : "🎞️"}</span>
                 <div class="min-w-0 flex-1">
                   <p class="font-bold text-xs truncate">{a.title}</p>
-                  <p class="text-[9px] text-win-dark">
+                  <p class="text-[10px] text-win-dark">
                     Hết hạn: {formatAnnouncementDate(a.end_at)} · {expired ? "⚠️ CŨ" : a.is_active ? "🟢 ĐANG CHẠY" : "⏸ TẠM DỪNG"}
                   </p>
                 </div>

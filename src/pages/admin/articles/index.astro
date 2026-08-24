@@ -447,7 +447,7 @@ const { data: allStatuses } = await supabase
                     <a href={`/articles/${article.slug}`} target="_blank" rel="noopener" class="font-bold text-black no-underline hover:underline">
                       {article.title}
                     </a>
-                    <div class="font-mono text-[9px] text-win-dark break-all">{article.slug}</div>
+                    <div class="font-mono text-[10px] text-win-dark break-all">{article.slug}</div>
                   </td>
                   <td class="text-[10px]">
                     {article.profiles?.full_name || "—"}
@@ -495,7 +495,7 @@ const { data: allStatuses } = await supabase
                         </button>
                       </div>
                     ) : (
-                      <span class="text-[9px] text-win-dark">— chỉ đọc —</span>
+                      <span class="text-[10px] text-win-dark">— chỉ đọc —</span>
                     )}
                   </td>
                 </tr>

@@ -184,7 +184,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
             <span>🔒</span>
             <span>AUTH_REQUIRED.SYS</span>
           </div>
-          <button className="win95-btn py-0 px-1 text-[9px] font-bold">✕</button>
+          <button className="win95-btn py-0 px-1 text-[10px] font-bold">✕</button>
         </div>
         <div className="p-6 text-center bg-win-gray space-y-4">
           <span className="text-5xl block">🔑</span>

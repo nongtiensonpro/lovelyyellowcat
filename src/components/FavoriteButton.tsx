@@ -131,7 +131,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     return (
       <div className="relative inline-block font-retro">
         {errorMsg && (
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 bg-[#0b001a] border border-[#ff71ce] p-1 text-[8px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse shadow-md">
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 bg-[#0b001a] border border-[#ff71ce] p-1 text-[10px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse shadow-md">
             ⚠️ {errorMsg}
           </div>
         )}
@@ -153,7 +153,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   return (
     <div className="relative inline-block font-retro">
       {errorMsg && (
-        <div className="absolute -top-7 right-0 bg-[#0b001a] border border-[#ff71ce] p-1 text-[8px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse">
+        <div className="absolute -top-7 right-0 bg-[#0b001a] border border-[#ff71ce] p-1 text-[10px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse">
           {errorMsg}
         </div>
       )}

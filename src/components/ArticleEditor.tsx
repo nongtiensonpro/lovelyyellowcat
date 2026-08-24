@@ -437,14 +437,14 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
                   <button
                     type="button"
                     onClick={() => setActiveTab("write")}
-                    className={`win95-btn text-[9px] font-bold px-2 py-0.5 ${activeTab === "write" ? "bg-white shadow-inner" : ""}`}
+                    className={`win95-btn text-[10px] font-bold px-2 py-0.5 ${activeTab === "write" ? "bg-white shadow-inner" : ""}`}
                   >
                     SOẠN THẢO
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveTab("preview")}
-                    className={`win95-btn text-[9px] font-bold px-2 py-0.5 ${activeTab === "preview" ? "bg-white shadow-inner" : ""}`}
+                    className={`win95-btn text-[10px] font-bold px-2 py-0.5 ${activeTab === "preview" ? "bg-white shadow-inner" : ""}`}
                   >
                     XEM TRƯỚC
                   </button>
@@ -517,7 +517,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
                   </div>
                 )}
 
-                <div className="flex flex-wrap justify-between gap-2 border-t border-win-dark bg-[#c0c0c0] px-2 py-1 text-[9px] text-win-dark font-bold">
+                <div className="flex flex-wrap justify-between gap-2 border-t border-win-dark bg-[#c0c0c0] px-2 py-1 text-[10px] text-win-dark font-bold">
                   <span>{wordCount} từ</span>
                   <span>{readingMinutes} phút đọc</span>
                   <span>{bodyMd.length} ký tự</span>

@@ -119,7 +119,7 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({ onUploadSucc
                 type="text" 
                 readOnly 
                 value={uploadedUrl} 
-                className="flex-1 p-1 bg-white text-black text-[9px] border border-win-dark outline-none font-mono"
+                className="flex-1 p-1 bg-white text-black text-[10px] border border-win-dark outline-none font-mono"
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
               <button 
@@ -134,7 +134,7 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({ onUploadSucc
                 {isCopied ? "ĐÃ LƯU" : "SAO CHÉP"}
               </button>
             </div>
-            <p className="text-[8px] text-win-dark mt-1 leading-normal italic">
+            <p className="text-[10px] text-win-dark mt-1 leading-normal italic">
               * Bạn có thể sao chép liên kết này và dán vào phần bình luận bên dưới các bài viết nghệ thuật!
             </p>
           </div>

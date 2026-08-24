@@ -362,10 +362,10 @@ const { count: rejectedCount } = await supabase
           <div class="win95-container bg-white flex flex-col justify-between p-2 shadow-sm border border-win-dark">
             <div>
               <div class="win95-header mb-2">
-                <span class="break-all font-mono text-[9px]">{sub.id}</span>
+                <span class="break-all font-mono text-[10px]">{sub.id}</span>
                 <span class="flex items-center gap-1">
                   {sub.is_featured && <span class="text-vapor-yellow text-[10px]" title="Đang nổi bật trên trang chủ">★</span>}
-                  <span class={`px-1.5 py-0.2 border text-[8px] font-bold uppercase ${
+                  <span class={`px-1.5 py-0.2 border text-[10px] font-bold uppercase ${
                     sub.status === 'approved'
                       ? 'bg-green-100 text-green-800 border-green-300'
                       : sub.status === 'pending'
@@ -393,7 +393,7 @@ const { count: rejectedCount } = await supabase
                   <span class="text-win-dark truncate">Tác giả: <strong>{sub.profiles?.full_name || "Anonymous"}</strong></span>
                 </div>
                 {sub.status === "rejected" && sub.rejection_reason && (
-                  <p class="mt-1 p-1.5 bg-red-50 border border-red-200 text-[9px] text-red-800 leading-snug">
+                  <p class="mt-1 p-1.5 bg-red-50 border border-red-200 text-[10px] text-red-800 leading-snug">
                     📋 Lý do từ chối: {sub.rejection_reason}
                   </p>
                 )}

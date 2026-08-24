@@ -716,11 +716,11 @@ export const AiChatStation: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Quick Model Selector on Menubar */}
             <div className="flex items-center gap-1 bg-white px-1.5 py-0.5 border border-win-dark shadow-inner">
-              <span className="text-[9px] font-bold text-win-darkest font-mono">⚡ MODEL:</span>
+              <span className="text-[10px] font-bold text-win-darkest font-mono">⚡ MODEL:</span>
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className="bg-transparent border-none outline-none font-mono text-[9px] text-black font-bold cursor-pointer max-w-[140px] sm:max-w-[210px] truncate"
+                className="bg-transparent border-none outline-none font-mono text-[10px] text-black font-bold cursor-pointer max-w-[140px] sm:max-w-[210px] truncate"
               >
                 {MODEL_OPTIONS.map(m => (
                   <option key={m.id} value={m.id}>
@@ -796,7 +796,7 @@ export const AiChatStation: React.FC = () => {
                         <button
                           type="button"
                           onClick={(e) => handleDeleteSession(s.id, e)}
-                          className={`px-1 py-0 text-[9px] font-mono hover:bg-red-700 hover:text-white ${
+                          className={`px-1 py-0 text-[10px] font-mono hover:bg-red-700 hover:text-white ${
                             isActive ? "text-white" : "text-win-dark"
                           }`}
                           title="Xóa phiên này"
@@ -831,7 +831,7 @@ export const AiChatStation: React.FC = () => {
                           <span>{p.icon}</span>
                           <span className="font-bold text-[11px] truncate">{p.name}</span>
                         </div>
-                        <span className="text-[9px] text-win-darkest leading-tight line-clamp-2">
+                        <span className="text-[10px] text-win-darkest leading-tight line-clamp-2">
                           {p.role}
                         </span>
                       </button>
@@ -848,7 +848,7 @@ export const AiChatStation: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-xs leading-none">{activePersonaObj.name}</h4>
-                    <span className="text-[9px] font-mono text-win-dark">{activePersonaObj.role}</span>
+                    <span className="text-[10px] font-mono text-win-dark">{activePersonaObj.role}</span>
                   </div>
                 </div>
                 <p className="text-[10px] text-win-darkest font-body leading-relaxed">
@@ -886,7 +886,7 @@ export const AiChatStation: React.FC = () => {
                 {/* Scrollable Message Box */}
                 <div className="win95-sunken bg-white p-3.5 space-y-4 overflow-y-auto h-[440px] border-2 border-win-dark">
                   {/* Cyber ASCII Welcome Banner */}
-                  <div className="text-center py-2 border-b border-win-light text-[9px] font-mono text-win-dark leading-tight select-none">
+                  <div className="text-center py-2 border-b border-win-light text-[10px] font-mono text-win-dark leading-tight select-none">
                     <pre className="text-vapor-purple font-bold">
 {`████████╗██████╗  █████╗ ███╗   ███╗     █████╗ ██╗
 ╚══██╔══╝██╔══██╗██╔══██╗████╗ ████║    ██╔══██╗██║
@@ -919,7 +919,7 @@ export const AiChatStation: React.FC = () => {
                         }`}
                       >
                         {/* Header of message */}
-                        <div className="flex items-center justify-between text-[9px] font-mono border-b pb-1 mb-1.5 border-black/10">
+                        <div className="flex items-center justify-between text-[10px] font-mono border-b pb-1 mb-1.5 border-black/10">
                           <span className="font-bold flex items-center gap-1 text-vapor-purple">
                             {msg.role === "user" ? "👤 BẠN" : `${activePersonaObj.icon} ${activePersonaObj.name.toUpperCase()}`}
                           </span>
@@ -1010,7 +1010,7 @@ export const AiChatStation: React.FC = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleCopyText(`err-detail-${msg.id}`, msg.errorDetail || "")}
-                                      className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-white hover:bg-vapor-yellow/30"
+                                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-bold bg-white hover:bg-vapor-yellow/30"
                                     >
                                       {copiedId === `err-detail-${msg.id}` ? "✓ Đã Chép Log!" : "📋 Sao Chép Log Lỗi"}
                                     </button>
@@ -1018,7 +1018,7 @@ export const AiChatStation: React.FC = () => {
                                       href={`mailto:nongtiensonpro@gmail.com?subject=${encodeURIComponent("Báo lỗi AI Chat // Lovely Yellow Cat")}&body=${encodeURIComponent(`Chào Dev Nongtiensonpro,\n\nTôi gặp sự cố khi trò chuyện với AI tại website Lovely Yellow Cat:\n\n- Thời gian: ${new Date().toLocaleString("vi-VN")}\n- Phiên chat: ${currentSession?.title || "AI Chat"}\n- Nhân cách: ${currentSession?.persona || "cybercat"}\n\n[Chi tiết lỗi kỹ thuật]:\n${msg.errorDetail || "Không có log chi tiết"}\n\nNhờ dev kiểm tra và khắc phục giúp tôi nhé!`)}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="win95-btn py-1 px-2.5 text-[9px] text-black font-bold bg-[#fffb96] no-underline hover:bg-yellow-300"
+                                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-bold bg-[#fffb96] no-underline hover:bg-yellow-300"
                                     >
                                       ✉️ Gửi Báo Lỗi Cho Dev (Email)
                                     </a>
@@ -1030,7 +1030,7 @@ export const AiChatStation: React.FC = () => {
                         )}
 
                         {/* Action buttons on message bubble */}
-                        <div className="flex justify-end items-center gap-2 pt-2 mt-1.5 border-t border-black/10 text-[9px] font-mono">
+                        <div className="flex justify-end items-center gap-2 pt-2 mt-1.5 border-t border-black/10 text-[10px] font-mono">
                           <button
                             type="button"
                             onClick={() => handleCopyText(msg.id, msg.content)}
@@ -1302,7 +1302,7 @@ export const AiChatStation: React.FC = () => {
                       onChange={(e) => setTemperature(parseFloat(e.target.value))}
                       className="w-full cursor-pointer"
                     />
-                    <div className="flex justify-between text-[9px] text-win-dark font-mono">
+                    <div className="flex justify-between text-[10px] text-win-dark font-mono">
                       <span>0.2 (Chính xác / Logic)</span>
                       <span>0.7 (Cân bằng chuẩn)</span>
                       <span>1.0 (Sáng tạo / Thơ ca)</span>

@@ -165,7 +165,7 @@ function daysLeft(deletedAt: string): number {
               <span aria-hidden="true">📄</span>
               <div class="min-w-0 flex-1">
                 <p class="font-bold text-xs truncate">{a.title}</p>
-                <p class="text-[9px] text-win-dark">
+                <p class="text-[10px] text-win-dark">
                   {a.profiles?.full_name || "—"} · còn <strong class={daysLeft(a.deleted_at) <= 7 ? "text-red-700" : ""}>{daysLeft(a.deleted_at)} ngày</strong>
                 </p>
               </div>
@@ -193,7 +193,7 @@ function daysLeft(deletedAt: string): number {
               <img src={s.image_url} alt="" loading="lazy" class="w-10 h-8 object-cover border border-win-dark shrink-0" />
               <div class="min-w-0 flex-1">
                 <p class="font-bold text-xs truncate">{s.title || "Tác phẩm không tên"}</p>
-                <p class="text-[9px] text-win-dark">
+                <p class="text-[10px] text-win-dark">
                   {s.profiles?.full_name || "—"} · còn <strong class={daysLeft(s.deleted_at) <= 7 ? "text-red-700" : ""}>{daysLeft(s.deleted_at)} ngày</strong>
                 </p>
               </div>

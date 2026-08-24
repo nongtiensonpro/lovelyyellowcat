@@ -66,7 +66,7 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
     <meta name="robots" content="noindex, nofollow" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
   </head>
   <body class="min-h-screen text-white font-body antialiased bg-cosmic-black">
     <!-- Lớp phủ CRT toàn trang -->
@@ -83,7 +83,7 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
       <header class="win95-window m-2 mb-0 shrink-0">
         <div class="win95-header px-2">
           <span class="truncate">📼 LYC CONTROL PANEL 98 // LOVELYYELLOWCAT ADMIN</span>
-          <span class="hidden sm:inline text-[9px] opacity-80 shrink-0 ml-2">
+          <span class="hidden sm:inline text-[10px] opacity-80 shrink-0 ml-2">
             {isAdmin ? "👑 ADMIN SESSION" : "✏️ EDITOR SESSION"}
           </span>
         </div>
@@ -144,7 +144,7 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
               </a>
             ))}
             {!isAdmin && (
-              <p class="px-2 pt-2 text-[9px] text-black/50">🔒 Người dùng & Cài đặt: chỉ dành cho admin</p>
+              <p class="px-2 pt-2 text-[10px] text-black/50">🔒 Người dùng & Cài đặt: chỉ dành cho admin</p>
             )}
           </nav>
 
@@ -164,12 +164,12 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
               {isAdmin ? "👑 ADMIN" : "✏️ EDITOR"}
             </span>
             <span class="win95-statusbar-panel" id="admin-net" role="status">▲ ONLINE</span>
-            <button id="toggle-crt-btn" class="win95-btn text-[9px] py-0 px-1.5 font-bold" style="min-height:20px;" aria-pressed="true">
+            <button id="toggle-crt-btn" class="win95-btn text-[10px] py-0 px-1.5 font-bold" style="min-height:20px;" aria-pressed="true">
               📺 CRT
             </button>
             <span class="win95-statusbar-panel ml-auto" id="admin-clock">--:--:--</span>
           </div>
-          <p class="text-center text-[8px] font-mono text-black/40 pb-1 pt-0.5 bg-win-gray">
+          <p class="text-center text-[10px] font-mono text-black/40 pb-1 pt-0.5 bg-win-gray">
             SHELL v3.0 · $0 BUDGET EDITION
           </p>
         </aside>
@@ -181,16 +181,16 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
             <div class="win95-header px-2">
               <span class="font-display tracking-wider text-sm">C:\ADMIN\{crumbSection}</span>
               <span class="flex gap-0.5" aria-hidden="true">
-                <button tabindex="-1" class="win95-btn text-[9px] leading-none w-[16px] h-[14px] p-0 font-bold">_</button>
-                <button tabindex="-1" class="win95-btn text-[9px] leading-none w-[16px] h-[14px] p-0 font-bold">□</button>
-                <button tabindex="-1" class="win95-btn text-[9px] leading-none w-[16px] h-[14px] p-0 font-bold" disabled>✕</button>
+                <button tabindex="-1" class="win95-btn text-[10px] leading-none w-[16px] h-[14px] p-0 font-bold">_</button>
+                <button tabindex="-1" class="win95-btn text-[10px] leading-none w-[16px] h-[14px] p-0 font-bold">□</button>
+                <button tabindex="-1" class="win95-btn text-[10px] leading-none w-[16px] h-[14px] p-0 font-bold" disabled>✕</button>
               </span>
             </div>
           </div>
 
           <slot />
 
-          <footer class="mt-8 mb-2 text-center font-mono text-[9px] text-text-muted">
+          <footer class="mt-8 mb-2 text-center font-mono text-[10px] text-text-muted">
             📼 LOVELY YELLOW CAT CONTROL PANEL · MIT LICENSE · BEST VIEWED AT 1024x768
           </footer>
         </main>

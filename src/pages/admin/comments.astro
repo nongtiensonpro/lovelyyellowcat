@@ -152,7 +152,7 @@ if (comments && comments.length > 0) {
     <div class={`win95-container mb-6 font-retro text-xs ${actionResult.success ? "border-vapor-green" : "border-red-600"}`}>
       <div class={`win95-header ${actionResult.success ? "bg-gradient-to-r from-green-700 to-green-600" : "bg-gradient-to-r from-red-800 to-red-600"}`}>
         <span>{actionResult.success ? "✅ SYSTEM_LOG.OK" : "❌ SYSTEM_ALERT.ERR"}</span>
-        <span class="text-[9px]">{new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+        <span class="text-[10px]">{new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
       </div>
       <div class={`p-3 text-black font-bold ${actionResult.success ? "bg-green-100" : "bg-red-100"}`}>
         <span class="mr-2">{actionResult.success ? "🟢" : "🔴"}</span>
@@ -244,7 +244,7 @@ if (comments && comments.length > 0) {
                         📄 {art.title}
                       </a>
                     ) : (
-                      <a href={`/articles/${comment.article_id}`} class="font-mono text-[9px] text-win-dark hover:underline no-underline break-all" target="_blank" rel="noopener">
+                      <a href={`/articles/${comment.article_id}`} class="font-mono text-[10px] text-win-dark hover:underline no-underline break-all" target="_blank" rel="noopener">
                         #{String(comment.article_id).slice(0, 12)}…
                       </a>
                     );
@@ -265,7 +265,7 @@ if (comments && comments.length > 0) {
                       <form method="POST" class="m-0">
                         <input type="hidden" name="action" value="delete" />
                         <input type="hidden" name="commentId" value={comment.id} />
-                        <label class="block text-[9px] font-bold mb-1 text-black">📋 Lý do xóa:</label>
+                        <label class="block text-[10px] font-bold mb-1 text-black">📋 Lý do xóa:</label>
                         <select name="deleteReasonPreset" class="w-full text-[10px] p-1 border border-win-dark bg-white mb-1 font-retro"
                           onchange={`this.form.deleteReason.value = this.value`}>
                           <option value="">-- Chọn lý do --</option>
@@ -308,7 +308,7 @@ if (comments && comments.length > 0) {
     )}
 
     <!-- Status Bar -->
-    <div class="p-1.5 bg-win-gray border-t border-white text-[8px] text-win-dark font-retro flex justify-between">
+    <div class="p-1.5 bg-win-gray border-t border-white text-[10px] text-win-dark font-retro flex justify-between">
       <span>COMMENT_MODERATION.SYS v3.0</span>
       <span>{commentsCount || 0} bình luận | Cập nhật: {new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</span>
     </div>

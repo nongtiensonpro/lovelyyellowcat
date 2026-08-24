@@ -628,7 +628,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               CYBER_GALLERY_PRO.EXE - [{activeSubmission.title}]
             </span>
             {zoomScale > 1 && (
-              <span className="bg-[#05ffa1] text-black font-mono text-[9px] px-1.5 py-0.2 font-bold hidden sm:inline">
+              <span className="bg-[#05ffa1] text-black font-mono text-[10px] px-1.5 py-0.2 font-bold hidden sm:inline">
                 {Math.round(zoomScale * 100)}%
               </span>
             )}
@@ -711,7 +711,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               {zoomScale !== 1 && (
                 <button
                   onClick={resetTransform}
-                  className="win95-btn px-1.5 py-0 text-[8px] font-bold bg-[#fffb96] ml-1"
+                  className="win95-btn px-1.5 py-0 text-[10px] font-bold bg-[#fffb96] ml-1"
                   title="Khôi phục vừa màn hình (Phím 0)"
                 >
                   FIT
@@ -747,16 +747,16 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                 title="Chọn hiệu ứng thị giác hoài cổ (Phím M để đổi nhanh)"
               >
                 <span>🎨 Lọc:</span>
-                <span className="font-mono text-[9px] uppercase">
+                <span className="font-mono text-[10px] uppercase">
                   {VISUAL_FILTERS.find(f => f.id === activeFilter)?.label.split(" ")[0]}
                 </span>
-                <span className="text-[8px]">▼</span>
+                <span className="text-[10px]">▼</span>
               </button>
 
               {/* Dropdown Bộ lọc */}
               {showFilterMenu && (
                 <div className="absolute left-0 top-full mt-1 bg-win-gray border-2 border-win-dark shadow-2xl p-1.5 z-50 min-w-[220px] space-y-1 animate-[fadeIn_0.1s_ease-out]">
-                  <div className="win95-header py-0.5 px-1 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-white text-[9px] font-bold">
+                  <div className="win95-header py-0.5 px-1 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-white text-[10px] font-bold">
                     CHỌN HIỆU ỨNG THỊ GIÁC RETRO (PHÍM M)
                   </div>
                   {VISUAL_FILTERS.map((f) => (
@@ -838,7 +838,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
               {/* Khung HUD Cyberpunk Overlay khi kích hoạt Filter Cyber */}
               {activeFilter === "cyber" && (
-                <div className="absolute inset-0 pointer-events-none border border-[#01cdfe]/40 p-2 flex flex-col justify-between text-[8px] font-mono text-[#01cdfe] z-20">
+                <div className="absolute inset-0 pointer-events-none border border-[#01cdfe]/40 p-2 flex flex-col justify-between text-[10px] font-mono text-[#01cdfe] z-20">
                   <div className="flex justify-between">
                     <span>TARGET_ACQUIRED // RES_1080P</span>
                     <span>COORDS: X={Math.round(panOffset.x)} Y={Math.round(panOffset.y)}</span>
@@ -878,7 +878,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               </button>
 
               {/* Badge thông tin chỉ số ảnh góc dưới trái */}
-              <div className="absolute bottom-2 left-2 bg-black/80 border border-win-dark text-[8px] sm:text-[9px] text-vapor-blue font-bold px-2 py-0.5 z-20 flex items-center gap-1.5">
+              <div className="absolute bottom-2 left-2 bg-black/80 border border-win-dark text-[10px] sm:text-[10px] text-vapor-blue font-bold px-2 py-0.5 z-20 flex items-center gap-1.5">
                 <span>SUBMISSION {currentIndex + 1} / {submissions.length}</span>
                 {zoomScale > 1 && (
                   <span className="text-[#05ffa1] font-mono">• Kéo chuột để di chuyển</span>
@@ -886,7 +886,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               </div>
 
               {/* Badge phím tắt góc trên phải */}
-              <div className="absolute top-2 right-2 bg-black/70 text-white/80 font-mono text-[8px] px-2 py-0.5 hidden md:block z-20">
+              <div className="absolute top-2 right-2 bg-black/70 text-white/80 font-mono text-[10px] px-2 py-0.5 hidden md:block z-20">
                 [LĂN CHUỘT] ZOOM • [DBL CLICK] 2X • [Z] ZEN • [M] FILTER
               </div>
             </div>
@@ -904,7 +904,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                   {isAutoplay ? "⏸ TẠM DỪNG" : "▶ CHẠY SLIDESHOW"}
                 </button>
                 <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-win-dark uppercase font-bold">Giây:</span>
+                  <span className="text-[10px] text-win-dark uppercase font-bold">Giây:</span>
                   <select
                     value={autoplaySpeed}
                     onChange={(e) => {
@@ -921,7 +921,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                 </div>
                 <button
                   onClick={() => setShowFilmstrip(!showFilmstrip)}
-                  className={`win95-btn py-0.5 px-2 text-[9px] font-bold hidden sm:inline ${
+                  className={`win95-btn py-0.5 px-2 text-[10px] font-bold hidden sm:inline ${
                     showFilmstrip ? "win95-sunken bg-white" : ""
                   }`}
                   title="Ẩn/Hiện cuộn ảnh thu nhỏ"
@@ -938,7 +938,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                 />
               </div>
 
-              <div className="text-[8px] text-win-dark font-bold hidden xl:block shrink-0 font-mono">
+              <div className="text-[10px] text-win-dark font-bold hidden xl:block shrink-0 font-mono">
                 [←/→] ĐỔI | [ESC] ĐÓNG | [F] FULL | [SPACE] PLAY
               </div>
             </div>
@@ -992,7 +992,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                     className="w-9 h-9 border border-win-dark object-cover filter saturate-150 contrast-110 shrink-0"
                   />
                   <div className="min-w-0">
-                    <div className="text-[9px] text-win-dark font-bold uppercase">Nghệ sĩ cộng tác</div>
+                    <div className="text-[10px] text-win-dark font-bold uppercase">Nghệ sĩ cộng tác</div>
                     <div className="text-[11px] sm:text-xs font-bold text-black truncate">{activeSubmission.profiles?.full_name}</div>
                   </div>
                 </div>
@@ -1005,7 +1005,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                   <h3 className="text-xs sm:text-sm font-extrabold text-black leading-tight border-b-2 border-dashed border-[#e6e6e6] pb-1 uppercase">
                     {activeSubmission.title}
                   </h3>
-                  <p className="text-[9px] text-win-dark font-mono" suppressHydrationWarning>{formattedDate}</p>
+                  <p className="text-[10px] text-win-dark font-mono" suppressHydrationWarning>{formattedDate}</p>
                   <p className="text-[11px] text-black/90 leading-relaxed font-sans break-words">
                     {activeSubmission.description || "Tác phẩm mang phong cách thẩm mỹ hoài cổ kỹ thuật số, tái hiện hoàn hảo thời kỳ đầu của nghệ thuật đồ họa vi tính."}
                   </p>
@@ -1015,7 +1015,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                       {activeSubmission.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="text-[8px] font-bold text-[#b967ff] bg-[#b967ff]/10 border border-[#b967ff]/30 px-1.5 py-0.5 uppercase tracking-wider"
+                          className="text-[10px] font-bold text-[#b967ff] bg-[#b967ff]/10 border border-[#b967ff]/30 px-1.5 py-0.5 uppercase tracking-wider"
                         >
                           #{tag}
                         </span>
@@ -1042,7 +1042,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={shareFacebook}
-                      className="win95-btn font-bold px-2 py-1 text-[9px]"
+                      className="win95-btn font-bold px-2 py-1 text-[10px]"
                       style={{ minHeight: "32px", minWidth: "32px" }}
                       title="Chia sẻ lên Facebook"
                     >
@@ -1050,7 +1050,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                     </button>
                     <button
                       onClick={shareX}
-                      className="win95-btn font-bold px-2 py-1 text-[9px]"
+                      className="win95-btn font-bold px-2 py-1 text-[10px]"
                       style={{ minHeight: "32px", minWidth: "32px" }}
                       title="Chia sẻ lên X"
                     >
@@ -1058,7 +1058,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                     </button>
                     <button
                       onClick={handleCopyLink}
-                      className={`win95-btn font-bold px-2 py-1 text-[9px] uppercase select-none transition-all ${
+                      className={`win95-btn font-bold px-2 py-1 text-[10px] uppercase select-none transition-all ${
                         copiedLink ? "bg-[#05ffa1]/20 border-[#05ffa1] text-green-800" : ""
                       }`}
                       style={{ minHeight: "32px", minWidth: "40px" }}

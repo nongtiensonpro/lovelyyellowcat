@@ -77,18 +77,22 @@
 
   /* ══════════════════════════════════════════
       HỆ THỐNG TYPOGRAPHY — Fluid Scaling
+      Ưu tiên font hỗ trợ ĐẦY ĐỦ dấu tiếng Việt:
+      · VT323 (pixel terminal) — có subset vietnamese ✓
+      · JetBrains Mono (mono thân Việt) — thay Share Tech Mono
+      · Press Start 2P: CHỈ dùng cho nhãn ASCII trang trí (không có tiếng Việt)
       ══════════════════════════════════════════ */
   --font-display: 'VT323', 'Press Start 2P', monospace;
-  --font-retro: 'MS Sans Serif', 'Pixelated MS Sans Serif', 'Arial', sans-serif;
-  --font-body: 'Courier New', 'Lucida Console', monospace;
-  --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+  --font-retro: 'MS Sans Serif', 'Pixelated MS Sans Serif', Tahoma, 'Segoe UI', Arial, sans-serif;
+  --font-body: 'JetBrains Mono', 'Courier New', 'Lucida Console', monospace;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
-  --text-hero:    clamp(2.2rem, 6vw, 4rem);
-  --text-section: clamp(1.5rem, 4vw, 2.5rem);
-  --text-card:    clamp(1.1rem, 2.5vw, 1.5rem);
-  --text-body:    clamp(0.9rem, 1.5vw, 1.1rem);
-  --text-small:   clamp(0.75rem, 1.2vw, 0.875rem);
-  --text-xs:      clamp(0.65rem, 1vw, 0.75rem);
+  --text-hero:    clamp(2.4rem, 6vw, 4.2rem);
+  --text-section: clamp(1.6rem, 4vw, 2.6rem);
+  --text-card:    clamp(1.15rem, 2.5vw, 1.55rem);
+  --text-body:    clamp(0.95rem, 1.5vw, 1.15rem);
+  --text-small:   clamp(0.8rem, 1.2vw, 0.925rem);
+  --text-xs:      clamp(0.72rem, 1vw, 0.8rem);
 
   /* Breakpoints cho di động */
   --breakpoint-xs:  480px;
@@ -107,6 +111,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Root fluid: chữ nền to rõ trên màn lớn, không quá to trên mobile.
+   Browser zoom (Ctrl +/−) vẫn nhân thêm trên giá trị này. */
+html {
+  font-size: clamp(15px, 14px + 0.2vw, 17.5px);
+}
+
 body {
   background-color: var(--color-cosmic-black);
   background-image: linear-gradient(to bottom, var(--color-cosmic-black) 0%, var(--color-cosmic-deep) 100%);
@@ -115,6 +125,9 @@ body {
   line-height: 1.7;
   overflow-x: hidden;
   min-height: 100vh;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom retro cursors on hover-capable devices */
@@ -364,6 +377,19 @@ body {
   a.win95-btn {
     min-height: 44px;
     padding-inline: 12px;
+  }
+
+  /* iOS Safari tự zoom khi focus input < 16px — ép cỡ chữ tối thiểu */
+  .input-vapor,
+  .textarea-vapor,
+  .select-vapor,
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
   }
 }
 
@@ -820,7 +846,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--font-retro);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-on-win);
 }
 
@@ -856,7 +882,7 @@ body {
 }
 
 .win-table.compact {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .win-table.compact thead th,

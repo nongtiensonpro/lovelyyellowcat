@@ -373,7 +373,7 @@ const pageUsed = resources.length - pageOrphans;
             data-folder={img.folder || ""}
           >
             <div class="absolute bottom-1 left-1 right-1 z-10 pointer-events-none">
-              <span class={`badge ${USAGE_LABELS[img.usageTag as UsageTag].cls} !text-[7px] px-1 py-0`}>
+              <span class={`badge ${USAGE_LABELS[img.usageTag as UsageTag].cls} !text-[10px] px-1 py-0`}>
                 {USAGE_LABELS[img.usageTag as UsageTag].text}
               </span>
             </div>
@@ -404,17 +404,17 @@ const pageUsed = resources.length - pageOrphans;
             </a>
 
             <div class="p-1.5 space-y-1">
-              <p class="text-[9px] font-bold truncate" title={img.filename || img.public_id}>
+              <p class="text-[10px] font-bold truncate" title={img.filename || img.public_id}>
                 📄 {img.filename || img.public_id.split("/").pop()}
               </p>
-              <p class="text-[8px] text-win-darkest flex justify-between">
+              <p class="text-[10px] text-win-darkest flex justify-between">
                 <span>{img.width && img.height ? `${img.width}×${img.height}` : ""}</span>
                 <span>{formatBytes(img.bytes)}</span>
               </p>
-              <p class="text-[8px] text-win-dark truncate" title={img.folder || ""}>📁 {img.folder || "root"}</p>
+              <p class="text-[10px] text-win-dark truncate" title={img.folder || ""}>📁 {img.folder || "root"}</p>
               <div class="flex gap-1">
-                <button type="button" class="copy-url-btn win95-btn flex-1 text-[8px] py-0.5 font-bold">🔗 URL</button>
-                <button type="button" class="copy-md-btn win95-btn flex-1 text-[8px] py-0.5 font-bold">📝 MD</button>
+                <button type="button" class="copy-url-btn win95-btn flex-1 text-[10px] py-0.5 font-bold">🔗 URL</button>
+                <button type="button" class="copy-md-btn win95-btn flex-1 text-[10px] py-0.5 font-bold">📝 MD</button>
               </div>
             </div>
           </div>
@@ -448,13 +448,13 @@ const pageUsed = resources.length - pageOrphans;
       <div class="p-3 bg-win-gray space-y-3">
         <img id="md-preview" src="" alt="" class="w-full max-h-72 object-contain border-2 border-win-dark bg-cosmic-black" />
         <dl class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] border-2 border-win-dark bg-white p-2">
-          <dt class="font-bold uppercase text-[9px]">Public ID</dt><dd id="md-pid" class="break-all font-mono"></dd>
-          <dt class="font-bold uppercase text-[9px]">Tên file</dt><dd id="md-name"></dd>
-          <dt class="font-bold uppercase text-[9px]">Kích thước</dt><dd id="md-size"></dd>
-          <dt class="font-bold uppercase text-[9px]">Định dạng</dt><dd id="md-fmt"></dd>
-          <dt class="font-bold uppercase text-[9px]">Dung lượng</dt><dd id="md-bytes"></dd>
-          <dt class="font-bold uppercase text-[9px]">Ngày tải</dt><dd id="md-date"></dd>
-          <dt class="font-bold uppercase text-[9px]">Thư mục</dt><dd id="md-folder"></dd>
+          <dt class="font-bold uppercase text-[10px]">Public ID</dt><dd id="md-pid" class="break-all font-mono"></dd>
+          <dt class="font-bold uppercase text-[10px]">Tên file</dt><dd id="md-name"></dd>
+          <dt class="font-bold uppercase text-[10px]">Kích thước</dt><dd id="md-size"></dd>
+          <dt class="font-bold uppercase text-[10px]">Định dạng</dt><dd id="md-fmt"></dd>
+          <dt class="font-bold uppercase text-[10px]">Dung lượng</dt><dd id="md-bytes"></dd>
+          <dt class="font-bold uppercase text-[10px]">Ngày tải</dt><dd id="md-date"></dd>
+          <dt class="font-bold uppercase text-[10px]">Thư mục</dt><dd id="md-folder"></dd>
         </dl>
         <div class="grid grid-cols-2 gap-2">
           <button type="button" data-copy="full" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">🔗 COPY URL GỐC (1600px)</button>

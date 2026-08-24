@@ -157,7 +157,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
       >
         <span className="text-sm" aria-hidden="true">🔔</span>
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white font-mono text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white animate-pulse">
+          <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white font-mono text-[10px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white animate-pulse">
             {unreadCount}
           </span>
         )}
@@ -170,7 +170,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
             <span>NOTIFICATION_CENTER.EXE</span>
             <button
               onClick={markAllAsRead}
-              className="win95-btn text-[9px] font-bold py-0.2 px-1 text-black border border-white"
+              className="win95-btn text-[10px] font-bold py-0.2 px-1 text-black border border-white"
               title="Đánh dấu tất cả đã đọc"
             >
               Đọc tất cả
@@ -220,14 +220,14 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
                       {!notif.is_read && (
                         <button
                           onClick={() => markAsRead(notif.id)}
-                          className="win95-btn text-[7px] py-0 px-1 font-bold shrink-0 self-start"
+                          className="win95-btn text-[10px] py-0 px-1 font-bold shrink-0 self-start"
                           title="Đánh dấu đã đọc"
                         >
                           ✔
                         </button>
                       )}
                     </div>
-                    <span className="text-[8px] text-win-dark mt-1 font-mono self-end" suppressHydrationWarning>
+                    <span className="text-[10px] text-win-dark mt-1 font-mono self-end" suppressHydrationWarning>
                       {new Date(notif.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -236,7 +236,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
             )}
           </div>
 
-          <div className="p-1.5 bg-win-gray border-t border-white text-[8px] text-win-dark text-center font-retro">
+          <div className="p-1.5 bg-win-gray border-t border-white text-[10px] text-win-dark text-center font-retro">
             Hệ thống thông báo thời gian thực v1.0
           </div>
         </div>

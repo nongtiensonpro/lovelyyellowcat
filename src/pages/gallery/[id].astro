@@ -159,12 +159,12 @@ const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN"
               />
             </a>
             <div class="min-w-0 flex-1">
-              <div class="text-[9px] text-win-dark font-bold uppercase">Nghệ sĩ phát triển</div>
+              <div class="text-[10px] text-win-dark font-bold uppercase">Nghệ sĩ phát triển</div>
               <a href={`/profile/${submission.profiles?.id}`} class="text-xs font-bold text-black truncate hover:underline no-underline block">
                 {submission.profiles?.full_name}
               </a>
             </div>
-            <div class="text-[9px] text-right font-bold text-win-dark shrink-0">
+            <div class="text-[10px] text-right font-bold text-win-dark shrink-0">
               {formattedDate}
             </div>
           </div>
@@ -179,7 +179,7 @@ const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN"
                 <a
                   key={tag}
                   href={`/gallery?tag=${encodeURIComponent(tag)}`}
-                  class="text-[9px] font-bold text-[#ff71ce] bg-[#ff71ce]/5 border border-[#ff71ce]/30 px-2 py-0.5 uppercase tracking-wider no-underline hover:bg-[#ff71ce]/10"
+                  class="text-[10px] font-bold text-[#ff71ce] bg-[#ff71ce]/5 border border-[#ff71ce]/30 px-2 py-0.5 uppercase tracking-wider no-underline hover:bg-[#ff71ce]/10"
                 >
                   #{tag}
                 </a>

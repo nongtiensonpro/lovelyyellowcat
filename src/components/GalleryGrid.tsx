@@ -297,7 +297,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
           {/* Tags */}
           <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <span className="text-[9px] text-win-darkest font-bold uppercase tracking-wider">🏷️ NHÃN THỂ LOẠI:</span>
+            <span className="text-[10px] text-win-darkest font-bold uppercase tracking-wider">🏷️ NHÃN THỂ LOẠI:</span>
             <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto pr-1">
               {allTags.map((tag) => (
                 <button
@@ -319,7 +319,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
 
           {/* Sắp xếp */}
           <div className="flex flex-col gap-1 shrink-0">
-            <span className="text-[9px] text-win-darkest font-bold uppercase tracking-wider">⚡ SẮP XẾP:</span>
+            <span className="text-[10px] text-win-darkest font-bold uppercase tracking-wider">⚡ SẮP XẾP:</span>
             <div className="flex gap-1">
               {(["newest", "reactions", "random"] as const).map((type) => {
                 const label = type === "newest" ? "💾 Mới Nhất" : type === "reactions" ? "💜 Yêu Thích" : "🎰 Ngẫu Nhiên";
@@ -400,7 +400,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                     <td className="p-2">
                       <div className="flex gap-1 flex-wrap">
                         {(sub.tags || []).slice(0, 2).map((t, i) => (
-                          <span key={i} className="text-[9px] font-mono bg-win-gray px-1 border border-win-dark">
+                          <span key={i} className="text-[10px] font-mono bg-win-gray px-1 border border-win-dark">
                             #{t}
                           </span>
                         ))}
@@ -439,7 +439,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                 className="bg-win-gray p-3 rounded-lg border-4 border-win-light shadow-[inset_-2px_-2px_0_#404040,inset_2px_2px_0_#dfdfdf,6px_6px_0_rgba(0,0,0,0.8)] cursor-pointer group"
                 onClick={() => handleOpenLightbox(sub.id)}
               >
-                <div className="flex justify-between items-center mb-1 text-[9px] font-mono font-bold">
+                <div className="flex justify-between items-center mb-1 text-[10px] font-mono font-bold">
                   <span className="truncate">{sub.title}</span>
                   <span className="text-vapor-pink shrink-0">● CRT-RGB</span>
                 </div>
@@ -473,9 +473,9 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                 onClick={() => handleOpenLightbox(sub.id)}
               >
                 {/* Header Window mini */}
-                <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-[9px] flex justify-between items-center">
+                <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-[10px] flex justify-between items-center">
                   <span className="truncate max-w-[70%] font-bold uppercase">{sub.title}</span>
-                  <span className="text-[8px] opacity-80 font-mono">ART_VIEW.DLL</span>
+                  <span className="text-[10px] opacity-80 font-mono">ART_VIEW.DLL</span>
                 </div>
 
                 {/* Khung chứa ảnh */}

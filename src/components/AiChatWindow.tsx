@@ -164,7 +164,7 @@ export const AiChatWindow: React.FC = () => {
           <button
             type="button"
             onClick={handleResetChat}
-            className="win95-btn py-0 px-1.5 text-[9px] font-bold"
+            className="win95-btn py-0 px-1.5 text-[10px] font-bold"
             title="Làm mới hội thoại"
             style={{ minHeight: "18px" }}
           >
@@ -173,7 +173,7 @@ export const AiChatWindow: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="win95-btn py-0 px-1.5 text-[9px] font-bold"
+            className="win95-btn py-0 px-1.5 text-[10px] font-bold"
             title={isCollapsed ? "Mở rộng cửa sổ" : "Thu gọn cửa sổ"}
             style={{ minHeight: "18px" }}
           >
@@ -192,7 +192,7 @@ export const AiChatWindow: React.FC = () => {
             </div>
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-vapor-green animate-pulse"></span>
-              <span className="font-mono text-[9px] font-bold text-win-darkest uppercase">
+              <span className="font-mono text-[10px] font-bold text-win-darkest uppercase">
                 {activeModel.replace("-preview", "").replace("-latest", "")}
               </span>
             </div>
@@ -219,13 +219,13 @@ export const AiChatWindow: React.FC = () => {
                   }`}
                 >
                   {msg.role === "model" && (
-                    <div className="flex items-center justify-between text-[9px] font-mono font-bold text-vapor-purple border-b border-win-light/60 pb-1 mb-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono font-bold text-vapor-purple border-b border-win-light/60 pb-1 mb-1">
                       <span>MÈO VÀNG CYBER</span>
                       <span className="text-win-dark font-normal">{msg.timestamp}</span>
                     </div>
                   )}
                   {msg.role === "user" && (
-                    <div className="flex items-center justify-between text-[9px] font-mono font-bold text-win-darkest border-b border-win-light/60 pb-1 mb-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono font-bold text-win-darkest border-b border-win-light/60 pb-1 mb-1">
                       <span>BẠN</span>
                       <span className="text-win-dark font-normal">{msg.timestamp}</span>
                     </div>
@@ -266,7 +266,7 @@ export const AiChatWindow: React.FC = () => {
           {/* Quick Prompt Suggestions Chips */}
           <div className="p-2 bg-win-gray border-b border-win-dark overflow-x-auto whitespace-nowrap">
             <div className="flex items-center gap-1.5">
-              <span className="text-[9px] font-bold text-win-darkest uppercase shrink-0 font-mono">
+              <span className="text-[10px] font-bold text-win-darkest uppercase shrink-0 font-mono">
                 💡 GỢI Ý:
               </span>
               <div className="flex gap-1.5">
@@ -276,7 +276,7 @@ export const AiChatWindow: React.FC = () => {
                     type="button"
                     onClick={() => handleSendMessage(prompt)}
                     disabled={isTyping}
-                    className="win95-btn py-0.5 px-2 text-[9px] font-mono text-black hover:bg-vapor-yellow/30 shrink-0 cursor-pointer disabled:opacity-50"
+                    className="win95-btn py-0.5 px-2 text-[10px] font-mono text-black hover:bg-vapor-yellow/30 shrink-0 cursor-pointer disabled:opacity-50"
                     style={{ minHeight: "22px" }}
                   >
                     {prompt}
@@ -318,7 +318,7 @@ export const AiChatWindow: React.FC = () => {
           </form>
 
           {/* Status bar */}
-          <div className="win95-statusbar justify-between text-[9px]">
+          <div className="win95-statusbar justify-between text-[10px]">
             <span className="text-win-darkest">● Powered by Google AI Studio (Gemini)</span>
             <span className="win95-statusbar-panel font-mono font-bold text-vapor-green">ONLINE</span>
           </div>

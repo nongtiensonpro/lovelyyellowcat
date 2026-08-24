@@ -123,7 +123,7 @@ export const SearchModal: React.FC = () => {
         title="Nhấn Ctrl+K để tìm kiếm nhanh"
       >
         <span>🔍 Tìm Kiếm</span>
-        <kbd className="bg-[#a0a0a0] px-1 text-[9px] border border-win-dark font-mono text-black">Ctrl+K</kbd>
+        <kbd className="bg-[#a0a0a0] px-1 text-[10px] border border-win-dark font-mono text-black">Ctrl+K</kbd>
       </button>
 
       {/* Modal Overlay */}
@@ -279,7 +279,7 @@ export const SearchModal: React.FC = () => {
                                 <p className="text-[10px] text-win-dark mt-0.5 line-clamp-1">{item.bio}</p>
                               )}
                             </div>
-                            <span className="text-[9px] font-bold text-win-darkest shrink-0">PROFILE →</span>
+                            <span className="text-[10px] font-bold text-win-darkest shrink-0">PROFILE →</span>
                           </a>
                         ))}
                       </>
@@ -290,7 +290,7 @@ export const SearchModal: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-2.5 bg-win-gray border-t border-white flex justify-between items-center text-[9px] text-win-dark">
+            <div className="p-2.5 bg-win-gray border-t border-white flex justify-between items-center text-[10px] text-win-dark">
               <span>Tìm kiếm toàn hệ thống: Bài viết · Tranh · Nghệ sĩ</span>
               <span>Nhấn [ESC] để đóng</span>
             </div>

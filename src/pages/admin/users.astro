@@ -145,28 +145,28 @@ function formatAction(action: string) {
       <div class="win95-header"><span>TOTAL.DLL</span></div>
       <div class="p-3 bg-[#c0c0c0] text-center">
         <p class="text-2xl font-black text-vapor-purple">{totalUsers || 0}</p>
-        <p class="text-[9px] font-bold uppercase">Tổng người dùng</p>
+        <p class="text-[10px] font-bold uppercase">Tổng người dùng</p>
       </div>
     </div>
     <div class="win95-container text-black">
       <div class="win95-header"><span>ADMIN.DLL</span></div>
       <div class="p-3 bg-[#c0c0c0] text-center">
         <p class="text-2xl font-black text-vapor-pink">{adminCount || 0}</p>
-        <p class="text-[9px] font-bold uppercase">👑 Admin</p>
+        <p class="text-[10px] font-bold uppercase">👑 Admin</p>
       </div>
     </div>
     <div class="win95-container text-black">
       <div class="win95-header"><span>EDITOR.DLL</span></div>
       <div class="p-3 bg-[#c0c0c0] text-center">
         <p class="text-2xl font-black text-vapor-blue">{editorCount || 0}</p>
-        <p class="text-[9px] font-bold uppercase">✏️ Editor</p>
+        <p class="text-[10px] font-bold uppercase">✏️ Editor</p>
       </div>
     </div>
     <div class="win95-container text-black">
       <div class="win95-header"><span>BANNED.DLL</span></div>
       <div class="p-3 bg-[#c0c0c0] text-center">
         <p class="text-2xl font-black text-red-600">{bannedCount || 0}</p>
-        <p class="text-[9px] font-bold uppercase">🚫 Bị cấm</p>
+        <p class="text-[10px] font-bold uppercase">🚫 Bị cấm</p>
       </div>
     </div>
   </div>
@@ -275,9 +275,9 @@ function formatAction(action: string) {
                     />
                     <div class="min-w-0">
                       <p class="font-bold text-xs truncate">{u.full_name || "Chưa đặt tên"}</p>
-                      <p class="text-[9px] text-win-dark truncate">{u.email}</p>
+                      <p class="text-[10px] text-win-dark truncate">{u.email}</p>
                       {u.id === userProfile.id && (
-                        <span class="text-[8px] text-vapor-pink font-bold">(Bạn)</span>
+                        <span class="text-[10px] text-vapor-pink font-bold">(Bạn)</span>
                       )}
                     </div>
                   </div>
@@ -355,10 +355,10 @@ function formatAction(action: string) {
                   {u.full_name || "Chưa đặt tên"}
                   {u.id === userProfile.id && <span class="text-vapor-pink ml-1">(Bạn)</span>}
                 </p>
-                <p class="text-[9px] text-win-dark truncate">{u.email}</p>
+                <p class="text-[10px] text-win-dark truncate">{u.email}</p>
               </div>
               <div class="flex flex-col items-end gap-1 shrink-0">
-                <span class={`px-1.5 py-0.5 border text-[8px] font-bold uppercase ${
+                <span class={`px-1.5 py-0.5 border text-[10px] font-bold uppercase ${
                   u.role === "admin"
                     ? "bg-pink-100 text-pink-800 border-pink-300"
                     : u.role === "editor"
@@ -368,14 +368,14 @@ function formatAction(action: string) {
                   {u.role === "admin" ? "👑" : u.role === "editor" ? "✏️" : "👤"} {u.role}
                 </span>
                 {u.is_banned ? (
-                  <span class="px-1.5 py-0.5 border text-[8px] font-bold bg-red-100 text-red-800 border-red-300">🚫 BỊ CẤM</span>
+                  <span class="px-1.5 py-0.5 border text-[10px] font-bold bg-red-100 text-red-800 border-red-300">🚫 BỊ CẤM</span>
                 ) : (
-                  <span class="px-1.5 py-0.5 border text-[8px] font-bold bg-green-100 text-green-800 border-green-300">✅ ACTIVE</span>
+                  <span class="px-1.5 py-0.5 border text-[10px] font-bold bg-green-100 text-green-800 border-green-300">✅ ACTIVE</span>
                 )}
               </div>
             </div>
             <div class="flex items-center justify-between border-t border-win-dark/30 pt-2">
-              <span class="text-[9px] text-win-dark">📅 {formatDate(u.created_at)}</span>
+              <span class="text-[10px] text-win-dark">📅 {formatDate(u.created_at)}</span>
               <UserManagementActions
                 client:load
                 userId={u.id}
@@ -458,7 +458,7 @@ function formatAction(action: string) {
                 <td class="p-2 border-r border-[#e0e0e0] font-bold text-[10px]">
                   {log.target?.full_name || "N/A"}
                 </td>
-                <td class="p-2 text-[9px] text-win-dark">
+                <td class="p-2 text-[10px] text-win-dark">
                   {log.action === "role_change" && log.details && (
                     <span>{log.details.old_role} → <strong>{log.details.new_role}</strong></span>
                   )}

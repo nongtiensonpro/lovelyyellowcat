@@ -70,7 +70,7 @@ if (articleIds.length > 0) {
 >
   <div class="text-center py-6">
     <h1 class="hero-title">💾 Drive A:\Saved</h1>
-    <p class="text-[9px] sm:text-xs tracking-[0.2em] text-vapor-blue mt-3 font-mono uppercase">
+    <p class="text-[10px] sm:text-xs tracking-[0.2em] text-vapor-blue mt-3 font-mono uppercase">
       // KHO LƯU TRỮ CÁ NHÂN — BÀI VIẾT ĐÃ ĐÁNH DẤU ĐỌC SAU //
     </p>
   </div>
@@ -107,7 +107,7 @@ if (articleIds.length > 0) {
               <p class="text-[10px] text-win-dark line-clamp-1 mt-0.5">
                 {(Array.isArray(art.tags) ? art.tags : []).map((t: string) => `#${t}`).join(" ") || art.excerpt || ""}
               </p>
-              <p class="text-[9px] text-win-dark mt-0.5">
+              <p class="text-[10px] text-win-dark mt-0.5">
                 Đã lưu: {new Date(art.saved_at).toLocaleDateString("vi-VN")}
               </p>
             </div>

@@ -226,8 +226,8 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
               ) : (
                 <div className="text-center text-vapor-blue p-2">
                   <span className="block text-4xl mb-1">📼</span>
-                  <p className="text-[9px] tracking-widest uppercase">CHƯA CÓ BANNER HỒ SƠ</p>
-                  <p className="text-[8px] text-win-dark">Khuyên dùng tỷ lệ 16:9 hoặc ảnh ngang rộng</p>
+                  <p className="text-[10px] tracking-widest uppercase">CHƯA CÓ BANNER HỒ SƠ</p>
+                  <p className="text-[10px] text-win-dark">Khuyên dùng tỷ lệ 16:9 hoặc ảnh ngang rộng</p>
                 </div>
               )}
 
@@ -286,7 +286,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
             />
-            <span className="text-[8px] text-win-dark text-right mt-1 font-mono">
+            <span className="text-[10px] text-win-dark text-right mt-1 font-mono">
               Tối đa 400 ký tự. Sử dụng ngôn từ văn minh.
             </span>
           </div>

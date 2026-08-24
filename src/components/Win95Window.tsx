@@ -67,7 +67,7 @@ export const Win95Window: React.FC<Win95WindowProps> = ({
           </button>
           <button
             type="button"
-            className="win95-btn py-0 px-1 text-[9px] font-bold h-4 w-4 flex items-center justify-center"
+            className="win95-btn py-0 px-1 text-[10px] font-bold h-4 w-4 flex items-center justify-center"
             style={{ minHeight: "16px", minWidth: "16px" }}
             aria-label="Maximize"
             onClick={onMaximize}
@@ -109,7 +109,7 @@ export const Win95Window: React.FC<Win95WindowProps> = ({
             <div className="win95-statusbar justify-between">
               <span className="truncate text-[10px]">{statusBarText || "Ready"}</span>
               {statusPanelText && (
-                <span className="win95-statusbar-panel text-[9px] shrink-0 font-mono">
+                <span className="win95-statusbar-panel text-[10px] shrink-0 font-mono">
                   {statusPanelText}
                 </span>
               )}

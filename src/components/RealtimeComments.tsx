@@ -197,7 +197,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
             />
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-center mb-1 text-[9px] text-vapor-purple font-bold">
+            <div className="flex justify-between items-center mb-1 text-[10px] text-vapor-purple font-bold">
               <span className="truncate">
                 {profile.id ? (
                   <a href={`/profile/${profile.id}`} className="hover:underline text-vapor-purple no-underline">
@@ -217,7 +217,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
             </p>
 
             {/* Các nút Tác vụ */}
-            <div className="mt-1.5 flex gap-3 text-[9px] font-bold">
+            <div className="mt-1.5 flex gap-3 text-[10px] font-bold">
               {currentUser && (comment.depth ?? 0) < 3 && (
                 <button
                   onClick={() => {
@@ -284,7 +284,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
           <button 
             type="button" 
             onClick={() => setErrorMessage(null)} 
-            className="win95-btn px-2 py-0.5 text-[8px] font-bold uppercase shrink-0 ml-2 cursor-pointer"
+            className="win95-btn px-2 py-0.5 text-[10px] font-bold uppercase shrink-0 ml-2 cursor-pointer"
           >
             Đóng
           </button>
