@@ -264,7 +264,9 @@ npm install
 
 > 🌐 **Gemini location failover**: `GEMINI_API_KEY` luôn chỉ nằm ở server. Nếu tuyến Cloudflare bị Google từ chối theo vị trí mạng, `/api/ai/chat` sẽ thử lần lượt Cloudflare AI Gateway, Vertex AI Express global (nếu được cấu hình), các route trong `GEMINI_FALLBACK_BASE_URL(S)` và endpoint Gemini mặc định; người dùng không phải nhập key cá nhân. Route dự phòng phải là endpoint do quản trị viên kiểm soát.
 
-> ☁️ **Khuyến nghị khi gặp `User location not supported`**: tạo gateway Google AI Studio trong Cloudflare AI Gateway và đặt `AI_GATEWAY_URL` bằng base URL dạng `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/google-ai-studio`. Nếu provider key được lưu trong AI Gateway, đặt thêm `CF_AIG_TOKEN`; nếu truyền Google key qua request thì giữ `GEMINI_API_KEY`. Phương án khác là Vertex AI Express Mode với `GEMINI_VERTEX_EXPRESS_BASE_URL=https://aiplatform.googleapis.com` và API key Express Mode server-side.
+> ☁️ **Khuyến nghị khi gặp `User location not supported`**: tạo gateway Google AI Studio trong Cloudflare AI Gateway và đặt `AI_GATEWAY_URL` bằng base URL dạng `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/google-ai-studio`. Nếu provider key được lưu trong AI Gateway, đặt thêm `CF_AIG_TOKEN`; nếu truyền Google key qua request thì giữ `GEMINI_API_KEY`. Phương án khác là Vertex AI Express Mode với `GEMINI_VERTEX_EXPRESS_BASE_URL=https://aiplatform.googleapis.com` và API key được tạo riêng trong Express Mode (`GEMINI_VERTEX_EXPRESS_API_KEY`), không dùng lại key AI Studio. Ứng dụng tự gửi key Express theo cơ chế `key` của endpoint Vertex và không đưa key vào log.
+
+> 🔎 **Kiểm tra production**: sau khi đặt biến trong Cloudflare Dashboard và deploy lại, mở `/api/ai/config`. Kết quả phải có `routes.vertexExpress: true`; nếu chỉ thấy `googleAiStudio: true` thì Worker chưa nhận biến Vertex Express.
 
 **Deploy**: push lên `main` → GitHub Actions tự build (`npm ci` → `astro build` → `wrangler deploy`) → sống trên `*.workers.dev` trong ~2 phút.
 

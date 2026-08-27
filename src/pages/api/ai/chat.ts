@@ -47,6 +47,14 @@ function getRouteKind(baseUrl: string): GeminiRouteKind {
   return "google-ai-studio";
 }
 
+function getVertexPublisherModelPath(model: string): string {
+  const normalized = model.replace(/^models\//i, "");
+  const publisherModel = normalized.startsWith("publishers/")
+    ? normalized
+    : `publishers/google/models/${normalized}`;
+  return publisherModel.split("/").map(encodeURIComponent).join("/");
+}
+
 function safeEndpointLabel(value: string): string {
   try {
     const url = new URL(value);
@@ -71,17 +79,34 @@ function isAuthenticationError(status: number): boolean {
   return status === 401 || status === 403;
 }
 
-function buildGeminiUrl(baseUrl: string, model: string, action: "generateContent" | "streamGenerateContent"): string {
+function buildGeminiUrl(
+  baseUrl: string,
+  model: string,
+  action: "generateContent" | "streamGenerateContent",
+  apiKey = "",
+): string {
   const streamQuery = action === "streamGenerateContent" ? "?alt=sse" : "";
   const encodedModel = encodeURIComponent(model);
   switch (getRouteKind(baseUrl)) {
     case "cloudflare-ai-gateway":
       return `${baseUrl}/v1/models/${encodedModel}:${action}${streamQuery}`;
-    case "vertex-express":
-      return `${baseUrl}/v1/${encodedModel}:${action}${streamQuery}`;
+    case "vertex-express": {
+      // Vertex Express documents API-key auth as ?key=... and does not accept
+      // an AI Studio key in x-goog-api-key. Keep the key server-side and never
+      // include it in endpoint labels or error details.
+      const query = new URLSearchParams();
+      if (apiKey) query.set("key", apiKey);
+      if (action === "streamGenerateContent") query.set("alt", "sse");
+      const queryString = query.toString();
+      return `${baseUrl}/v1/${getVertexPublisherModelPath(model)}:${action}${queryString ? `?${queryString}` : ""}`;
+    }
     default:
       return `${baseUrl}/v1beta/models/${encodedModel}:${action}${streamQuery}`;
   }
+}
+
+function getEndpointApiKey(baseUrl: string, apiKey: string, vertexExpressApiKey: string): string {
+  return getRouteKind(baseUrl) === "vertex-express" ? vertexExpressApiKey : apiKey;
 }
 
 function buildGeminiRequest(
@@ -92,8 +117,13 @@ function buildGeminiRequest(
   cloudflareGatewayToken: string,
 ): RequestInit {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const useCloudflareStoredKey = getRouteKind(baseUrl) === "cloudflare-ai-gateway" && Boolean(cloudflareGatewayToken);
-  if (apiKey && !useCloudflareStoredKey) headers["x-goog-api-key"] = apiKey;
+  const routeKind = getRouteKind(baseUrl);
+  const useCloudflareStoredKey = routeKind === "cloudflare-ai-gateway" && Boolean(cloudflareGatewayToken);
+  // Vertex Express requires the key in the URL query; passing an AI Studio
+  // key via x-goog-api-key makes Vertex reject the request as unauthenticated.
+  if (apiKey && routeKind !== "vertex-express" && !useCloudflareStoredKey) {
+    headers["x-goog-api-key"] = apiKey;
+  }
   if (useCloudflareStoredKey) {
     headers["cf-aig-authorization"] = `Bearer ${cloudflareGatewayToken}`;
   }
@@ -231,8 +261,7 @@ export const POST: APIRoute = async ({ request }) => {
     getStringEnv("GEMINI_API_KEY") ||
     getStringEnv("AI_API_KEY");
   const vertexExpressApiKey =
-    getStringEnv("GEMINI_VERTEX_EXPRESS_API_KEY") ||
-    apiKey;
+    getStringEnv("GEMINI_VERTEX_EXPRESS_API_KEY");
   const cloudflareGatewayToken =
     getStringEnv("CF_AIG_TOKEN") ||
     getStringEnv("CLOUDFLARE_AI_GATEWAY_TOKEN");
@@ -297,8 +326,9 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const wantStream = body.stream === true;
-    const attemptLogs: AttemptLog[] = [];
+  const wantStream = body.stream === true;
+  const attemptLogs: AttemptLog[] = [];
+  const configuredRouteLabels = baseUrls.map(safeEndpointLabel);
 
     // ===== STREAMING MODE: trả về Server-Sent Events, hiển thị gõ dần =====
     if (wantStream) {
@@ -344,10 +374,11 @@ export const POST: APIRoute = async ({ request }) => {
                 const timeout = setTimeout(() => abortController.abort(), getUpstreamTimeoutMs());
                 let partialText = "";
                 try {
+                  const endpointApiKey = getEndpointApiKey(baseUrl, apiKey, vertexExpressApiKey);
                   const response = await fetch(
-                    buildGeminiUrl(baseUrl, model, "streamGenerateContent"),
+                    buildGeminiUrl(baseUrl, model, "streamGenerateContent", endpointApiKey),
                     buildGeminiRequest(
-                      getRouteKind(baseUrl) === "vertex-express" ? vertexExpressApiKey : apiKey,
+                      endpointApiKey,
                       requestBody,
                       abortController.signal,
                       baseUrl,
@@ -404,7 +435,10 @@ export const POST: APIRoute = async ({ request }) => {
               done: true,
               isLocationBlocked: locationBlocked,
               attemptLogs,
-              errorDetail: attemptLogs.map((a, i) => `${i + 1}. [${a.model}] (HTTP ${a.status})${a.endpoint ? ` [${a.endpoint}]` : ""}: ${a.error}`).join("\n"),
+              configuredRoutes: configuredRouteLabels,
+              errorDetail:
+                `Routes Worker đã nhận: ${configuredRouteLabels.join(", ")}\n` +
+                attemptLogs.map((a, i) => `${i + 1}. [${a.model}] (HTTP ${a.status})${a.endpoint ? ` [${a.endpoint}]` : ""}: ${a.error}`).join("\n"),
             });
           } catch (err: any) {
             console.error("[AI STREAM ERROR]:", err);
@@ -445,10 +479,11 @@ export const POST: APIRoute = async ({ request }) => {
         const abortController = new AbortController();
         const timeout = setTimeout(() => abortController.abort(), getUpstreamTimeoutMs());
         try {
+          const endpointApiKey = getEndpointApiKey(baseUrl, apiKey, vertexExpressApiKey);
           const response = await fetch(
-            buildGeminiUrl(baseUrl, model, "generateContent"),
+            buildGeminiUrl(baseUrl, model, "generateContent", endpointApiKey),
             buildGeminiRequest(
-              getRouteKind(baseUrl) === "vertex-express" ? vertexExpressApiKey : apiKey,
+              endpointApiKey,
               requestBody,
               abortController.signal,
               baseUrl,
@@ -517,6 +552,7 @@ export const POST: APIRoute = async ({ request }) => {
       `Model ưu tiên ban đầu: ${preferredModel || "auto"}\n` +
       `Cho phép Fallback: ${allowFallback ? "BẬT" : "TẮT"}\n` +
       `Phát hiện chặn tuyến mạng: ${locationBlocked ? "CÓ (User location not supported)" : "KHÔNG"}\n\n` +
+      `Routes Worker đã nhận: ${configuredRouteLabels.join(", ")}\n\n` +
       `Chi tiết từng model:\n${logDetails}`;
 
     let userFriendlyReply = "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng hoặc hạn mức model đã hết. Bạn hãy thử chọn model khác hoặc mở chi tiết lỗi nhé! 🐱💾";
@@ -533,6 +569,7 @@ export const POST: APIRoute = async ({ request }) => {
         reply: userFriendlyReply,
         errorDetail: formattedErrorDetail,
         attemptLogs,
+        configuredRoutes: configuredRouteLabels,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
