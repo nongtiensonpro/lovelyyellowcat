@@ -38,7 +38,7 @@ export const AiChatWindow: React.FC = () => {
   const [inputVal, setInputVal] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeModel, setActiveModel] = useState<string>("gemini-2.5-flash");
+  const [activeModel, setActiveModel] = useState<string>("gemini-3.6-flash");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);

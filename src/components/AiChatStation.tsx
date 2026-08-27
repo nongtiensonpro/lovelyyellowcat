@@ -111,32 +111,25 @@ Phong cách:
 };
 
 export const FALLBACK_MODEL_ORDER = [
-  "gemini-2.5-flash",
-  "gemini-flash-latest",
+  "gemini-3.6-flash",
+  "gemini-3.7-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
   "gemini-3-flash-preview",
-  "gemini-3.1-flash-lite-preview",
-  "gemini-pro-latest",
-  "gemini-2.5-pro",
   "gemini-3.1-pro-preview",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-1.5-pro",
 ] as const;
 
 // Danh sách các Model Gemini hỗ trợ
 export const MODEL_OPTIONS = [
-  { id: "auto", name: "⚡ Tự Động Fallback (Khuyên dùng - Tự tìm model sẵn sàng)" },
-  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
-  { id: "gemini-flash-latest", name: "Gemini Flash Latest" },
+  { id: "auto", name: "⚡ Tự Động Fallback (Khuyên dùng - Model ổn định mới nhất)" },
+  { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash" },
+  { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash" },
+  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash" },
+  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite" },
+  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite" },
   { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-  { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite Preview" },
-  { id: "gemini-pro-latest", name: "Gemini Pro Latest" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
   { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Ổn định nhất)" },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash (Bền bỉ)" },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
 ];
 
 // Thư viện đề tài gợi ý chuyên sâu
