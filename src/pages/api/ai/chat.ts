@@ -20,6 +20,8 @@ const MAX_CONTEXT_MESSAGES = 24;
 const LOCATION_BLOCKED_REPLY =
   "Meow~! Kết nối Gemini từ máy chủ đang bị Google từ chối theo vị trí mạng (`User location not supported`). Hệ thống sẽ tự chuyển sang tuyến AI dự phòng nếu quản trị viên đã cấu hình. Bạn không cần nhập API Key cá nhân trừ khi muốn dùng hạn mức riêng. 🐱🌐";
 
+type GeminiRouteKind = "google-ai-studio" | "cloudflare-ai-gateway" | "vertex-express";
+
 function getStringEnv(name: string): string {
   return String((env as any)?.[name] || (import.meta.env as any)?.[name] || (process.env as any)?.[name] || "").trim();
 }
@@ -28,14 +30,21 @@ function getGeminiBaseUrls(): string[] {
   const configured = [
     getStringEnv("GEMINI_BASE_URL"),
     getStringEnv("AI_GATEWAY_URL"),
+    getStringEnv("GEMINI_VERTEX_EXPRESS_BASE_URL"),
     getStringEnv("GEMINI_FALLBACK_BASE_URL"),
     ...getStringEnv("GEMINI_FALLBACK_BASE_URLS").split(","),
   ]
     .map((value) => value.trim().replace(/\/+$/, ""))
     .filter(Boolean)
-    .map((value) => value.replace(/\/v1beta$/i, ""));
+    .map((value) => value.replace(/\/v1beta$/i, "").replace(/\/v1$/i, ""));
 
   return [...new Set([...configured, DEFAULT_GEMINI_BASE_URL])];
+}
+
+function getRouteKind(baseUrl: string): GeminiRouteKind {
+  if (/gateway\.ai\.cloudflare\.com/i.test(baseUrl)) return "cloudflare-ai-gateway";
+  if (/aiplatform\.googleapis\.com/i.test(baseUrl)) return "vertex-express";
+  return "google-ai-studio";
 }
 
 function safeEndpointLabel(value: string): string {
@@ -64,17 +73,34 @@ function isAuthenticationError(status: number): boolean {
 
 function buildGeminiUrl(baseUrl: string, model: string, action: "generateContent" | "streamGenerateContent"): string {
   const streamQuery = action === "streamGenerateContent" ? "?alt=sse" : "";
-  return `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:${action}${streamQuery}`;
+  const encodedModel = encodeURIComponent(model);
+  switch (getRouteKind(baseUrl)) {
+    case "cloudflare-ai-gateway":
+      return `${baseUrl}/v1/models/${encodedModel}:${action}${streamQuery}`;
+    case "vertex-express":
+      return `${baseUrl}/v1/${encodedModel}:${action}${streamQuery}`;
+    default:
+      return `${baseUrl}/v1beta/models/${encodedModel}:${action}${streamQuery}`;
+  }
 }
 
-function buildGeminiRequest(apiKey: string, body: unknown, signal: AbortSignal): RequestInit {
+function buildGeminiRequest(
+  apiKey: string,
+  body: unknown,
+  signal: AbortSignal,
+  baseUrl: string,
+  cloudflareGatewayToken: string,
+): RequestInit {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const useCloudflareStoredKey = getRouteKind(baseUrl) === "cloudflare-ai-gateway" && Boolean(cloudflareGatewayToken);
+  if (apiKey && !useCloudflareStoredKey) headers["x-goog-api-key"] = apiKey;
+  if (useCloudflareStoredKey) {
+    headers["cf-aig-authorization"] = `Bearer ${cloudflareGatewayToken}`;
+  }
+
   return {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      // Header-based auth avoids leaking the server key into proxy/access URLs.
-      "x-goog-api-key": apiKey,
-    },
+    headers,
     body: JSON.stringify(body),
     signal,
   };
@@ -208,17 +234,23 @@ export const POST: APIRoute = async ({ request }) => {
   const apiKey =
     getStringEnv("GEMINI_API_KEY") ||
     getStringEnv("AI_API_KEY");
+  const vertexExpressApiKey =
+    getStringEnv("GEMINI_VERTEX_EXPRESS_API_KEY") ||
+    apiKey;
+  const cloudflareGatewayToken =
+    getStringEnv("CF_AIG_TOKEN") ||
+    getStringEnv("CLOUDFLARE_AI_GATEWAY_TOKEN");
   const baseUrls = getGeminiBaseUrls();
 
-  if (!apiKey) {
+  if (!apiKey && !vertexExpressApiKey && !cloudflareGatewayToken) {
     return new Response(
       JSON.stringify({
         success: false,
         isMissingKey: true,
-        error: "Chưa cấu hình GEMINI_API_KEY trong hệ thống.",
+        error: "Chưa cấu hình thông tin xác thực AI ở phía server.",
         reply:
-          "Meow~! Hệ thống chưa tìm thấy khóa `GEMINI_API_KEY`. Bạn hãy dán API Key cá nhân miễn phí từ https://aistudio.google.com/ vào bên dưới để trò chuyện ngay nhé! 🐱🔑",
-        errorDetail: "[CONFIG_ERROR] Chưa tìm thấy biến môi trường GEMINI_API_KEY trong hệ thống.",
+          "Meow~! Hệ thống AI chưa được cấu hình khóa hoặc gateway ở phía máy chủ. Quản trị viên cần kiểm tra `GEMINI_API_KEY`, `GEMINI_VERTEX_EXPRESS_API_KEY` hoặc `CF_AIG_TOKEN`. Bạn không cần nhập key cá nhân. 🐱🔧",
+        errorDetail: "[CONFIG_ERROR] Chưa tìm thấy credential AI server-side.",
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -318,7 +350,13 @@ export const POST: APIRoute = async ({ request }) => {
                 try {
                   const response = await fetch(
                     buildGeminiUrl(baseUrl, model, "streamGenerateContent"),
-                    buildGeminiRequest(apiKey, requestBody, abortController.signal),
+                    buildGeminiRequest(
+                      getRouteKind(baseUrl) === "vertex-express" ? vertexExpressApiKey : apiKey,
+                      requestBody,
+                      abortController.signal,
+                      baseUrl,
+                      cloudflareGatewayToken,
+                    ),
                   );
                   if (!response.ok || !response.body) {
                     const message = await readResponseError(response);
@@ -413,7 +451,13 @@ export const POST: APIRoute = async ({ request }) => {
         try {
           const response = await fetch(
             buildGeminiUrl(baseUrl, model, "generateContent"),
-            buildGeminiRequest(apiKey, requestBody, abortController.signal),
+            buildGeminiRequest(
+              getRouteKind(baseUrl) === "vertex-express" ? vertexExpressApiKey : apiKey,
+              requestBody,
+              abortController.signal,
+              baseUrl,
+              cloudflareGatewayToken,
+            ),
           );
 
           if (response.ok) {

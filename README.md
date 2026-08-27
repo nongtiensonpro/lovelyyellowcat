@@ -255,12 +255,16 @@ npm install
 | `CLOUDINARY_API_KEY` · `..._API_SECRET` | **Cloudflare Dashboard → Worker → Variables** | Server-only — Admin API |
 | `GEMINI_API_KEY` · `RECAPTCHA_SECRET_KEY` · `GMAIL_APP_PASSWORD` | **Cloudflare Dashboard** | Server-only |
 | `GEMINI_BASE_URL` · `AI_GATEWAY_URL` | **Cloudflare Dashboard** | Optional server-side Gemini-compatible route |
+| `CF_AIG_TOKEN` · `CLOUDFLARE_AI_GATEWAY_TOKEN` | **Cloudflare Dashboard** | Optional AI Gateway token khi dùng stored provider key |
+| `GEMINI_VERTEX_EXPRESS_BASE_URL` · `GEMINI_VERTEX_EXPRESS_API_KEY` | **Cloudflare Dashboard** | Optional Vertex AI Express global route |
 | `GEMINI_FALLBACK_BASE_URL` · `GEMINI_FALLBACK_BASE_URLS` | **Cloudflare Dashboard** | Optional comma-separated routes; tự chuyển tuyến khi upstream báo `User location not supported` |
 | `GEMINI_UPSTREAM_TIMEOUT_MS` | **Cloudflare Dashboard** | Optional, mặc định 120000ms; giới hạn 15000–300000ms |
 
 > ⚠️ **Quy tắc vàng**: biến có tiền tố `PUBLIC_` nhúng lúc build (GitHub Secrets); biến server **chỉ tồn tại trên Cloudflare Dashboard** — sửa `.env` local không bao giờ ảnh hưởng production!
 
-> 🌐 **Gemini location failover**: `GEMINI_API_KEY` luôn chỉ nằm ở server. Nếu tuyến Cloudflare bị Google từ chối theo vị trí mạng, `/api/ai/chat` sẽ thử các route trong `GEMINI_FALLBACK_BASE_URL(S)` trước khi báo lỗi; người dùng không phải nhập key cá nhân. Route dự phòng phải là endpoint Gemini-compatible do quản trị viên kiểm soát.
+> 🌐 **Gemini location failover**: `GEMINI_API_KEY` luôn chỉ nằm ở server. Nếu tuyến Cloudflare bị Google từ chối theo vị trí mạng, `/api/ai/chat` sẽ thử lần lượt Cloudflare AI Gateway, Vertex AI Express global (nếu được cấu hình), các route trong `GEMINI_FALLBACK_BASE_URL(S)` và endpoint Gemini mặc định; người dùng không phải nhập key cá nhân. Route dự phòng phải là endpoint do quản trị viên kiểm soát.
+
+> ☁️ **Khuyến nghị khi gặp `User location not supported`**: tạo gateway Google AI Studio trong Cloudflare AI Gateway và đặt `AI_GATEWAY_URL` bằng base URL dạng `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/google-ai-studio`. Nếu provider key được lưu trong AI Gateway, đặt thêm `CF_AIG_TOKEN`; nếu truyền Google key qua request thì giữ `GEMINI_API_KEY`. Phương án khác là Vertex AI Express Mode với `GEMINI_VERTEX_EXPRESS_BASE_URL=https://aiplatform.googleapis.com` và API key Express Mode server-side.
 
 **Deploy**: push lên `main` → GitHub Actions tự build (`npm ci` → `astro build` → `wrangler deploy`) → sống trên `*.workers.dev` trong ~2 phút.
 
