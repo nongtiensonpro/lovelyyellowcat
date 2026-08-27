@@ -27,6 +27,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
   const [isOpen, setIsOpen] = useState(false);
   
   const popoverRef = useRef<HTMLDivElement>(null);
+  const channelSuffixRef = useRef<string | null>(null);
+  if (channelSuffixRef.current === null) {
+    channelSuffixRef.current = Math.random().toString(36).slice(2, 6) + "-" + Date.now().toString(36);
+  }
 
   // Lấy các thông báo hiện có của người dùng
   const fetchNotifications = async () => {
@@ -47,10 +51,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
     if (!currentUser?.id) return;
     fetchNotifications();
 
-    // Tạo channel — BẮT BUỘC .on() trước .subscribe() (supabase-js v2.112+ sẽ throw nếu ngược lại)
     let cancelled = false;
-    const channelName = `notifications:${currentUser.id}`;
     let channel: ReturnType<typeof supabaseClient.channel> | null = null;
+    const channelName = `notifications:${currentUser.id}:${channelSuffixRef.current}`;
+
     try {
       channel = supabaseClient
         .channel(channelName)
@@ -78,7 +82,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
             } catch {}
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.warn("[NotificationBell] Realtime status:", status);
+          }
+        });
     } catch (e) {
       console.warn("[NotificationBell] Realtime subscribe failed:", e);
     }
