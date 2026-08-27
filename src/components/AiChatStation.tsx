@@ -1073,18 +1073,40 @@ export const AiChatStation: React.FC = () => {
         </div>
       )}
 
-      {/* Trạng thái cần đăng nhập / bị chặn */}
+      {/* Trạng thái cần đăng nhập / bị chặn — TOÀN TRANG, chặn mọi tương tác */}
       {needsLogin && (
-        <div className="win95-container bg-red-100 border-2 border-red-600 p-4 text-center space-y-2">
-          <p className="font-bold text-red-700">🔒 YÊU CẦU ĐĂNG NHẬP</p>
-          <p className="text-xs">Chỉ tài khoản hoạt động mới được sử dụng AI (E2EE bắt buộc). Vui lòng đăng nhập bằng Google để tiếp tục.</p>
-          <a href="/api/auth/signin" className="win95-btn inline-block px-4 py-2 bg-white font-bold no-underline">🔑 Đăng nhập với Google</a>
+        <div className="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="win95-container bg-win-gray w-full max-w-lg shadow-2xl">
+            <div className="win95-header bg-gradient-to-r from-red-700 to-red-600"><span>🔒 YÊU CẦU ĐĂNG NHẬP — TRẠM AI</span></div>
+            <div className="p-6 bg-win-gray text-center space-y-4">
+              <div className="text-5xl">🔐</div>
+              <h2 className="font-bold text-sm">VUI LÒNG ĐĂNG NHẬP ĐỂ TIẾP TỤC</h2>
+              <p className="text-xs leading-relaxed max-w-md mx-auto">
+                Trạm AI yêu cầu <strong>tài khoản hoạt động</strong> (E2EE bắt buộc). Toàn bộ hội thoại được mã hóa <strong>AES-GCM 256</strong> ngay trên trình duyệt và lưu <strong>vĩnh viễn theo tài khoản</strong>. Vui lòng đăng nhập bằng Google để mở khóa.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <a href="/api/auth/signin" className="win95-btn px-6 py-3 bg-white font-bold no-underline text-sm flex items-center justify-center gap-2">🔑 ĐĂNG NHẬP VỚI GOOGLE</a>
+                <a href="/" className="win95-btn px-6 py-3 no-underline text-xs flex items-center justify-center">🏠 Về trang chủ</a>
+              </div>
+              <p className="text-[10px] text-win-dark">Admin không thể đọc lịch sử của bạn — cam kết <a href="/terms" className="underline">/terms</a> và <a href="/ai-security" className="underline">/ai-security</a></p>
+            </div>
+          </div>
         </div>
       )}
       {isAccountBanned && (
-        <div className="win95-container bg-red-100 border-2 border-red-600 p-4 text-center">
-          <p className="font-bold text-red-700">⛔ TÀI KHOẢN BỊ CHẶN</p>
-          <p className="text-xs">Tài khoản của bạn đã bị chặn, không thể sử dụng tính năng AI. Liên hệ quản trị viên.</p>
+        <div className="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="win95-container bg-win-gray w-full max-w-lg shadow-2xl">
+            <div className="win95-header bg-gradient-to-r from-red-800 to-black"><span>⛔ TÀI KHOẢN BỊ CHẶN</span></div>
+            <div className="p-6 bg-win-gray text-center space-y-4">
+              <div className="text-5xl">⛔</div>
+              <h2 className="font-bold text-red-700">TÀI KHOẢN CỦA BẠN ĐÃ BỊ CHẶN</h2>
+              <p className="text-xs leading-relaxed">Tài khoản này không thể sử dụng tính năng AI. Mọi phiên mã hóa trước đó vẫn được lưu an toàn nhưng đã bị khóa truy cập. Vui lòng liên hệ quản trị viên để được hỗ trợ.</p>
+              <div className="flex gap-2 justify-center">
+                <a href="mailto:nongtiensonpro@gmail.com" className="win95-btn px-4 py-2 bg-white font-bold no-underline text-xs">✉️ Liên hệ Admin</a>
+                <a href="/" className="win95-btn px-4 py-2 no-underline text-xs">🏠 Về trang chủ</a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       {loadingKeys && !needsLogin && !isAccountBanned && (
