@@ -44,48 +44,54 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
   };
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
     fetchNotifications();
 
-    // Tạo channel trước, đăng ký callback, rồi mới subscribe — tránh lỗi "cannot add after subscribe"
+    // Tạo channel — BẮT BUỘC .on() trước .subscribe() (supabase-js v2.112+ sẽ throw nếu ngược lại)
     let cancelled = false;
-    const channel = supabaseClient
-      .channel(`notifications-rt-${currentUser.id}-${Date.now()}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient=eq.${currentUser.id}`
-        },
-        (payload) => {
-          if (cancelled) return;
-          // Thêm thông báo mới lên đầu danh sách
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
-          
-          // Phát âm thanh bip retro cổ điển (tuỳ chọn)
-          try {
-            const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = context.createOscillator();
-            osc.type = "sine";
-            osc.frequency.setValueAtTime(800, context.currentTime);
-            osc.connect(context.destination);
-            osc.start();
-            osc.stop(context.currentTime + 0.1);
-          } catch (e) {
-            // Trình duyệt chặn audio-context cho đến khi tương tác, bỏ qua lỗi
+    const channelName = `notifications:${currentUser.id}`;
+    let channel: ReturnType<typeof supabaseClient.channel> | null = null;
+    try {
+      channel = supabaseClient
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `recipient=eq.${currentUser.id}`
+          },
+          (payload) => {
+            if (cancelled) return;
+            setNotifications((prev) => [payload.new as Notification, ...prev]);
+            try {
+              const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+              if (!Ctx) return;
+              const context = new Ctx();
+              const osc = context.createOscillator();
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(800, context.currentTime);
+              osc.connect(context.destination);
+              osc.start();
+              osc.stop(context.currentTime + 0.1);
+            } catch {}
           }
-        }
-      );
-
-    channel.subscribe();
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn("[NotificationBell] Realtime subscribe failed:", e);
+    }
 
     return () => {
       cancelled = true;
-      supabaseClient.removeChannel(channel);
+      if (channel) {
+        try {
+          supabaseClient.removeChannel(channel);
+        } catch {}
+      }
     };
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   // Click ra ngoài để tự động đóng Popover thông báo
   useEffect(() => {
