@@ -254,8 +254,13 @@ npm install
 | `PUBLIC_CLOUDINARY_CLOUD_NAME` · `..._UPLOAD_PRESET` | `.env` + GitHub Secrets | Unsigned upload |
 | `CLOUDINARY_API_KEY` · `..._API_SECRET` | **Cloudflare Dashboard → Worker → Variables** | Server-only — Admin API |
 | `GEMINI_API_KEY` · `RECAPTCHA_SECRET_KEY` · `GMAIL_APP_PASSWORD` | **Cloudflare Dashboard** | Server-only |
+| `GEMINI_BASE_URL` · `AI_GATEWAY_URL` | **Cloudflare Dashboard** | Optional server-side Gemini-compatible route |
+| `GEMINI_FALLBACK_BASE_URL` · `GEMINI_FALLBACK_BASE_URLS` | **Cloudflare Dashboard** | Optional comma-separated routes; tự chuyển tuyến khi upstream báo `User location not supported` |
+| `GEMINI_UPSTREAM_TIMEOUT_MS` | **Cloudflare Dashboard** | Optional, mặc định 120000ms; giới hạn 15000–300000ms |
 
 > ⚠️ **Quy tắc vàng**: biến có tiền tố `PUBLIC_` nhúng lúc build (GitHub Secrets); biến server **chỉ tồn tại trên Cloudflare Dashboard** — sửa `.env` local không bao giờ ảnh hưởng production!
+
+> 🌐 **Gemini location failover**: `GEMINI_API_KEY` luôn chỉ nằm ở server. Nếu tuyến Cloudflare bị Google từ chối theo vị trí mạng, `/api/ai/chat` sẽ thử các route trong `GEMINI_FALLBACK_BASE_URL(S)` trước khi báo lỗi; người dùng không phải nhập key cá nhân. Route dự phòng phải là endpoint Gemini-compatible do quản trị viên kiểm soát.
 
 **Deploy**: push lên `main` → GitHub Actions tự build (`npm ci` → `astro build` → `wrangler deploy`) → sống trên `*.workers.dev` trong ~2 phút.
 

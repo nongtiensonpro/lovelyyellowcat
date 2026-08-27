@@ -35,6 +35,8 @@ export interface ChatSession {
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  /** Chỉ dùng tạm khi Supabase không sẵn sàng; không gửi dữ liệu tới id giả. */
+  isLocalOnly?: boolean;
 }
 
 // 4 Nhân cách AI độc đáo
@@ -179,6 +181,20 @@ export const TOPIC_CATEGORIES = [
 const STORAGE_KEY = "vapor_ai_chat_sessions_v2"; // legacy, chỉ dùng để migrate 1 lần rồi xóa
 const API_KEY_STORAGE = "user_gemini_api_key";
 const LEGACY_API_KEY_STORAGE = "user_gemini_api_key"; // giữ để tương thích, nhưng sẽ mã hóa khi có masterKey
+const MAX_CONTEXT_MESSAGES = 24;
+
+function formatClientGeminiContents(messages: Array<{ role: string; content: string }>) {
+  const context = messages
+    .filter((message) => typeof message?.content === "string" && message.content.trim())
+    .slice(-MAX_CONTEXT_MESSAGES);
+  const firstUserIndex = context.findIndex((message) => message.role === "user");
+  const usableContext = firstUserIndex > 0 ? context.slice(firstUserIndex) : context;
+
+  return usableContext.map((message) => ({
+    role: message.role === "user" ? "user" : "model",
+    parts: [{ text: message.content.trim() }],
+  }));
+}
 
 // Phát âm thanh retro 8-bit đơn giản qua Web Audio API
 function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.08) {
@@ -226,10 +242,7 @@ async function executeClientDirectChat(
     modelsToTry = [...FALLBACK_MODEL_ORDER];
   }
 
-  const formattedContents = messages.map(m => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content || "" }]
-  }));
+  const formattedContents = formatClientGeminiContents(messages);
 
   const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
   let successfulReply: string | null = null;
@@ -237,11 +250,14 @@ async function executeClientDirectChat(
   const startTime = Date.now();
 
   for (const model of modelsToTry) {
+    const abortController = new AbortController();
+    const timeout = window.setTimeout(() => abortController.abort(), 120_000);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey.trim() },
+        signal: abortController.signal,
         body: JSON.stringify({
           contents: formattedContents,
           systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -254,7 +270,10 @@ async function executeClientDirectChat(
 
       if (response.ok) {
         const data = await response.json();
-        const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const candidateText = (data?.candidates || [])
+          .flatMap((candidate: any) => candidate?.content?.parts || [])
+          .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
+          .join("");
         if (candidateText) {
           successfulReply = candidateText;
           modelUsed = model;
@@ -272,6 +291,8 @@ async function executeClientDirectChat(
       }
     } catch (err: any) {
       attemptLogs.push({ model, status: 0, error: err?.message || String(err) });
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
 
@@ -306,7 +327,7 @@ async function executeClientDirectChatStream(
   temperature: number,
   onChunk: (text: string, model: string) => void,
   onModelStart?: (model: string) => void
-): Promise<{ success: boolean; model: string; durationMs: number; hasQuotaError?: boolean; reply?: string; errorDetail?: string }> {
+): Promise<{ success: boolean; model: string; durationMs: number; hasQuotaError?: boolean; isLocationBlocked?: boolean; incomplete?: boolean; reply?: string; errorDetail?: string }> {
   const systemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat;
   let modelsToTry: string[] = [];
   if (preferredModel && preferredModel !== "auto") {
@@ -314,19 +335,34 @@ async function executeClientDirectChatStream(
   } else {
     modelsToTry = [...FALLBACK_MODEL_ORDER];
   }
-  const formattedContents = messages.map(m => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content || "" }],
-  }));
+  const formattedContents = formatClientGeminiContents(messages);
   const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
   const startTime = Date.now();
+  const upstreamTimeoutMs = 120_000;
+
+  const isLocationError = (error: string) => /user\s+location\s+is\s+not\s+supported|location\s+not\s+supported|unsupported\s+location/i.test(error);
+  const readError = async (response: Response) => {
+    const raw = await response.text().catch(() => "");
+    if (!raw) return `HTTP ${response.status}`;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed?.error?.message || parsed?.message || raw.slice(0, 1_000);
+    } catch {
+      return raw.slice(0, 1_000);
+    }
+  };
+
   for (const model of modelsToTry) {
+    const abortController = new AbortController();
+    const timeout = window.setTimeout(() => abortController.abort(), upstreamTimeoutMs);
+    let partialText = "";
     try {
       if (onModelStart) onModelStart(model);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey.trim()}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey.trim() },
+        signal: abortController.signal,
         body: JSON.stringify({
           contents: formattedContents,
           systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -337,50 +373,79 @@ async function executeClientDirectChatStream(
         }),
       });
       if (!response.ok || !response.body) {
-        const errData = await (response as any).json?.().catch(() => ({})) || {};
-        attemptLogs.push({ model, status: response.status, error: errData?.error?.message || `HTTP ${response.status}` });
+        const error = await readError(response);
+        attemptLogs.push({ model, status: response.status, error });
+        if (isLocationError(error)) break;
         continue;
       }
       const reader = (response.body as ReadableStream<Uint8Array>).getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let hasContent = false;
-      let modelUsed = model;
+      let streamError = "";
+      const consumeLine = (rawLine: string) => {
+        const line = rawLine.replace(/\r$/, "");
+        if (!line.startsWith("data:")) return;
+        const jsonStr = line.slice(5).trim();
+        if (!jsonStr || jsonStr === "[DONE]") return;
+        try {
+          const data = JSON.parse(jsonStr);
+          const error = data?.error?.message || data?.error || data?.message;
+          if (error) {
+            streamError = String(error);
+            return;
+          }
+          const text = (data?.candidates || [])
+            .flatMap((candidate: any) => candidate?.content?.parts || [])
+            .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
+            .join("");
+          if (text) {
+            hasContent = true;
+            partialText += text;
+            onChunk(text, model);
+          }
+        } catch {}
+      };
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value as Uint8Array, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
-          try {
-            const data = JSON.parse(jsonStr);
-            const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              hasContent = true;
-              onChunk(text, modelUsed);
-            }
-          } catch {}
-        }
+        for (const line of lines) consumeLine(line);
+        if (streamError) break;
       }
+      buffer += decoder.decode();
+      if (buffer) consumeLine(buffer);
       if (hasContent) {
-        return { success: true, model: modelUsed, durationMs: Date.now() - startTime };
+        return { success: true, model, durationMs: Date.now() - startTime, incomplete: Boolean(streamError) };
       } else {
-        attemptLogs.push({ model, status: 200, error: "Stream kết thúc không có nội dung." });
+        const error = streamError || "Stream kết thúc không có nội dung.";
+        attemptLogs.push({ model, status: 200, error });
+        if (isLocationError(error)) break;
       }
     } catch (err: any) {
-      attemptLogs.push({ model, status: 0, error: err?.message || String(err) });
+      const error = err?.name === "AbortError"
+        ? `Timeout sau ${Math.round(upstreamTimeoutMs / 1000)} giây.`
+        : err?.message || String(err);
+      attemptLogs.push({ model, status: 0, error });
+      if (partialText) {
+        return { success: true, model, durationMs: Date.now() - startTime, incomplete: true };
+      }
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
   const logDetails = attemptLogs.map((a, i) => `${i + 1}. [${a.model}] (HTTP ${a.status}): ${a.error}`).join("\n");
-  const hasQuotaError = attemptLogs.some(a => a.error?.includes("Quota exceeded") || a.status === 429);
+  const hasQuotaError = attemptLogs.some(a => /quota|rate.?limit/i.test(a.error) || a.status === 429);
+  const locationBlocked = attemptLogs.some(a => isLocationError(a.error));
   return {
     success: false,
     hasQuotaError,
-    reply: hasQuotaError
+    isLocationBlocked: locationBlocked,
+    reply: locationBlocked
+      ? "Meow~! Key cá nhân cũng đang bị Google từ chối theo vị trí mạng (`User location not supported`). Hãy kiểm tra giới hạn khu vực của key hoặc thử mạng khác nhé! 🐱🌐"
+      : hasQuotaError
       ? "Meow~! Hạn mức miễn phí (Quota) của Key AI hiện đang bị quá tải. Bạn hãy thử chọn Model khác (như Gemini 2.0 Flash / 1.5 Flash) hoặc đổi sang API Key cá nhân trong Cài đặt nhé! 🐱💾"
       : "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi phản hồi. Bạn hãy mở chi tiết lỗi bên dưới để xem thêm nhé! 🐱💾",
     errorDetail: `[CLIENT-SIDE STREAM]\nChi tiết từng model:\n${logDetails}`,
@@ -427,6 +492,7 @@ export const AiChatStation: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const isSendingRef = useRef(false);
 
   const toggleExpandError = (msgId: string) => {
     setExpandedErrors(prev => ({ ...prev, [msgId]: !prev[msgId] }));
@@ -520,7 +586,9 @@ export const AiChatStation: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title_encrypted: ciphertext, title_iv: iv, persona: persona.id }),
       });
-      const { session } = await res.json();
+      const responseBody = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(responseBody?.error || `HTTP ${res.status}`);
+      const { session } = responseBody;
       if (!session) throw new Error("Tạo phiên thất bại");
       const newSession: ChatSession = {
         id: session.id,
@@ -536,6 +604,7 @@ export const AiChatStation: React.FC = () => {
             timestamp: "1995-INIT",
           },
         ],
+        isLocalOnly: false,
       };
       // Lưu greeting đã mã hóa
       try {
@@ -584,7 +653,8 @@ export const AiChatStation: React.FC = () => {
           content: persona.defaultGreeting,
           timestamp: "1995-INIT",
         }
-      ]
+      ],
+      isLocalOnly: true,
     };
     setSessions(prev => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
@@ -754,54 +824,61 @@ export const AiChatStation: React.FC = () => {
     }
   };
 
-  const pushChatError = (text: string) => {
-    if (!currentSession) return;
-    const errMsg: ChatMessage = {
-      id: `err-${Date.now()}`,
-      role: "model",
-      content: text,
-      timestamp: new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }),
-      isError: true,
-    };
-    setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: [...s.messages, errMsg] } : s));
-  };
-
   // Xử lý gửi tin nhắn — E2EE bắt buộc
   const handleSendMessage = async (textToSend?: string, overrideApiKey?: string) => {
     if (needsLogin) {
-      pushChatError("🔒 Vui lòng **đăng nhập bằng Google** để sử dụng AI. Trạm AI yêu cầu tài khoản hoạt động (E2EE bắt buộc). Nhấn nút **Đăng nhập với Google** ở banner trên cùng.");
       return;
     }
     if (isAccountBanned) {
-      pushChatError("⛔ Tài khoản của bạn đã bị chặn, không thể sử dụng AI. Vui lòng liên hệ quản trị viên.");
       return;
     }
     if (!isUnlocked || !masterKey) {
-      pushChatError("🔐 Phiên đang khóa — Vui lòng **Mở khóa E2EE** bằng mật khẩu mã hóa trước khi trò chuyện. Nhấn nút **Mở khóa** ở banner vàng hoặc header.");
       setShowPassphraseModal(true);
       setUnlockError("Vui lòng mở khóa bằng mật khẩu mã hóa trước khi trò chuyện. Đây là yêu cầu bắt buộc để đảm bảo E2EE.");
       return;
     }
     const content = (textToSend || inputVal).trim();
-    if (!content || isTyping) return;
-    if (!currentSession) {
-      setSessions(prev => {
-        const errMsg: ChatMessage = {
-          id: `err-${Date.now()}`,
-          role: "model",
-          content: "⚠️ Chưa có phiên hội thoại nào. Vui lòng tạo phiên mới hoặc mở khóa lại. Nếu vừa đăng nhập, hãy mở khóa E2EE trước.",
-          timestamp: new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }),
-          isError: true,
-        };
-        // Try to show in current session if exists, otherwise just log
-        if (prev.length > 0) {
-          return prev.map(s => s.id === prev[0].id ? { ...s, messages: [...s.messages, errMsg] } : s);
+    if (!content || isTyping || isSendingRef.current) return;
+    isSendingRef.current = true;
+    setIsTyping(true);
+    setInputVal("");
+    // Đảm bảo có phiên hiện tại — nếu chưa có (lần đầu chào), tự tạo
+    let targetSession: ChatSession | null = currentSession || null;
+    if (!targetSession) {
+      try {
+        const created = await createNewSessionEncrypted(selectedPersonaId, masterKey);
+        if (created) {
+          targetSession = created as unknown as ChatSession;
+        } else {
+          // Fallback local nếu API lỗi
+          const persona = PERSONAS.find(p => p.id === selectedPersonaId) || PERSONAS[0];
+          const fallback: ChatSession = {
+            id: `session-${Date.now()}`,
+            title: `Hội thoại cùng ${persona.name}`,
+            persona: persona.id,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            messages: [{ id: `msg-welcome-1`, role: "model", content: persona.defaultGreeting, timestamp: "1995-INIT" }],
+            isLocalOnly: true,
+          };
+          setSessions(prev => [fallback, ...prev]);
+          setActiveSessionId(fallback.id);
+          targetSession = fallback;
         }
-        return prev;
-      });
-      console.warn("[AI] No currentSession");
-      return;
+      } catch (e) {
+        console.error("[AI] Failed to auto-create session:", e);
+        isSendingRef.current = false;
+        setIsTyping(false);
+        return;
+      }
+      if (!targetSession) {
+        isSendingRef.current = false;
+        setIsTyping(false);
+        return;
+      }
     }
+
+    const session = targetSession;
 
     if (soundEnabled) playRetroBeep(587.33, "sine", 0.06); // D5 note
 
@@ -815,20 +892,20 @@ export const AiChatStation: React.FC = () => {
       timestamp: timeStr,
     };
 
-    const updatedMessages = [...currentSession.messages, userMsg];
+    const updatedMessages = [...session.messages, userMsg];
 
     // Cập nhật title của phiên nếu là tin nhắn đầu của user — mã hóa và PATCH
     const userMessageCount = updatedMessages.filter(m => m.role === "user").length;
-    let newTitle = currentSession.title;
+    let newTitle = session.title;
     if (userMessageCount === 1) {
       newTitle = content.length > 30 ? content.substring(0, 30) + "..." : content;
       // Mã hóa title mới và cập nhật server (không chặn UI)
-      if (masterKey) {
+      if (masterKey && !session.isLocalOnly) {
         encryptString(newTitle, masterKey).then(payload => {
           fetch("/api/ai/sessions", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: currentSession.id, title_encrypted: payload.ciphertext, title_iv: payload.iv }),
+            body: JSON.stringify({ id: session.id, title_encrypted: payload.ciphertext, title_iv: payload.iv }),
           }).catch(() => {});
         });
       }
@@ -836,21 +913,21 @@ export const AiChatStation: React.FC = () => {
 
     setSessions(prev =>
       prev.map(s =>
-        s.id === currentSession.id
+        s.id === session.id
           ? { ...s, messages: updatedMessages, title: newTitle, updatedAt: Date.now() }
           : s
       )
     );
 
     // Lưu userMsg đã mã hóa lên Supabase (fire-and-forget, không chặn Gemini)
-    if (masterKey) {
+    if (masterKey && !session.isLocalOnly) {
       encryptJson({ content: userMsg.content, timestamp: userMsg.timestamp }, masterKey)
         .then(payload => {
           return fetch("/api/ai/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              session_id: currentSession.id,
+              session_id: session.id,
               role: "user",
               ciphertext: payload.ciphertext,
               iv: payload.iv,
@@ -863,7 +940,7 @@ export const AiChatStation: React.FC = () => {
         .then(data => {
           if (data?.message?.id) {
             // Đồng bộ id server cho userMsg (tùy chọn)
-            setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: s.messages.map(m => m.id === userMsg.id ? { ...m, id: data.message.id } : m) } : s));
+            setSessions(prev => prev.map(s => s.id === session.id ? { ...s, messages: s.messages.map(m => m.id === userMsg.id ? { ...m, id: data.message.id } : m) } : s));
           }
         })
         .catch(() => {});
@@ -885,18 +962,17 @@ export const AiChatStation: React.FC = () => {
           timestamp: timeStr,
           modelName: streamModel,
         };
-        setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: [...updatedMessages, placeholderMsg], updatedAt: Date.now() } : s));
-        setIsTyping(false);
+        setSessions(prev => prev.map(s => s.id === session.id ? { ...s, messages: [...updatedMessages, placeholderMsg], updatedAt: Date.now() } : s));
         let fullText = "";
         const onChunk = (text: string, model: string) => {
           fullText += text;
           streamModel = model;
-          setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: fullText, modelName: streamModel } : m) } : s));
+          setSessions(prev => prev.map(s => s.id === session.id ? { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: fullText, modelName: streamModel } : m) } : s));
         };
         const result: any = await executeClientDirectChatStream(
           effectiveApiKey,
           updatedMessages.map(m => ({ role: m.role, content: m.content })),
-          currentSession.persona,
+          session.persona,
           selectedModel,
           allowFallback,
           temperature,
@@ -904,20 +980,20 @@ export const AiChatStation: React.FC = () => {
         );
         if (result.success) {
           setSessions(prev => prev.map(s => {
-            if (s.id !== currentSession.id) return s;
+            if (s.id !== session.id) return s;
             return { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, durationMs: result.durationMs, modelName: result.model } : m), updatedAt: Date.now() };
           }));
           if (soundEnabled) playRetroBeep(880, "triangle", 0.09);
-          if (masterKey && fullText) {
+          if (masterKey && !session.isLocalOnly && fullText) {
             encryptJson({ content: fullText, timestamp: timeStr, modelName: result.model, durationMs: result.durationMs }, masterKey)
-              .then(payload => fetch("/api/ai/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: currentSession.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: result.model }) }))
+              .then(payload => fetch("/api/ai/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: session.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: result.model }) }))
               .catch(() => {});
           }
         } else {
           setSessions(prev => {
-            if (prev.find(s => s.id === currentSession.id)?.messages.find(m => m.id === placeholderId)) {
+            if (prev.find(s => s.id === session.id)?.messages.find(m => m.id === placeholderId)) {
               return prev.map(s => {
-                if (s.id !== currentSession.id) return s;
+                if (s.id !== session.id) return s;
                 const msgs = s.messages.filter(m => m.id !== placeholderId);
                 const errMsg: ChatMessage = {
                   id: `err-${Date.now()}`,
@@ -939,12 +1015,26 @@ export const AiChatStation: React.FC = () => {
       }
 
       // ===== STREAMING VIA SERVER PROXY (hiển thị gõ dần) =====
+      // Tạo placeholder trước khi chờ mạng để người dùng luôn thấy trạng thái
+      // đang xử lý, kể cả khi server/upstream phản hồi chậm.
+      const placeholderId = `model-${Date.now()}`;
+      const streamStartTime = Date.now();
+      let streamModel = selectedModel === "auto" ? "streaming" : selectedModel;
+      const placeholderMsg: ChatMessage = {
+        id: placeholderId,
+        role: "model",
+        content: "",
+        timestamp: timeStr,
+        modelName: streamModel,
+      };
+      setSessions(prev => prev.map(s => s.id === session.id ? { ...s, messages: [...updatedMessages, placeholderMsg], updatedAt: Date.now() } : s));
+
       const streamRes = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
-          persona: currentSession.persona,
+          persona: session.persona,
           preferredModel: selectedModel === "auto" ? undefined : selectedModel,
           allowFallback,
           temperature,
@@ -956,31 +1046,18 @@ export const AiChatStation: React.FC = () => {
         throw new Error(`Stream HTTP ${streamRes.status}`);
       }
 
-      // Tạo placeholder rỗng để gõ dần
-      const placeholderId = `model-${Date.now()}`;
-      const streamStartTime = Date.now();
-      let streamModel = selectedModel === "auto" ? "streaming" : selectedModel;
-      const placeholderMsg: ChatMessage = {
-        id: placeholderId,
-        role: "model",
-        content: "",
-        timestamp: timeStr,
-        modelName: streamModel,
-      };
-      setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: [...updatedMessages, placeholderMsg], updatedAt: Date.now() } : s));
-      // Tắt typing dots, bật chế độ streaming (placeholder sẽ được bơm dần)
-      setIsTyping(false);
-
       const reader = streamRes.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let fullText = "";
       let doneReceived = false;
-      let streamError: string | null = null;
+      let messageFinalized = false;
+      let streamError = "";
+      let streamErrorDetail = "";
 
       const updatePlaceholder = (text: string, model?: string) => {
         setSessions(prev => prev.map(s => {
-          if (s.id !== currentSession.id) return s;
+          if (s.id !== session.id) return s;
           return {
             ...s,
             messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: text, modelName: model || m.modelName } : m),
@@ -988,71 +1065,119 @@ export const AiChatStation: React.FC = () => {
         }));
       };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr) continue;
-          try {
-            const data = JSON.parse(jsonStr);
-            if (data.text) {
-              fullText += data.text;
-              if (data.model) streamModel = data.model;
-              updatePlaceholder(fullText, streamModel);
-            }
-            if (data.done) {
-              doneReceived = true;
-              if (data.model) streamModel = data.model;
-              // Finalize
-              const durationMs = data.durationMs || (Date.now() - streamStartTime);
-              setSessions(prev => prev.map(s => {
-                if (s.id !== currentSession.id) return s;
-                return {
-                  ...s,
-                  messages: s.messages.map(m => m.id === placeholderId ? { ...m, durationMs, modelName: streamModel } : m),
-                  updatedAt: Date.now(),
-                };
-              }));
-              if (soundEnabled) playRetroBeep(880, "triangle", 0.09);
-              if (masterKey && fullText) {
-                encryptJson({ content: fullText, timestamp: timeStr, modelName: streamModel, durationMs }, masterKey)
-                  .then(payload => fetch("/api/ai/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: currentSession.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: streamModel }) }))
-                  .catch(() => {});
-              }
-            }
-            if (data.error) {
-              streamError = data.error;
-              // Nếu có attemptLogs kèm theo thì hiển thị chi tiết
-              if (data.isLocationBlocked) {
-                updatePlaceholder(data.error || "Bị chặn vị trí", streamModel);
-              }
-            }
-          } catch {}
-        }
-      }
+      const persistModelMessage = (durationMs: number) => {
+        if (!masterKey || session.isLocalOnly || !fullText) return;
+        encryptJson({ content: fullText, timestamp: timeStr, modelName: streamModel, durationMs }, masterKey)
+          .then(payload => fetch("/api/ai/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: session.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: streamModel }),
+          }))
+          .catch(() => {});
+      };
 
-      if (!doneReceived && !fullText) {
-        // Stream kết thúc mà không có done flag → coi như lỗi
-        const msg = streamError || "Stream kết thúc bất ngờ, không nhận được nội dung.";
-        // Xóa placeholder rỗng và hiện lỗi
+      const finalizeAnswer = (durationMs: number, incomplete = false) => {
+        if (messageFinalized) return;
+        messageFinalized = true;
         setSessions(prev => prev.map(s => {
-          if (s.id !== currentSession.id) return s;
+          if (s.id !== session.id) return s;
+          return {
+            ...s,
+            messages: s.messages.map(m => m.id === placeholderId
+              ? { ...m, durationMs, modelName: streamModel, ...(incomplete ? { errorDetail: "Phản hồi bị ngắt giữa chừng; nội dung đã nhận vẫn được giữ lại." } : {}) }
+              : m),
+            updatedAt: Date.now(),
+          };
+        }));
+        persistModelMessage(durationMs);
+        if (soundEnabled) playRetroBeep(incomplete ? 659.25 : 880, incomplete ? "sine" : "triangle", 0.09);
+      };
+
+      const finalizeError = (message: string, detail = message, locationBlocked = false) => {
+        if (messageFinalized) return;
+        messageFinalized = true;
+        const friendlyMessage = message.startsWith("Meow~!") || locationBlocked
+          ? message
+          : `Meow~! ${message} Bạn hãy thử lại hoặc đổi model nhé! 🐱💾`;
+        setSessions(prev => prev.map(s => {
+          if (s.id !== session.id) return s;
           const msgs = s.messages.filter(m => m.id !== placeholderId);
           const errMsg: ChatMessage = {
             id: `err-${Date.now()}`,
             role: "model",
-            content: `Meow~! ${msg} Bạn hãy thử lại hoặc đổi model nhé! 🐱💾`,
+            content: friendlyMessage,
             timestamp: timeStr,
             isError: true,
-            errorDetail: streamError || msg,
+            errorDetail: detail,
+            isLocationBlocked: locationBlocked,
           };
           return { ...s, messages: [...msgs, errMsg], updatedAt: Date.now() };
         }));
+        if (soundEnabled) playRetroBeep(locationBlocked ? 440 : 330, "sine", 0.1);
+      };
+
+      const consumeEvent = (data: any): boolean => {
+        if (data.text) {
+          fullText += data.text;
+          if (data.model) streamModel = data.model;
+          updatePlaceholder(fullText, streamModel);
+        }
+        if (data.error) {
+          streamError = data.reply || data.error;
+          streamErrorDetail = data.errorDetail || data.error;
+          doneReceived = true;
+          if (fullText) {
+            finalizeAnswer(data.durationMs || (Date.now() - streamStartTime), true);
+          } else {
+            finalizeError(streamError, streamErrorDetail, Boolean(data.isLocationBlocked));
+          }
+          return true;
+        }
+        if (data.done) {
+          doneReceived = true;
+          if (data.model) streamModel = data.model;
+          if (fullText) {
+            finalizeAnswer(data.durationMs || (Date.now() - streamStartTime), Boolean(data.incomplete));
+          } else {
+            finalizeError("Stream kết thúc mà không có nội dung.");
+          }
+          return true;
+        }
+        return false;
+      };
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const rawLine of lines) {
+            const line = rawLine.replace(/\r$/, "");
+            if (!line.startsWith("data:")) continue;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr) continue;
+            try {
+              if (consumeEvent(JSON.parse(jsonStr))) break;
+            } catch {}
+          }
+          if (doneReceived) break;
+        }
+        buffer += decoder.decode();
+        if (!doneReceived && buffer.trim().startsWith("data:")) {
+          try { consumeEvent(JSON.parse(buffer.trim().slice(5).trim())); } catch {}
+        }
+        if (!messageFinalized) {
+          if (fullText) finalizeAnswer(Date.now() - streamStartTime, !doneReceived);
+          else finalizeError(streamError || "Stream kết thúc bất ngờ, không nhận được nội dung.", streamErrorDetail || "Stream không có dữ liệu.");
+        }
+      } catch (err: any) {
+        if (fullText) {
+          finalizeAnswer(Date.now() - streamStartTime, true);
+        } else {
+          finalizeError("Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy thử lại sau nhé! 🐱💾", `[CLIENT_STREAM_EXCEPTION]: ${err?.message || err}`);
+        }
       }
       return;
     } catch (err: any) {
@@ -1067,13 +1192,14 @@ export const AiChatStation: React.FC = () => {
       };
       setSessions(prev =>
         prev.map(s =>
-          s.id === currentSession.id
+          s.id === session.id
             ? { ...s, messages: [...updatedMessages, errMsg], updatedAt: Date.now() }
             : s
         )
       );
     } finally {
       setIsTyping(false);
+      isSendingRef.current = false;
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
@@ -1108,11 +1234,13 @@ export const AiChatStation: React.FC = () => {
   // Xóa một phiên hội thoại (E2EE: xóa trên Supabase)
   const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isUnlocked || !masterKey) {
-      // Chưa unlock: chỉ xóa local
+    const sessionToDelete = sessions.find((session) => session.id === sessionId);
+    if (!isUnlocked || !masterKey || sessionToDelete?.isLocalOnly) {
+      // Chưa unlock hoặc session tạm: chỉ xóa local, không gọi API với id giả
       const filteredLocal = sessions.filter(s => s.id !== sessionId);
       if (filteredLocal.length === 0) {
-        createNewSession(selectedPersonaId);
+        if (isUnlocked && masterKey) await createNewSessionEncrypted(selectedPersonaId, masterKey);
+        else createNewSession(selectedPersonaId);
       } else {
         setSessions(filteredLocal);
         if (activeSessionId === sessionId) {
@@ -1550,6 +1678,11 @@ export const AiChatStation: React.FC = () => {
                 <span className="font-bold">{currentSession?.messages.length || 0}</span>
               </div>
             </div>
+            {currentSession?.isLocalOnly && (
+              <div className="mt-2 p-2 border border-red-500 bg-red-100 text-[10px] leading-relaxed font-bold text-red-800">
+                ⚠️ Supabase đang tạm thời không khả dụng. Phiên này chỉ lưu trong tab hiện tại và sẽ không đồng bộ sau khi tải lại.
+              </div>
+            )}
           </div>
 
           {/* RIGHT CHAT / CONTENT AREA (8 cols on desktop) */}

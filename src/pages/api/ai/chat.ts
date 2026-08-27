@@ -1,6 +1,168 @@
 import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 
+type AttemptLog = {
+  model: string;
+  status: number;
+  error: string;
+  endpoint?: string;
+};
+
+type StreamReadResult = {
+  hasContent: boolean;
+  error?: string;
+};
+
+const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 120_000;
+const SSE_HEARTBEAT_MS = 10_000;
+const MAX_CONTEXT_MESSAGES = 24;
+const LOCATION_BLOCKED_REPLY =
+  "Meow~! Kết nối Gemini từ máy chủ đang bị Google từ chối theo vị trí mạng (`User location not supported`). Hệ thống sẽ tự chuyển sang tuyến AI dự phòng nếu quản trị viên đã cấu hình. Bạn không cần nhập API Key cá nhân trừ khi muốn dùng hạn mức riêng. 🐱🌐";
+
+function getStringEnv(name: string): string {
+  return String((env as any)?.[name] || (import.meta.env as any)?.[name] || (process.env as any)?.[name] || "").trim();
+}
+
+function getGeminiBaseUrls(): string[] {
+  const configured = [
+    getStringEnv("GEMINI_BASE_URL"),
+    getStringEnv("AI_GATEWAY_URL"),
+    getStringEnv("GEMINI_FALLBACK_BASE_URL"),
+    ...getStringEnv("GEMINI_FALLBACK_BASE_URLS").split(","),
+  ]
+    .map((value) => value.trim().replace(/\/+$/, ""))
+    .filter(Boolean)
+    .map((value) => value.replace(/\/v1beta$/i, ""));
+
+  return [...new Set([...configured, DEFAULT_GEMINI_BASE_URL])];
+}
+
+function safeEndpointLabel(value: string): string {
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return value.split("?")[0].slice(0, 300);
+  }
+}
+
+function getUpstreamTimeoutMs(): number {
+  const configured = Number(getStringEnv("GEMINI_UPSTREAM_TIMEOUT_MS"));
+  return Number.isFinite(configured) && configured >= 15_000
+    ? Math.min(configured, 300_000)
+    : DEFAULT_UPSTREAM_TIMEOUT_MS;
+}
+
+function isLocationBlocked(error: string): boolean {
+  return /user\s+location\s+is\s+not\s+supported|location\s+not\s+supported|unsupported\s+location/i.test(error);
+}
+
+function isAuthenticationError(status: number): boolean {
+  return status === 401 || status === 403;
+}
+
+function buildGeminiUrl(baseUrl: string, model: string, action: "generateContent" | "streamGenerateContent"): string {
+  const streamQuery = action === "streamGenerateContent" ? "?alt=sse" : "";
+  return `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:${action}${streamQuery}`;
+}
+
+function buildGeminiRequest(apiKey: string, body: unknown, signal: AbortSignal): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // Header-based auth avoids leaking the server key into proxy/access URLs.
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify(body),
+    signal,
+  };
+}
+
+async function readResponseError(response: Response): Promise<string> {
+  const raw = await response.text().catch(() => "");
+  if (!raw) return `HTTP ${response.status}`;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed?.error?.message || parsed?.message || raw.slice(0, 1_000);
+  } catch {
+    return raw.slice(0, 1_000);
+  }
+}
+
+function extractCandidateText(data: any): string {
+  return (data?.candidates || [])
+    .flatMap((candidate: any) => candidate?.content?.parts || [])
+    .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
+    .join("");
+}
+
+function formatGeminiContents(messages: Array<{ role: string; content: string }>) {
+  const context = messages
+    .filter((message) => typeof message?.content === "string" && message.content.trim())
+    .slice(-MAX_CONTEXT_MESSAGES);
+  const firstUserIndex = context.findIndex((message) => message.role === "user");
+  const usableContext = firstUserIndex > 0 ? context.slice(firstUserIndex) : context;
+
+  return usableContext.map((message) => ({
+    role: message.role === "user" ? "user" : "model",
+    parts: [{ text: message.content.trim() }],
+  }));
+}
+
+async function consumeGeminiSse(
+  response: Response,
+  onText: (text: string) => void,
+): Promise<StreamReadResult> {
+  if (!response.body) return { hasContent: false, error: "Upstream không trả về response body." };
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let hasContent = false;
+  let streamError: string | undefined;
+
+  const consumeLine = (rawLine: string) => {
+    const line = rawLine.replace(/\r$/, "");
+    if (!line.startsWith("data:")) return;
+    const jsonStr = line.slice(5).trim();
+    if (!jsonStr || jsonStr === "[DONE]") return;
+
+    try {
+      const data = JSON.parse(jsonStr);
+      const error = data?.error?.message || data?.error || data?.message;
+      if (error) {
+        streamError = String(error);
+        return;
+      }
+      const text = extractCandidateText(data);
+      if (text) {
+        hasContent = true;
+        onText(text);
+      }
+    } catch {
+      // SSE chunks can be split at any byte boundary; malformed partial JSON
+      // remains recoverable only when it is kept in the line buffer.
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) consumeLine(line);
+    if (streamError) break;
+  }
+
+  buffer += decoder.decode();
+  if (buffer) consumeLine(buffer);
+
+  return { hasContent, error: streamError };
+}
+
 export const FALLBACK_MODEL_ORDER = [
   "gemini-2.5-flash",
   "gemini-flash-latest",
@@ -44,18 +206,9 @@ Phong cách:
 
 export const POST: APIRoute = async ({ request }) => {
   const apiKey =
-    (env as any)?.GEMINI_API_KEY ||
-    (env as any)?.AI_API_KEY ||
-    import.meta.env.GEMINI_API_KEY ||
-    import.meta.env.AI_API_KEY ||
-    process.env.GEMINI_API_KEY;
-
-  const baseUrl =
-    (env as any)?.GEMINI_BASE_URL ||
-    (env as any)?.AI_GATEWAY_URL ||
-    import.meta.env.GEMINI_BASE_URL ||
-    process.env.GEMINI_BASE_URL ||
-    "https://generativelanguage.googleapis.com";
+    getStringEnv("GEMINI_API_KEY") ||
+    getStringEnv("AI_API_KEY");
+  const baseUrls = getGeminiBaseUrls();
 
   if (!apiKey) {
     return new Response(
@@ -108,88 +261,131 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Định dạng lịch sử hội thoại chuẩn theo Google Gemini REST API
-    const formattedContents = messages.map((m: { role: string; content: string }) => ({
-      role: m.role === "user" ? "user" : "model",
-      parts: [{ text: m.content || "" }],
-    }));
+    const formattedContents = formatGeminiContents(messages);
+    if (formattedContents.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Dữ liệu tin nhắn không có nội dung." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
     const wantStream = body.stream === true;
-    const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
+    const attemptLogs: AttemptLog[] = [];
 
     // ===== STREAMING MODE: trả về Server-Sent Events, hiển thị gõ dần =====
     if (wantStream) {
       const stream = new ReadableStream({
         async start(controller) {
           const encoder = new TextEncoder();
-          const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-          const startTime = Date.now();
-          for (const model of modelsToTry) {
+          let closed = false;
+          const send = (obj: unknown) => {
+            if (closed) return;
             try {
-              const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
-              const url = `${cleanBaseUrl}/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
-              const response = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  contents: formattedContents,
-                  systemInstruction: { parts: [{ text: systemPrompt }] },
-                  generationConfig: {
-                    temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
-                    maxOutputTokens: 1200,
-                  },
-                }),
-              });
-              if (!response.ok || !response.body) {
-                const errData = await (response as any).json?.().catch(() => ({})) || {};
-                const msg = errData?.error?.message || `HTTP ${response.status}`;
-                attemptLogs.push({ model, status: response.status, error: msg });
-                continue;
-              }
-              const reader = (response.body as ReadableStream<Uint8Array>).getReader();
-              const decoder = new TextDecoder();
-              let buffer = "";
-              let hasContent = false;
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-                for (const line of lines) {
-                  if (!line.startsWith("data: ")) continue;
-                  const jsonStr = line.slice(6).trim();
-                  if (!jsonStr || jsonStr === "[DONE]") continue;
-                  try {
-                    const data = JSON.parse(jsonStr);
-                    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (text) {
-                      hasContent = true;
-                      send({ text, model });
-                    }
-                  } catch {}
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+            } catch {
+              closed = true;
+            }
+          };
+          const close = () => {
+            if (closed) return;
+            closed = true;
+            try { controller.close(); } catch {}
+          };
+          const heartbeat = setInterval(() => {
+            if (!closed) {
+              try { controller.enqueue(encoder.encode(": keep-alive\n\n")); } catch { closed = true; }
+            }
+          }, SSE_HEARTBEAT_MS);
+          const startTime = Date.now();
+          const requestBody = {
+            contents: formattedContents,
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+              temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+              maxOutputTokens: 1200,
+            },
+          };
+
+          send({ status: "connecting" });
+          try {
+            // A location error belongs to the endpoint/egress, not to a model.
+            // Move to the next configured route instead of retrying every model.
+            for (const baseUrl of baseUrls) {
+              for (const model of modelsToTry) {
+                const abortController = new AbortController();
+                const timeout = setTimeout(() => abortController.abort(), getUpstreamTimeoutMs());
+                let partialText = "";
+                try {
+                  const response = await fetch(
+                    buildGeminiUrl(baseUrl, model, "streamGenerateContent"),
+                    buildGeminiRequest(apiKey, requestBody, abortController.signal),
+                  );
+                  if (!response.ok || !response.body) {
+                    const message = await readResponseError(response);
+                    attemptLogs.push({ model, status: response.status, error: message, endpoint: safeEndpointLabel(baseUrl) });
+                    if (isLocationBlocked(message) || isAuthenticationError(response.status)) break;
+                    continue;
+                  }
+
+                  const streamResult = await consumeGeminiSse(response, (text) => {
+                    partialText += text;
+                    send({ text, model });
+                  });
+
+                  if (streamResult.hasContent) {
+                    send({
+                      done: true,
+                      model,
+                      durationMs: Date.now() - startTime,
+                      incomplete: Boolean(streamResult.error),
+                    });
+                    close();
+                    return;
+                  }
+
+                  const message = streamResult.error || "Stream kết thúc không có nội dung.";
+                  attemptLogs.push({ model, status: 200, error: message, endpoint: safeEndpointLabel(baseUrl) });
+                  if (isLocationBlocked(message)) break;
+                } catch (err: any) {
+                  const message = err?.name === "AbortError"
+                    ? `Timeout sau ${Math.round(getUpstreamTimeoutMs() / 1000)} giây.`
+                    : err?.message || String(err);
+                  attemptLogs.push({ model, status: 0, error: message, endpoint: safeEndpointLabel(baseUrl) });
+                  // Preserve a usable partial answer when the upstream cuts out.
+                  if (partialText) {
+                    send({ done: true, model, durationMs: Date.now() - startTime, incomplete: true });
+                    close();
+                    return;
+                  }
+                } finally {
+                  clearTimeout(timeout);
                 }
               }
-              if (hasContent) {
-                send({ done: true, model, durationMs: Date.now() - startTime });
-                controller.close();
-                return;
-              } else {
-                attemptLogs.push({ model, status: 200, error: "Stream kết thúc không có nội dung." });
-              }
-            } catch (err: any) {
-              attemptLogs.push({ model, status: 0, error: err?.message || String(err) });
             }
+
+            const locationBlocked = attemptLogs.some((attempt) => isLocationBlocked(attempt.error));
+            send({
+              error: locationBlocked ? "User location not supported" : "All models failed",
+              reply: locationBlocked ? LOCATION_BLOCKED_REPLY : undefined,
+              done: true,
+              isLocationBlocked: locationBlocked,
+              attemptLogs,
+              errorDetail: attemptLogs.map((a, i) => `${i + 1}. [${a.model}] (HTTP ${a.status})${a.endpoint ? ` [${a.endpoint}]` : ""}: ${a.error}`).join("\n"),
+            });
+          } catch (err: any) {
+            console.error("[AI STREAM ERROR]:", err);
+            send({ error: err?.message || "Lỗi stream nội bộ.", done: true });
+          } finally {
+            clearInterval(heartbeat);
+            close();
           }
-          // Tất cả model đều thất bại
-          const isBlocked = attemptLogs.some(a => a.error?.toLowerCase().includes("user location is not supported"));
-          send({ error: isBlocked ? "User location not supported" : "All models failed", done: true, isLocationBlocked: isBlocked, attemptLogs });
-          controller.close();
         },
       });
       return new Response(stream, {
         headers: {
           "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-cache, no-store, no-transform",
+          "X-Accel-Buffering": "no",
           Connection: "keep-alive",
         },
       });
@@ -198,60 +394,61 @@ export const POST: APIRoute = async ({ request }) => {
     let successfulReply: string | null = null;
     let modelUsed: string = "";
     const startTime = Date.now();
+    const requestBody = {
+      contents: formattedContents,
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      generationConfig: {
+        temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+        maxOutputTokens: 1200,
+      },
+    };
 
     // Duyệt qua danh sách Model theo thứ tự (non-stream fallback)
-    for (const model of modelsToTry) {
-      try {
-        const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
-        const url = `${cleanBaseUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    for (const baseUrl of baseUrls) {
+      for (const model of modelsToTry) {
+        const abortController = new AbortController();
+        const timeout = setTimeout(() => abortController.abort(), getUpstreamTimeoutMs());
+        try {
+          const response = await fetch(
+            buildGeminiUrl(baseUrl, model, "generateContent"),
+            buildGeminiRequest(apiKey, requestBody, abortController.signal),
+          );
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: formattedContents,
-            systemInstruction: {
-              parts: [{ text: systemPrompt }],
-            },
-            generationConfig: {
-              temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
-              maxOutputTokens: 1200,
-            },
-          }),
-        });
+          if (response.ok) {
+            const data = await response.json();
+            const candidateText = extractCandidateText(data);
 
-        if (response.ok) {
-          const data = await response.json();
-          const candidateText =
-            data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-          if (candidateText) {
-            successfulReply = candidateText;
-            modelUsed = model;
-            break; // Thành công
+            if (candidateText) {
+              successfulReply = candidateText;
+              modelUsed = model;
+              break; // Thành công
+            } else {
+              attemptLogs.push({
+                model,
+                status: response.status,
+                error: "API trả về 200 OK nhưng không có nội dung văn bản.",
+                endpoint: safeEndpointLabel(baseUrl),
+              });
+            }
           } else {
-            attemptLogs.push({
-              model,
-              status: response.status,
-              error: "API trả về 200 OK nhưng không có nội dung văn bản."
-            });
+            const error = await readResponseError(response);
+            attemptLogs.push({ model, status: response.status, error, endpoint: safeEndpointLabel(baseUrl) });
+            // Location/auth errors are endpoint/key-wide; do not waste time
+            // trying the remaining models on this same route.
+            if (isLocationBlocked(error) || isAuthenticationError(response.status)) break;
           }
-        } else {
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData.error?.message || errData.message || `HTTP ${response.status}`;
-          attemptLogs.push({
-            model,
-            status: response.status,
-            error: errMsg
-          });
+        } catch (err: any) {
+          const error = err?.name === "AbortError"
+            ? `Timeout sau ${Math.round(getUpstreamTimeoutMs() / 1000)} giây.`
+            : err?.message || String(err);
+          attemptLogs.push({ model, status: 0, error, endpoint: safeEndpointLabel(baseUrl) });
+        } finally {
+          clearTimeout(timeout);
         }
-      } catch (err: any) {
-        attemptLogs.push({
-          model,
-          status: 0,
-          error: err?.message || String(err)
-        });
       }
+      if (successfulReply) break;
     }
 
     const durationMs = Date.now() - startTime;
@@ -269,32 +466,30 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Kiểm tra xem có phải do chặn vị trí địa lý của Cloudflare egress IP không
-    const isLocationBlocked = attemptLogs.some(
-      att => att.error?.toLowerCase().includes("user location is not supported")
-    );
+    const locationBlocked = attemptLogs.some((att) => isLocationBlocked(att.error));
 
     const logDetails = attemptLogs
-      .map((att, idx) => `${idx + 1}. [${att.model}] (HTTP ${att.status}): ${att.error}`)
+      .map((att, idx) => `${idx + 1}. [${att.model}] (HTTP ${att.status})${att.endpoint ? ` [${att.endpoint}]` : ""}: ${att.error}`)
       .join("\n");
 
     const formattedErrorDetail = 
       `[TỔNG HỢP KẾT QUẢ THỬ NGHIỆM MODEL]\n` +
       `Model ưu tiên ban đầu: ${preferredModel || "auto"}\n` +
       `Cho phép Fallback: ${allowFallback ? "BẬT" : "TẮT"}\n` +
-      `Phát hiện chặn IP Edge Cloudflare: ${isLocationBlocked ? "CÓ (User location not supported)" : "KHÔNG"}\n\n` +
+      `Phát hiện chặn tuyến mạng: ${locationBlocked ? "CÓ (User location not supported)" : "KHÔNG"}\n\n` +
       `Chi tiết từng model:\n${logDetails}`;
 
     let userFriendlyReply = "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng hoặc hạn mức model đã hết. Bạn hãy thử chọn model khác hoặc mở chi tiết lỗi nhé! 🐱💾";
 
-    if (isLocationBlocked) {
-      userFriendlyReply = "Meow~! Google AI Studio đang chặn dải địa chỉ IP máy chủ Edge của Cloudflare tại khu vực này (`User location is not supported`).\n\n👉 **Giải pháp:** Bạn chỉ cần dán **API Key Google AI Studio cá nhân** vào khung bên dưới để chuyển sang chế độ **Gọi Trực Tiếp Từ Trình Duyệt** (hoạt động 100% không bao giờ bị chặn IP)! 🐱🔑✨";
+    if (locationBlocked) {
+      userFriendlyReply = LOCATION_BLOCKED_REPLY;
     }
 
     return new Response(
       JSON.stringify({
         success: false,
-        isLocationBlocked,
-        error: isLocationBlocked ? "Google AI Studio chặn IP máy chủ Cloudflare (User location not supported)." : "Tất cả các Model AI đều không phản hồi.",
+        isLocationBlocked: locationBlocked,
+        error: locationBlocked ? "Google AI Studio từ chối tuyến mạng (User location not supported)." : "Tất cả các Model AI đều không phản hồi.",
         reply: userFriendlyReply,
         errorDetail: formattedErrorDetail,
         attemptLogs,
