@@ -129,7 +129,11 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
   // Gửi bình luận cấp gốc (cấp 0)
   const postMainComment = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!mainInputText.trim() || !currentUser || isSending) return;
+    if (!currentUser) {
+      setErrorMessage("🔒 Vui lòng đăng nhập Google để bình luận — bạn cần tài khoản hoạt động.");
+      return;
+    }
+    if (!mainInputText.trim() || isSending) return;
 
     const success = await postComment(mainInputText, null, 0);
     if (success) {
@@ -140,7 +144,11 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
 
   // Gửi phản hồi bình luận lồng nhau
   const postReplyComment = async (parentComment: Comment) => {
-    if (!replyInputText.trim() || !currentUser || isSending) return;
+    if (!currentUser) {
+      setErrorMessage("🔒 Vui lòng đăng nhập Google để phản hồi bình luận.");
+      return;
+    }
+    if (!replyInputText.trim() || isSending) return;
 
     const nextDepth = (parentComment.depth ?? 0) + 1;
     if (nextDepth > 3) {

@@ -663,23 +663,54 @@ export const AiChatStation: React.FC = () => {
     }
   };
 
+  const pushChatError = (text: string) => {
+    if (!currentSession) return;
+    const errMsg: ChatMessage = {
+      id: `err-${Date.now()}`,
+      role: "model",
+      content: text,
+      timestamp: new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }),
+      isError: true,
+    };
+    setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: [...s.messages, errMsg] } : s));
+  };
+
   // Xử lý gửi tin nhắn — E2EE bắt buộc
   const handleSendMessage = async (textToSend?: string, overrideApiKey?: string) => {
     if (needsLogin) {
-      alert("Vui lòng đăng nhập bằng tài khoản hoạt động để sử dụng AI. E2EE yêu cầu xác thực.");
+      pushChatError("🔒 Vui lòng **đăng nhập bằng Google** để sử dụng AI. Trạm AI yêu cầu tài khoản hoạt động (E2EE bắt buộc). Nhấn nút **Đăng nhập với Google** ở banner trên cùng.");
       return;
     }
     if (isAccountBanned) {
-      alert("Tài khoản của bạn đã bị chặn, không thể sử dụng AI.");
+      pushChatError("⛔ Tài khoản của bạn đã bị chặn, không thể sử dụng AI. Vui lòng liên hệ quản trị viên.");
       return;
     }
     if (!isUnlocked || !masterKey) {
+      pushChatError("🔐 Phiên đang khóa — Vui lòng **Mở khóa E2EE** bằng mật khẩu mã hóa trước khi trò chuyện. Nhấn nút **Mở khóa** ở banner vàng hoặc header.");
       setShowPassphraseModal(true);
       setUnlockError("Vui lòng mở khóa bằng mật khẩu mã hóa trước khi trò chuyện. Đây là yêu cầu bắt buộc để đảm bảo E2EE.");
       return;
     }
     const content = (textToSend || inputVal).trim();
-    if (!content || isTyping || !currentSession) return;
+    if (!content || isTyping) return;
+    if (!currentSession) {
+      setSessions(prev => {
+        const errMsg: ChatMessage = {
+          id: `err-${Date.now()}`,
+          role: "model",
+          content: "⚠️ Chưa có phiên hội thoại nào. Vui lòng tạo phiên mới hoặc mở khóa lại. Nếu vừa đăng nhập, hãy mở khóa E2EE trước.",
+          timestamp: new Date().toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }),
+          isError: true,
+        };
+        // Try to show in current session if exists, otherwise just log
+        if (prev.length > 0) {
+          return prev.map(s => s.id === prev[0].id ? { ...s, messages: [...s.messages, errMsg] } : s);
+        }
+        return prev;
+      });
+      console.warn("[AI] No currentSession");
+      return;
+    }
 
     if (soundEnabled) playRetroBeep(587.33, "sine", 0.06); // D5 note
 
@@ -1632,13 +1663,13 @@ export const AiChatStation: React.FC = () => {
                         !isUnlocked ? "🔒 Vui lòng mở khóa E2EE trước khi trò chuyện..." :
                         `Trò chuyện cùng ${activePersonaObj.name}... (Nhấn Enter để gửi, Shift+Enter để xuống dòng)`
                       }
-                      disabled={isTyping || !isUnlocked || needsLogin || isAccountBanned}
+                      disabled={isTyping}
                       className="w-full bg-transparent border-none outline-none text-xs sm:text-sm text-black font-body resize-none disabled:opacity-50"
                       maxLength={1000}
                     />
                     <button
                       type="submit"
-                      disabled={isTyping || !inputVal.trim() || !isUnlocked || needsLogin || isAccountBanned}
+                      disabled={isTyping || !inputVal.trim()}
                       className="win95-btn font-extrabold text-xs sm:text-sm px-5 py-2 text-vapor-purple bg-[#fffb96]/40 border-2 border-black disabled:opacity-50 flex items-center gap-1.5 shrink-0 hover:bg-vapor-yellow"
                       style={{ minHeight: "38px" }}
                     >
