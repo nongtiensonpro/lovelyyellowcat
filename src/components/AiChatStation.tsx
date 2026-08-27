@@ -296,6 +296,97 @@ async function executeClientDirectChat(
   };
 }
 
+// Hàm gọi trực tiếp có streaming — hiển thị gõ dần cho BYOK
+async function executeClientDirectChatStream(
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  persona: string,
+  preferredModel: string,
+  allowFallback: boolean,
+  temperature: number,
+  onChunk: (text: string, model: string) => void,
+  onModelStart?: (model: string) => void
+): Promise<{ success: boolean; model: string; durationMs: number; hasQuotaError?: boolean; reply?: string; errorDetail?: string }> {
+  const systemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat;
+  let modelsToTry: string[] = [];
+  if (preferredModel && preferredModel !== "auto") {
+    modelsToTry = allowFallback ? [preferredModel, ...FALLBACK_MODEL_ORDER.filter(m => m !== preferredModel)] : [preferredModel];
+  } else {
+    modelsToTry = [...FALLBACK_MODEL_ORDER];
+  }
+  const formattedContents = messages.map(m => ({
+    role: m.role === "user" ? "user" : "model",
+    parts: [{ text: m.content || "" }],
+  }));
+  const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
+  const startTime = Date.now();
+  for (const model of modelsToTry) {
+    try {
+      if (onModelStart) onModelStart(model);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey.trim()}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: formattedContents,
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: {
+            temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+            maxOutputTokens: 1200,
+          },
+        }),
+      });
+      if (!response.ok || !response.body) {
+        const errData = await (response as any).json?.().catch(() => ({})) || {};
+        attemptLogs.push({ model, status: response.status, error: errData?.error?.message || `HTTP ${response.status}` });
+        continue;
+      }
+      const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let hasContent = false;
+      let modelUsed = model;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value as Uint8Array, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+          try {
+            const data = JSON.parse(jsonStr);
+            const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              hasContent = true;
+              onChunk(text, modelUsed);
+            }
+          } catch {}
+        }
+      }
+      if (hasContent) {
+        return { success: true, model: modelUsed, durationMs: Date.now() - startTime };
+      } else {
+        attemptLogs.push({ model, status: 200, error: "Stream kết thúc không có nội dung." });
+      }
+    } catch (err: any) {
+      attemptLogs.push({ model, status: 0, error: err?.message || String(err) });
+    }
+  }
+  const logDetails = attemptLogs.map((a, i) => `${i + 1}. [${a.model}] (HTTP ${a.status}): ${a.error}`).join("\n");
+  const hasQuotaError = attemptLogs.some(a => a.error?.includes("Quota exceeded") || a.status === 429);
+  return {
+    success: false,
+    hasQuotaError,
+    reply: hasQuotaError
+      ? "Meow~! Hạn mức miễn phí (Quota) của Key AI hiện đang bị quá tải. Bạn hãy thử chọn Model khác (như Gemini 2.0 Flash / 1.5 Flash) hoặc đổi sang API Key cá nhân trong Cài đặt nhé! 🐱💾"
+      : "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi phản hồi. Bạn hãy mở chi tiết lỗi bên dưới để xem thêm nhé! 🐱💾",
+    errorDetail: `[CLIENT-SIDE STREAM]\nChi tiết từng model:\n${logDetails}`,
+  };
+}
+
 export const AiChatStation: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
@@ -783,102 +874,187 @@ export const AiChatStation: React.FC = () => {
     const effectiveApiKey = (overrideApiKey || userCustomApiKey).trim();
 
     try {
-      let result: any = null;
-
-      // NẾU NGƯỜI DÙNG TỰ DÁN KEY CÁ NHÂN -> GỌI TRỰC TIẾP TỪ TRÌNH DUYỆT ĐỂ BỎ QUA CHẶN IP CLOUDFLARE
+      // NẾU NGƯỜI DÙNG TỰ DÁN KEY CÁ NHÂN -> GỌI TRỰC TIẾP VỚI STREAMING (gõ dần)
       if (effectiveApiKey) {
-        result = await executeClientDirectChat(
+        const placeholderId = `model-${Date.now()}`;
+        let streamModel = selectedModel === "auto" ? "streaming" : selectedModel;
+        const placeholderMsg: ChatMessage = {
+          id: placeholderId,
+          role: "model",
+          content: "",
+          timestamp: timeStr,
+          modelName: streamModel,
+        };
+        setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: [...updatedMessages, placeholderMsg], updatedAt: Date.now() } : s));
+        setIsTyping(false);
+        let fullText = "";
+        const onChunk = (text: string, model: string) => {
+          fullText += text;
+          streamModel = model;
+          setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: fullText, modelName: streamModel } : m) } : s));
+        };
+        const result: any = await executeClientDirectChatStream(
           effectiveApiKey,
           updatedMessages.map(m => ({ role: m.role, content: m.content })),
           currentSession.persona,
           selectedModel,
           allowFallback,
-          temperature
+          temperature,
+          onChunk
         );
-      } else {
-        // Fallback gọi qua backend nếu chưa tải được key
-        const res = await fetch("/api/ai/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
-            persona: currentSession.persona,
-            preferredModel: selectedModel === "auto" ? undefined : selectedModel,
-            allowFallback,
-            temperature,
-          }),
-        });
-
-        result = await res.json();
-      }
-
-      if (soundEnabled) playRetroBeep(880, "triangle", 0.09); // A5 note
-
-      if (result.success === false || result.error) {
-        const errorModelMsg: ChatMessage = {
-          id: `err-${Date.now()}`,
-          role: "model",
-          content: result.reply || "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy thử đổi sang Model khác nhé! 🐱💾",
-          timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
-          isError: true,
-          errorDetail: result.errorDetail || result.error || "Lỗi không xác định khi kết nối với máy chủ Google AI Studio.",
-          isLocationBlocked: result.isLocationBlocked,
-        };
-
-        setSessions(prev =>
-          prev.map(s =>
-            s.id === currentSession.id
-              ? { ...s, messages: [...updatedMessages, errorModelMsg], updatedAt: Date.now() }
-              : s
-          )
-        );
-      } else if (result.reply) {
-        const modelMsg: ChatMessage = {
-          id: `model-${Date.now()}`,
-          role: "model",
-          content: result.reply,
-          timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
-          modelName: result.model,
-          durationMs: result.durationMs,
-        };
-
-        setSessions(prev =>
-          prev.map(s =>
-            s.id === currentSession.id
-              ? { ...s, messages: [...updatedMessages, modelMsg], updatedAt: Date.now() }
-              : s
-          )
-        );
-
-        // Lưu reply đã mã hóa (E2EE)
-        if (masterKey) {
-          encryptJson(
-            {
-              content: modelMsg.content,
-              timestamp: modelMsg.timestamp,
-              modelName: modelMsg.modelName,
-              durationMs: modelMsg.durationMs,
-            },
-            masterKey
-          )
-            .then(payload =>
-              fetch("/api/ai/messages", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  session_id: currentSession.id,
+        if (result.success) {
+          setSessions(prev => prev.map(s => {
+            if (s.id !== currentSession.id) return s;
+            return { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, durationMs: result.durationMs, modelName: result.model } : m), updatedAt: Date.now() };
+          }));
+          if (soundEnabled) playRetroBeep(880, "triangle", 0.09);
+          if (masterKey && fullText) {
+            encryptJson({ content: fullText, timestamp: timeStr, modelName: result.model, durationMs: result.durationMs }, masterKey)
+              .then(payload => fetch("/api/ai/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: currentSession.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: result.model }) }))
+              .catch(() => {});
+          }
+        } else {
+          setSessions(prev => {
+            if (prev.find(s => s.id === currentSession.id)?.messages.find(m => m.id === placeholderId)) {
+              return prev.map(s => {
+                if (s.id !== currentSession.id) return s;
+                const msgs = s.messages.filter(m => m.id !== placeholderId);
+                const errMsg: ChatMessage = {
+                  id: `err-${Date.now()}`,
                   role: "model",
-                  ciphertext: payload.ciphertext,
-                  iv: payload.iv,
-                  model_name: modelMsg.modelName,
-                }),
-              })
-            )
-            .catch(() => {});
+                  content: result.reply || "Meow~! Mạng nơ-ron gặp lỗi.",
+                  timestamp: timeStr,
+                  isError: true,
+                  errorDetail: result.errorDetail || result.error,
+                  isLocationBlocked: result.isLocationBlocked,
+                };
+                return { ...s, messages: [...msgs, errMsg], updatedAt: Date.now() };
+              });
+            }
+            return prev;
+          });
+          if (soundEnabled) playRetroBeep(880, "triangle", 0.09);
         }
-      } else {
-        throw new Error(result.error || "Không nhận được phản hồi từ AI.");
+        return;
       }
+
+      // ===== STREAMING VIA SERVER PROXY (hiển thị gõ dần) =====
+      const streamRes = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          persona: currentSession.persona,
+          preferredModel: selectedModel === "auto" ? undefined : selectedModel,
+          allowFallback,
+          temperature,
+          stream: true,
+        }),
+      });
+
+      if (!streamRes.ok || !streamRes.body) {
+        throw new Error(`Stream HTTP ${streamRes.status}`);
+      }
+
+      // Tạo placeholder rỗng để gõ dần
+      const placeholderId = `model-${Date.now()}`;
+      const streamStartTime = Date.now();
+      let streamModel = selectedModel === "auto" ? "streaming" : selectedModel;
+      const placeholderMsg: ChatMessage = {
+        id: placeholderId,
+        role: "model",
+        content: "",
+        timestamp: timeStr,
+        modelName: streamModel,
+      };
+      setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: [...updatedMessages, placeholderMsg], updatedAt: Date.now() } : s));
+      // Tắt typing dots, bật chế độ streaming (placeholder sẽ được bơm dần)
+      setIsTyping(false);
+
+      const reader = streamRes.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+      let doneReceived = false;
+      let streamError: string | null = null;
+
+      const updatePlaceholder = (text: string, model?: string) => {
+        setSessions(prev => prev.map(s => {
+          if (s.id !== currentSession.id) return s;
+          return {
+            ...s,
+            messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: text, modelName: model || m.modelName } : m),
+          };
+        }));
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+          try {
+            const data = JSON.parse(jsonStr);
+            if (data.text) {
+              fullText += data.text;
+              if (data.model) streamModel = data.model;
+              updatePlaceholder(fullText, streamModel);
+            }
+            if (data.done) {
+              doneReceived = true;
+              if (data.model) streamModel = data.model;
+              // Finalize
+              const durationMs = data.durationMs || (Date.now() - streamStartTime);
+              setSessions(prev => prev.map(s => {
+                if (s.id !== currentSession.id) return s;
+                return {
+                  ...s,
+                  messages: s.messages.map(m => m.id === placeholderId ? { ...m, durationMs, modelName: streamModel } : m),
+                  updatedAt: Date.now(),
+                };
+              }));
+              if (soundEnabled) playRetroBeep(880, "triangle", 0.09);
+              if (masterKey && fullText) {
+                encryptJson({ content: fullText, timestamp: timeStr, modelName: streamModel, durationMs }, masterKey)
+                  .then(payload => fetch("/api/ai/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: currentSession.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: streamModel }) }))
+                  .catch(() => {});
+              }
+            }
+            if (data.error) {
+              streamError = data.error;
+              // Nếu có attemptLogs kèm theo thì hiển thị chi tiết
+              if (data.isLocationBlocked) {
+                updatePlaceholder(data.error || "Bị chặn vị trí", streamModel);
+              }
+            }
+          } catch {}
+        }
+      }
+
+      if (!doneReceived && !fullText) {
+        // Stream kết thúc mà không có done flag → coi như lỗi
+        const msg = streamError || "Stream kết thúc bất ngờ, không nhận được nội dung.";
+        // Xóa placeholder rỗng và hiện lỗi
+        setSessions(prev => prev.map(s => {
+          if (s.id !== currentSession.id) return s;
+          const msgs = s.messages.filter(m => m.id !== placeholderId);
+          const errMsg: ChatMessage = {
+            id: `err-${Date.now()}`,
+            role: "model",
+            content: `Meow~! ${msg} Bạn hãy thử lại hoặc đổi model nhé! 🐱💾`,
+            timestamp: timeStr,
+            isError: true,
+            errorDetail: streamError || msg,
+          };
+          return { ...s, messages: [...msgs, errMsg], updatedAt: Date.now() };
+        }));
+      }
+      return;
     } catch (err: any) {
       console.error(err);
       const errMsg: ChatMessage = {

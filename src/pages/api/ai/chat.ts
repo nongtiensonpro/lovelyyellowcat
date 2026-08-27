@@ -113,12 +113,93 @@ export const POST: APIRoute = async ({ request }) => {
       parts: [{ text: m.content || "" }],
     }));
 
+    const wantStream = body.stream === true;
     const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
+
+    // ===== STREAMING MODE: trả về Server-Sent Events, hiển thị gõ dần =====
+    if (wantStream) {
+      const stream = new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+          const startTime = Date.now();
+          for (const model of modelsToTry) {
+            try {
+              const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
+              const url = `${cleanBaseUrl}/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+              const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: formattedContents,
+                  systemInstruction: { parts: [{ text: systemPrompt }] },
+                  generationConfig: {
+                    temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+                    maxOutputTokens: 1200,
+                  },
+                }),
+              });
+              if (!response.ok || !response.body) {
+                const errData = await (response as any).json?.().catch(() => ({})) || {};
+                const msg = errData?.error?.message || `HTTP ${response.status}`;
+                attemptLogs.push({ model, status: response.status, error: msg });
+                continue;
+              }
+              const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+              const decoder = new TextDecoder();
+              let buffer = "";
+              let hasContent = false;
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (const line of lines) {
+                  if (!line.startsWith("data: ")) continue;
+                  const jsonStr = line.slice(6).trim();
+                  if (!jsonStr || jsonStr === "[DONE]") continue;
+                  try {
+                    const data = JSON.parse(jsonStr);
+                    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) {
+                      hasContent = true;
+                      send({ text, model });
+                    }
+                  } catch {}
+                }
+              }
+              if (hasContent) {
+                send({ done: true, model, durationMs: Date.now() - startTime });
+                controller.close();
+                return;
+              } else {
+                attemptLogs.push({ model, status: 200, error: "Stream kết thúc không có nội dung." });
+              }
+            } catch (err: any) {
+              attemptLogs.push({ model, status: 0, error: err?.message || String(err) });
+            }
+          }
+          // Tất cả model đều thất bại
+          const isBlocked = attemptLogs.some(a => a.error?.toLowerCase().includes("user location is not supported"));
+          send({ error: isBlocked ? "User location not supported" : "All models failed", done: true, isLocationBlocked: isBlocked, attemptLogs });
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
     let successfulReply: string | null = null;
     let modelUsed: string = "";
     const startTime = Date.now();
 
-    // Duyệt qua danh sách Model theo thứ tự
+    // Duyệt qua danh sách Model theo thứ tự (non-stream fallback)
     for (const model of modelsToTry) {
       try {
         const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
