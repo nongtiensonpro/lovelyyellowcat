@@ -596,38 +596,22 @@ export const AiChatStation: React.FC = () => {
           setInlineKeyInput(savedCustomKey);
         }
 
-        // 3. Kiểm tra đăng nhập & trạng thái khóa E2EE
-        const supabase = getSupabaseBrowserClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          if (!cancelled) {
-            setNeedsLogin(true);
-            setAuthChecked(true);
-            setLoadingKeys(false);
-          }
-          return;
-        }
-        // Kiểm tra tài khoản hoạt động (profile is_banned)
-        const { data: profile } = await supabase.from("profiles").select("is_banned").eq("id", user.id).maybeSingle();
-        if ((profile as any)?.is_banned) {
-          if (!cancelled) {
-            setIsAccountBanned(true);
-            setAuthChecked(true);
-            setLoadingKeys(false);
-          }
-          return;
-        }
+        // 3. Kiểm tra đăng nhập & trạng thái khóa E2EE qua API server-side (cookie httpOnly)
+        // Không dùng getSupabaseBrowserClient().auth.getUser() vì nó đọc localStorage, không thấy session cookie httpOnly do SSR đặt.
+        // Thay vào đó gọi trực tiếp /api/ai/keys — server sẽ trả 401/403 chính xác.
         if (!cancelled) {
           setAuthChecked(true);
           setNeedsLogin(false);
         }
 
         // 4. Kiểm tra đã có khóa E2EE chưa
-        const keyRes = await fetch("/api/ai/keys");
+        const keyRes = await fetch("/api/ai/keys", { credentials: "same-origin" });
         if (keyRes.status === 401 || keyRes.status === 403) {
-          if (keyRes.status === 401) setNeedsLogin(true);
-          if (keyRes.status === 403) setIsAccountBanned(true);
-          setLoadingKeys(false);
+          if (!cancelled) {
+            if (keyRes.status === 401) setNeedsLogin(true);
+            if (keyRes.status === 403) setIsAccountBanned(true);
+            setLoadingKeys(false);
+          }
           return;
         }
         const keyData = await keyRes.json();

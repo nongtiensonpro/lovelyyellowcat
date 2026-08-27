@@ -1,0 +1,86 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies
+});
+const userProfile = await getCurrentUserProfile(supabase);
+---
+
+<BaseLayout
+  title="VAPOR_ENCRYPT.SYS // NGUYÊN TẮC BẢO MẬT AI — LOVELYYELLOWCAT"
+  description="Chi tiết mã hóa đầu-cuối E2EE cho Trạm AI: AES-GCM 256, PBKDF2, lưu trữ vĩnh viễn, admin không thể đọc."
+  userProfile={userProfile}
+>
+  <div class="text-center py-6">
+    <h1 class="hero-title text-glitch-soft">VAPOR_ENCRYPT.SYS</h1>
+    <p class="text-[11px] tracking-[0.2em] text-vapor-purple mt-2 font-mono uppercase">
+      // NGUYÊN TẮC BẢO MẬT LƯU TRỮ HỘI THOẠI AI — E2EE ZERO-KNOWLEDGE //
+    </p>
+  </div>
+
+  <div class="win95-container bg-[#0b001a] border-2 border-vapor-purple max-w-5xl mx-auto mb-6 overflow-hidden">
+    <div class="win95-header bg-gradient-to-r from-vapor-purple to-[#ff71ce]">
+      <span>🔐 VAPOR_ENCRYPT.SYS — CHI TIẾT ĐẦY ĐỦ</span>
+      <span class="text-[9px] bg-black text-vapor-green px-2 py-0.5 font-mono">E2EE · AES-GCM 256</span>
+    </div>
+
+    <div class="p-4 bg-win-gray text-xs leading-relaxed space-y-4 text-black">
+      <div class="grid md:grid-cols-3 gap-3">
+        <div class="bg-white border border-win-dark p-3 space-y-1">
+          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">🔒 Mã hóa đầu-cuối bắt buộc</h3>
+          <p class="text-[11px] text-win-darkest leading-snug">Mọi phiên và tin nhắn được <strong>mã hóa AES-GCM 256</strong> ngay trên trình duyệt <strong>trước khi gửi</strong>. Supabase chỉ lưu <code class="bg-black text-vapor-green px-1">ciphertext + iv</code> — không có khóa thì không thể đọc.</p>
+        </div>
+        <div class="bg-white border border-win-dark p-3 space-y-1">
+          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">👤 Chỉ tài khoản hoạt động</h3>
+          <p class="text-[11px] text-win-darkest leading-snug">Chỉ tài khoản đã đăng nhập và <strong>không bị chặn</strong> mới được tạo khóa và sử dụng AI. Ẩn danh / bị chặn → <code class="bg-red-100 px-1">401/403</code>.</p>
+        </div>
+        <div class="bg-white border border-win-dark p-3 space-y-1">
+          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">♾️ Lưu trữ vĩnh viễn</h3>
+          <p class="text-[11px] text-win-darkest leading-snug">Lịch sử gắn với <strong>tài khoản của bạn</strong>, lưu <strong>vĩnh viễn</strong> đến khi bạn tự xóa. Chỉ xóa tài khoản mới xóa cascade.</p>
+        </div>
+      </div>
+
+      <div class="bg-white border border-win-dark p-4 space-y-3">
+        <h4 class="font-bold uppercase text-[11px] tracking-wide text-black border-b border-win-dark pb-1">📜 Cam kết chi tiết</h4>
+        <ul class="list-disc pl-5 space-y-2 text-[11px] text-win-darkest">
+          <li><strong class="text-black">Admin không thể đọc:</strong> RLS <code class="bg-black text-vapor-green px-1 text-[10px]">auth.uid() = user_id</code> — kể cả admin cũng bị chặn ở cấp DB, tuân thủ <a href="/terms" class="underline text-vapor-purple">/terms</a> “người dùng có toàn quyền với dữ liệu”.</li>
+          <li><strong class="text-black">Khóa do bạn nắm:</strong> Mật khẩu (≥8 ký tự) → PBKDF2 250k vòng → KEK bọc masterKey ngẫu nhiên 256-bit. Đổi mật khẩu chỉ bọc lại masterKey, không mã hóa lại toàn bộ.</li>
+          <li><strong class="text-black">Quên = mất:</strong> Mất mật khẩu + mất khóa khôi phục → mất vĩnh viễn (zero-knowledge, không backdoor). Hãy lưu khóa khôi phục hiện 1 lần khi thiết lập (Base64 masterKey).</li>
+          <li><strong class="text-black">Chuẩn hạ tầng:</strong> Web Crypto API (trình duyệt + Cloudflare Workers), Vault cho <code class="bg-black text-vapor-green px-1 text-[10px]">GEMINI_API_KEY</code>, rate limit 30 msg/phút, RLS bật cho mọi bảng AI.</li>
+          <li><strong class="text-black">Tích hợp:</strong> MasterKey lưu trong RAM (không lưu plaintext vào localStorage), bọc bằng KEK và lưu <code class="bg-black text-vapor-green px-1 text-[10px]">encrypted_master_key + kek_salt + iv_wrap</code> tại <code class="bg-black text-vapor-green px-1 text-[10px]">ai_user_keys</code>.</li>
+          <li><strong class="text-black">BYOK:</strong> Nếu bạn dùng API Key cá nhân, nó cũng được bọc bằng cùng masterKey trước khi lưu — không nằm plaintext.</li>
+        </ul>
+
+        <div class="bg-[#0b001a] text-vapor-green p-3 font-mono text-[11px] leading-relaxed border border-win-dark">
+          <p class="font-bold text-vapor-yellow">🔬 Luồng kỹ thuật tóm tắt:</p>
+          <p>passphrase → PBKDF2(salt, 250k, SHA-256) → KEK → AES-GCM(wrap) → encryptedMasterKey (lưu Supabase)</p>
+          <p>masterKey (random 256-bit) → AES-GCM(iv 12B random) → ciphertext (lưu Supabase) → chỉ bạn giải mã được</p>
+          <p class="mt-2 text-win-dark">Mọi thao tác mã hóa/giải mã chạy 100% trên trình duyệt qua <code class="bg-black px-1">crypto.subtle</code>.</p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <a href="/ai" class="win95-btn text-xs px-4 py-2 no-underline font-bold">⬅️ Quay lại Trạm AI</a>
+          <a href="/terms" class="win95-btn text-xs px-4 py-2 no-underline">📜 Xem Điều Khoản</a>
+          <span class="text-[10px] text-win-dark self-center ml-auto">PBKDF2 · AES-GCM 256 · iv 12B random · Base64 · Web Crypto API</span>
+        </div>
+      </div>
+
+      <div class="bg-[#fffb96]/30 border border-win-dark p-3 text-[11px]">
+        <p class="font-bold">💡 Mẹo sử dụng an toàn:</p>
+        <ul class="list-disc pl-5 space-y-1 mt-1 text-win-darkest">
+          <li>Đặt mật khẩu mạnh, khác mật khẩu đăng nhập Google.</li>
+          <li>Lưu <strong>khóa khôi phục</strong> ngay khi thiết lập lần đầu — in ra giấy hoặc lưu vào trình quản lý mật khẩu.</li>
+          <li>Không chia sẻ mật khẩu/khóa khôi phục cho bất kỳ ai, kể cả admin.</li>
+          <li>Bạn có thể <strong>Khóa</strong> phiên bất kỳ lúc nào để xóa khóa khỏi RAM.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center pb-8">
+    <a href="/ai" class="win95-btn px-6 py-2 font-bold no-underline">⬅️ TRỞ VỀ TRẠM AI</a>
+  </div>
+</BaseLayout>
