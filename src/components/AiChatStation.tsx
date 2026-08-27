@@ -13,6 +13,7 @@ import {
   encryptString,
   decryptString,
   isPassphraseStrong,
+  exportMasterKeyRaw,
 } from "../lib/aiCrypto";
 
 export interface ChatMessage {
@@ -1007,18 +1008,8 @@ export const AiChatStation: React.FC = () => {
 
   const activePersonaObj = PERSONAS.find(p => p.id === (currentSession?.persona || selectedPersonaId)) || PERSONAS[0];
 
-  // Helpers for UI
-  const renderE2EEBanner = () => (
-    <div className="win95-container bg-[#0b001a] border border-vapor-purple p-2 text-[10px] font-mono text-vapor-green flex items-center gap-2">
-      <span className="w-2 h-2 bg-vapor-green rounded-full animate-pulse"></span>
-      🔐 E2EE BẮT BUỘC — Lịch sử được mã hóa AES-GCM 256, lưu vĩnh viễn theo tài khoản, admin KHÔNG thể đọc (cam kết /terms)
-      {isUnlocked ? <span className="ml-auto bg-vapor-green text-black px-1 font-bold">ĐÃ MỞ KHÓA</span> : <span className="ml-auto bg-red-600 text-white px-1 font-bold">ĐÃ KHÓA</span>}
-    </div>
-  );
-
   return (
     <div className="font-retro text-black select-none max-w-7xl mx-auto my-4 space-y-4">
-      {renderE2EEBanner()}
 
       {/* ===== E2EE Passphrase Modal — BẮT BUỘC ===== */}
       {showPassphraseModal && (
