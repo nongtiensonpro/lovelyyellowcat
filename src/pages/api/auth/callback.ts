@@ -47,12 +47,21 @@ export const GET: APIRoute = async ({ request, cookies, redirect, url }) => {
             console.error("[AUTH] Lỗi upsert profile:", upsertErr);
           }
 
-          // 2. Lấy profile để kiểm tra welcome email
+          // 2. Lấy profile để kiểm tra welcome email và trạng thái chặn
           const { data: profile } = await supabase
             .from("profiles")
-            .select("created_at, full_name, email")
+            .select("created_at, full_name, email, is_banned, ban_reason, banned_at")
             .eq("id", user.id)
             .maybeSingle();
+
+          // Nếu tài khoản đã bị chặn → đăng xuất ngay và chuyển tới trang BANNED rõ ràng
+          if ((profile as any)?.is_banned) {
+            await supabase.auth.signOut();
+            const bannedUrl = new URL("/banned", url.origin);
+            if ((profile as any).ban_reason) bannedUrl.searchParams.set("reason", (profile as any).ban_reason);
+            if ((profile as any).banned_at) bannedUrl.searchParams.set("at", (profile as any).banned_at);
+            return redirect(bannedUrl.pathname + bannedUrl.search, 307);
+          }
 
           // Nếu profile mới tạo trong 60 giây → là người dùng mới → gửi welcome email
           if (profile?.created_at) {

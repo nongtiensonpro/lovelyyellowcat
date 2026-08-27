@@ -21,6 +21,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.rewrite(new URL("/unauthorized", url));
   }
 
+  // Màn hình BANNED độc lập: hiển thị trang chặn rõ ràng thay vì trang chủ mờ nhạt
+  // Giữ lại query ?reason & ?at nếu có để hiển thị chi tiết lệnh chặn
+  if (pathname === "/" && url.searchParams.get("error") === "banned") {
+    const rewriteUrl = new URL("/banned", url);
+    rewriteUrl.search = url.search;
+    return context.rewrite(rewriteUrl);
+  }
+
+  // Cho phép truy cập trực tiếp /banned và /unauthorized mà không bị chặn bởi maintenance
+  if (pathname === "/banned" || pathname === "/unauthorized") {
+    return next();
+  }
+
   // ────────────────────────────────────────────────
   // 1) Bảo vệ khu vực /admin
   // ────────────────────────────────────────────────
@@ -39,15 +52,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("role, is_banned")
+        .select("role, is_banned, ban_reason, banned_at")
         .eq("id", user.id)
         .maybeSingle();
 
       if (profile?.is_banned) {
+        const reason = (profile as any).ban_reason || "";
+        const at = (profile as any).banned_at || "";
         await supabase.auth.signOut();
+        const bannedUrl = new URL("/banned", url.origin);
+        if (reason) bannedUrl.searchParams.set("reason", reason);
+        if (at) bannedUrl.searchParams.set("at", at);
         return new Response(null, {
           status: 302,
-          headers: { Location: `${url.origin}/?error=banned` },
+          headers: { Location: bannedUrl.toString() },
         });
       }
 
@@ -166,15 +184,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("is_banned")
+          .select("is_banned, ban_reason, banned_at")
           .eq("id", user.id)
           .maybeSingle();
 
         if (profile?.is_banned) {
+          const reason = (profile as any).ban_reason || "";
+          const at = (profile as any).banned_at || "";
           await supabase.auth.signOut();
+          const bannedUrl = new URL("/banned", url.origin);
+          if (reason) bannedUrl.searchParams.set("reason", reason);
+          if (at) bannedUrl.searchParams.set("at", at);
           return new Response(null, {
             status: 302,
-            headers: { Location: `${url.origin}/?error=banned` },
+            headers: { Location: bannedUrl.toString() },
           });
         }
       }

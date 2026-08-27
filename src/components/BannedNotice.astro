@@ -1,0 +1,217 @@
+<section class="banned-screen" aria-labelledby="banned-title" role="alert">
+  <div class="banned-signal banned-signal-one" aria-hidden="true"></div>
+  <div class="banned-signal banned-signal-two" aria-hidden="true"></div>
+
+  <div class="banned-window">
+    <div class="banned-titlebar">
+      <span><span class="banned-title-icon">⛔</span> SECURITY_SYSTEM.EXE — ACCOUNT BLOCKED</span>
+      <span class="banned-window-buttons" aria-hidden="true"><i>_</i><i>□</i><i>×</i></span>
+    </div>
+    <div class="banned-menubar"><span>FILE</span><span>EDIT</span><span>VIEW</span><span>HELP</span><b>STATUS: BLOCKED</b></div>
+
+    <div class="banned-content">
+      <div class="banned-icon-wrap" aria-hidden="true">
+        <span class="banned-icon">🚫</span>
+        <span class="banned-icon-pulse"></span>
+      </div>
+      <p class="banned-kicker">HTTP 403 // ACCOUNT_SUSPENDED — ERROR 0x00000423</p>
+      <h1 id="banned-title">Tài khoản của bạn<br /><span>đã bị chặn</span></h1>
+      <p class="banned-message">
+        Tài khoản này đã bị quản trị viên chặn và <strong>không thể sử dụng</strong> bất kỳ tính năng nào yêu cầu đăng nhập — bao gồm đăng bài, bình luận, gửi tranh, yêu thích và nhắn tin. Phiên đăng nhập của bạn đã được đăng xuất tự động.
+      </p>
+
+      <div class="banned-details" id="banned-details" aria-label="Chi tiết lệnh chặn">
+        <div class="banned-details-row">
+          <span class="banned-details-label">Trạng thái tài khoản</span>
+          <strong class="banned-details-value banned-blocked">BỊ CHẶN — BLOCKED</strong>
+        </div>
+        <div class="banned-details-row" id="banned-reason-row">
+          <span class="banned-details-label">Lý do</span>
+          <strong class="banned-details-value" id="banned-reason-text">Vi phạm quy tắc cộng đồng</strong>
+        </div>
+        <div class="banned-details-row" id="banned-date-row">
+          <span class="banned-details-label">Thời gian chặn</span>
+          <strong class="banned-details-value" id="banned-date-text">—</strong>
+        </div>
+        <div class="banned-details-row">
+          <span class="banned-details-label">Hành động hệ thống</span>
+          <strong class="banned-details-value">AUTO_SIGNOUT — Phiên đã kết thúc</strong>
+        </div>
+      </div>
+
+      <div class="banned-actions">
+        <a class="banned-primary" href="mailto:nongtiensonpro@gmail.com?subject=Kháng nghị lệnh chặn tài khoản LovelyYellowCat">✉️ GỬI KHÁNG NGHỊ</a>
+        <a class="banned-secondary" href="/">🏠 VỀ TRANG CHỦ</a>
+        <a class="banned-secondary" href="/gallery">🖼️ XEM TRIỂN LÃM (KHÁCH)</a>
+      </div>
+
+      <div class="banned-help">
+        <span class="banned-help-icon">💡</span>
+        <p>
+          Nếu bạn cho rằng đây là nhầm lẫn, hãy gửi email tới
+          <a href="mailto:nongtiensonpro@gmail.com">nongtiensonpro@gmail.com</a> kèm username/email của bạn.
+          Quản trị viên sẽ xem xét và phản hồi trong thời gian sớm nhất. Vui lòng không tạo tài khoản mới để lách lệnh chặn.
+        </p>
+      </div>
+    </div>
+
+    <div class="banned-statusbar"><span>LOVELYYELLOWCAT SECURITY SYSTEM</span><span>ACCOUNT: SUSPENDED</span><span>⛔</span></div>
+  </div>
+
+  <p class="banned-footer-note">ERROR: ACCOUNT_BLOCKED.EXE · Mã lỗi: 0x423 · Liên hệ quản trị viên để biết thêm chi tiết</p>
+</section>
+
+<script is:inline>
+  (function() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const reason = params.get("reason");
+      const at = params.get("at");
+      
+      const reasonEl = document.getElementById("banned-reason-text");
+      const dateEl = document.getElementById("banned-date-text");
+      
+      if (reasonEl) {
+        if (reason && reason.trim()) {
+          reasonEl.textContent = reason.trim();
+        } else {
+          reasonEl.textContent = "Vi phạm quy tắc cộng đồng / Quyết định của quản trị viên";
+        }
+      }
+      
+      if (dateEl) {
+        if (at) {
+          try {
+            const d = new Date(at);
+            if (!isNaN(d.getTime())) {
+              dateEl.textContent = d.toLocaleString("vi-VN", { 
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              });
+            } else {
+              dateEl.textContent = at;
+            }
+          } catch {
+            dateEl.textContent = at;
+          }
+        } else {
+          dateEl.textContent = new Date().toLocaleString("vi-VN");
+        }
+      }
+    } catch {}
+  })();
+</script>
+
+<style>
+  .banned-screen {
+    --bn-red: #e11d2a;
+    --bn-red-dark: #7a0b12;
+    --bn-pink: var(--color-vapor-pink);
+    --bn-blue: var(--color-vapor-blue);
+    position: relative;
+    isolation: isolate;
+    min-height: min(760px, calc(100vh - 170px));
+    display: grid;
+    place-items: center;
+    padding: clamp(1rem, 4vw, 3rem) 0 1rem;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 38%, rgba(225, 29, 42, 0.18), transparent 42%),
+      linear-gradient(180deg, rgba(11, 0, 26, 0.2), rgba(11, 0, 26, 0.72));
+  }
+
+  .banned-screen::before {
+    content: "";
+    position: absolute;
+    inset: 35% -10% -35%;
+    z-index: -1;
+    opacity: 0.22;
+    transform: perspective(390px) rotateX(56deg) scale(1.25);
+    background-image: linear-gradient(rgba(225, 29, 42, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(225, 29, 42, 0.3) 1px, transparent 1px);
+    background-size: 38px 38px;
+    mask-image: linear-gradient(to bottom, transparent, black 35%, black);
+  }
+
+  .banned-screen::after {
+    content: "BANNED";
+    position: absolute;
+    right: -0.04em;
+    bottom: -0.1em;
+    z-index: -1;
+    color: rgba(225, 29, 42, 0.04);
+    font: 16rem/0.8 var(--font-display);
+    pointer-events: none;
+    letter-spacing: -0.04em;
+  }
+
+  .banned-signal { position: absolute; z-index: -1; border-radius: 50%; filter: blur(65px); pointer-events: none; }
+  .banned-signal-one { width: 280px; height: 280px; top: 4%; left: 6%; background: rgba(225, 29, 42, 0.14); }
+  .banned-signal-two { width: 200px; height: 200px; right: 5%; bottom: 12%; background: rgba(255, 113, 206, 0.1); }
+
+  .banned-window {
+    width: min(100%, 760px);
+    padding: 4px;
+    color: var(--color-text-primary);
+    background: var(--color-win-gray);
+    box-shadow: 10px 12px 0 rgba(0, 0, 0, 0.42), inset -2px -2px 0 var(--color-win-darkest), inset 2px 2px 0 var(--color-win-light);
+    animation: banned-rise 0.6s ease both;
+  }
+
+  .banned-titlebar, .banned-menubar, .banned-statusbar { display: flex; align-items: center; }
+  .banned-titlebar { justify-content: space-between; min-height: 29px; padding: 0.25rem 0.45rem; color: white; background: linear-gradient(90deg, #7a0b12, #e11d2a); font: 700 0.7rem var(--font-retro); }
+  .banned-title-icon { color: #fffb96; }
+  .banned-window-buttons { display: flex; gap: 3px; }
+  .banned-window-buttons i { display: grid; place-items: center; width: 18px; height: 17px; color: black; background: var(--color-win-gray); box-shadow: inset -1px -1px 0 var(--color-win-darkest), inset 1px 1px 0 var(--color-win-light); font: 700 0.64rem Arial; font-style: normal; }
+  .banned-menubar { gap: 1rem; padding: 0.25rem 0.55rem; color: #161616; background: #d9d9d9; font: 0.55rem var(--font-mono); letter-spacing: 0.09em; }
+  .banned-menubar b { margin-left: auto; color: #9b0b14; font-size: 0.52rem; }
+  .banned-content { position: relative; padding: clamp(2rem, 6vw, 3.2rem) clamp(1rem, 6vw, 4.5rem) 2.2rem; text-align: center; background: radial-gradient(circle at 50% 0%, rgba(225, 29, 42, 0.18), rgba(5, 0, 17, 0.98) 68%); overflow: hidden; }
+  .banned-content::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.18; background: repeating-linear-gradient(to bottom, transparent 0 3px, rgba(255,255,255,0.035) 4px 5px); }
+  .banned-icon-wrap { position: relative; display: inline-grid; place-items: center; width: 86px; height: 86px; margin-bottom: 1.2rem; }
+  .banned-icon { position: relative; z-index: 1; display: grid; place-items: center; width: 86px; height: 86px; border: 2px solid rgba(225, 29, 42, 0.9); border-radius: 50%; background: rgba(225, 29, 42, 0.12); box-shadow: 0 0 30px rgba(225, 29, 42, 0.35), inset 0 0 20px rgba(225, 29, 42, 0.15); font-size: 2.8rem; animation: banned-pulse 2s ease-in-out infinite; }
+  .banned-icon-pulse { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(225, 29, 42, 0.4); animation: banned-ping 2s ease-out infinite; }
+  .banned-kicker { position: relative; margin: 0 0 0.8rem; color: #ff6b6b; font: 0.65rem var(--font-mono); letter-spacing: 0.14em; }
+  .banned-content h1 { position: relative; margin: 0; color: white; font: clamp(2.6rem, 7vw, 4.8rem)/0.85 var(--font-display); letter-spacing: -0.02em; text-transform: uppercase; text-shadow: 3px 3px 0 rgba(225, 29, 42, 0.5), -2px -2px 0 rgba(255, 113, 206, 0.3); }
+  .banned-content h1 span { color: #ff3b3b; }
+  .banned-message { position: relative; max-width: 620px; margin: 1.4rem auto 1.2rem; color: var(--color-text-secondary); font-size: 0.95rem; line-height: 1.65; }
+  .banned-message strong { color: #ff6b6b; }
+  .banned-details { position: relative; max-width: 560px; margin: 0 auto; border: 1px solid rgba(225, 29, 42, 0.35); background: rgba(225, 29, 42, 0.06); text-align: left; overflow: hidden; }
+  .banned-details-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.7rem 1rem; border-bottom: 1px solid rgba(225, 29, 42, 0.12); font: 0.68rem var(--font-mono); }
+  .banned-details-row:last-child { border-bottom: none; }
+  .banned-details-label { color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.62rem; }
+  .banned-details-value { color: var(--color-text-primary); text-align: right; max-width: 60%; word-break: break-word; }
+  .banned-details-value.banned-blocked { color: #ff3b3b; background: rgba(225, 29, 42, 0.15); padding: 2px 6px; border: 1px solid rgba(225, 29, 42, 0.3); font-weight: 700; letter-spacing: 0.05em; }
+  .banned-actions { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.65rem; margin-top: 1.5rem; }
+  .banned-actions a { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0.65rem 0.9rem; border: 1px solid; font: 700 0.68rem var(--font-mono); text-decoration: none; transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease; }
+  .banned-actions a:hover { transform: translateY(-2px); }
+  .banned-primary { color: white; border-color: #e11d2a; background: #e11d2a; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35); }
+  .banned-primary:hover { background: #c5101c; box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45); }
+  .banned-secondary { color: var(--color-text-secondary); border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
+  .banned-secondary:hover { background: rgba(255,255,255,0.12); color: white; }
+  .banned-help { position: relative; display: flex; align-items: flex-start; gap: 0.65rem; max-width: 560px; margin: 1.6rem auto 0; padding: 0.85rem 0.9rem; border: 1px dashed rgba(255, 251, 150, 0.35); background: rgba(255, 251, 150, 0.06); text-align: left; }
+  .banned-help-icon { color: var(--color-vapor-yellow); font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+  .banned-help p { margin: 0; color: var(--color-text-secondary); font-size: 0.74rem; line-height: 1.6; }
+  .banned-help a { color: var(--color-vapor-yellow); font-weight: 700; text-decoration: underline; overflow-wrap: anywhere; }
+  .banned-statusbar { justify-content: space-between; gap: 1rem; padding: 0.3rem 0.55rem; color: #333; font: 0.52rem var(--font-mono); letter-spacing: 0.08em; background: var(--color-win-gray); display: flex; align-items: center; border-top: 1px solid var(--color-win-dark); margin: 4px -4px -4px -4px; }
+  .banned-footer-note { position: relative; margin: 1rem 0 0; color: var(--color-text-muted); font: 0.58rem var(--font-mono); letter-spacing: 0.08em; text-align: center; }
+
+  @keyframes banned-rise { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes banned-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(225, 29, 42, 0.35); } 50% { transform: scale(1.04); box-shadow: 0 0 40px rgba(225, 29, 42, 0.5); } }
+  @keyframes banned-ping { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.45); opacity: 0; } }
+
+  @media (max-width: 560px) {
+    .banned-screen { min-height: calc(100vh - 130px); padding-top: 0.5rem; }
+    .banned-menubar span:not(:first-child) { display: none; }
+    .banned-content { padding: 1.7rem 0.9rem 1.7rem; }
+    .banned-content h1 { font-size: clamp(2.4rem, 13vw, 3.6rem); }
+    .banned-message { font-size: 0.84rem; }
+    .banned-details-row { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+    .banned-details-value { max-width: 100%; text-align: left; }
+    .banned-actions a { width: 100%; }
+    .banned-statusbar { flex-wrap: wrap; font-size: 0.48rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .banned-window, .banned-icon, .banned-icon-pulse { animation: none; }
+    .banned-actions a { transition: none; }
+  }
+</style>
