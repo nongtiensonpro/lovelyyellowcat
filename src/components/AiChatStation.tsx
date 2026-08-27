@@ -1,4 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
+import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
+import {
+  toBase64,
+  fromBase64,
+  deriveKEK,
+  generateMasterKey,
+  wrapMasterKey,
+  unwrapMasterKey,
+  generateSalt,
+  encryptJson,
+  decryptJson,
+  encryptString,
+  decryptString,
+  isPassphraseStrong,
+} from "../lib/aiCrypto";
 
 export interface ChatMessage {
   id: string;
@@ -160,8 +175,9 @@ export const TOPIC_CATEGORIES = [
   }
 ];
 
-const STORAGE_KEY = "vapor_ai_chat_sessions_v2";
+const STORAGE_KEY = "vapor_ai_chat_sessions_v2"; // legacy, chỉ dùng để migrate 1 lần rồi xóa
 const API_KEY_STORAGE = "user_gemini_api_key";
+const LEGACY_API_KEY_STORAGE = "user_gemini_api_key"; // giữ để tương thích, nhưng sẽ mã hóa khi có masterKey
 
 // Phát âm thanh retro 8-bit đơn giản qua Web Audio API
 function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.08) {
@@ -302,6 +318,21 @@ export const AiChatStation: React.FC = () => {
   const [userCustomApiKey, setUserCustomApiKey] = useState<string>("");
   const [inlineKeyInput, setInlineKeyInput] = useState<string>("");
 
+  // ===== E2EE Zero-Knowledge States (bắt buộc) =====
+  const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [passphraseInput, setPassphraseInput] = useState("");
+  const [isFirstSetup, setIsFirstSetup] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(false);
+  const [isAccountBanned, setIsAccountBanned] = useState(false);
+  const [loadingKeys, setLoadingKeys] = useState(true);
+  const [unlockError, setUnlockError] = useState("");
+  const [showPassphraseModal, setShowPassphraseModal] = useState(false);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [recoveryKey, setRecoveryKey] = useState("");
+  const [isE2EELoading, setIsE2ELoading] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -309,8 +340,144 @@ export const AiChatStation: React.FC = () => {
     setExpandedErrors(prev => ({ ...prev, [msgId]: !prev[msgId] }));
   };
 
-  // Tạo phiên mặc định ban đầu
+  // ===== E2EE Helpers =====
+  const loadSessionsFromSupabase = async (key: CryptoKey) => {
+    setIsE2EELoading(true);
+    try {
+      const res = await fetch("/api/ai/sessions");
+      if (!res.ok) throw new Error("Không thể tải phiên");
+      const { sessions: encSessions } = await res.json();
+      if (!encSessions || encSessions.length === 0) {
+        // Tạo phiên đầu tiên được mã hóa
+        await createNewSessionEncrypted("cybercat", key);
+        return;
+      }
+      const decrypted: ChatSession[] = [];
+      for (const s of encSessions) {
+        try {
+          const title = await decryptString({ iv: s.title_iv, ciphertext: s.title_encrypted }, key);
+          // Tải messages cho session này
+          const msgRes = await fetch(`/api/ai/messages?session_id=${s.id}`);
+          const { messages: encMessages } = await msgRes.json();
+          const msgs: ChatMessage[] = [];
+          for (const m of encMessages || []) {
+            try {
+              const obj = await decryptJson<{ content: string; timestamp: string; modelName?: string; durationMs?: number; isError?: boolean; errorDetail?: string }>(
+                { iv: m.iv, ciphertext: m.ciphertext },
+                key
+              );
+              msgs.push({
+                id: m.id,
+                role: m.role,
+                content: obj.content,
+                timestamp: obj.timestamp || new Date(m.created_at).toLocaleTimeString("vi-VN"),
+                modelName: obj.modelName || m.model_name,
+                durationMs: obj.durationMs,
+                isError: obj.isError || m.is_error,
+                errorDetail: obj.errorDetail,
+              });
+            } catch {}
+          }
+          // Nếu chưa có message nào (phiên mới), thêm greeting
+          const persona = PERSONAS.find(p => p.id === s.persona) || PERSONAS[0];
+          if (msgs.length === 0) {
+            msgs.push({
+              id: `msg-welcome-1`,
+              role: "model",
+              content: persona.defaultGreeting,
+              timestamp: "1995-INIT",
+            });
+          }
+          decrypted.push({
+            id: s.id,
+            title,
+            persona: s.persona,
+            messages: msgs,
+            createdAt: new Date(s.created_at).getTime(),
+            updatedAt: new Date(s.updated_at).getTime(),
+          });
+        } catch {}
+      }
+      if (decrypted.length > 0) {
+        // Sắp xếp theo updated_at giảm dần (server đã sort nhưng decrypt xong giữ nguyên)
+        decrypted.sort((a, b) => b.updatedAt - a.updatedAt);
+        setSessions(decrypted);
+        setActiveSessionId(decrypted[0].id);
+        setSelectedPersonaId(decrypted[0].persona || "cybercat");
+      } else {
+        await createNewSessionEncrypted("cybercat", key);
+      }
+      // Xóa localStorage plaintext cũ sau khi migrate thành công (bảo mật)
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    } catch (e) {
+      console.error("Load E2EE sessions failed:", e);
+    } finally {
+      setIsE2ELoading(false);
+    }
+  };
+
+  const createNewSessionEncrypted = async (personaId: string, keyOverride?: CryptoKey) => {
+    const k = keyOverride || masterKey;
+    if (!k) return null;
+    const persona = PERSONAS.find(p => p.id === personaId) || PERSONAS[0];
+    const titlePlain = `Hội thoại cùng ${persona.name}`;
+    try {
+      const { iv, ciphertext } = await encryptString(titlePlain, k);
+      const res = await fetch("/api/ai/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title_encrypted: ciphertext, title_iv: iv, persona: persona.id }),
+      });
+      const { session } = await res.json();
+      if (!session) throw new Error("Tạo phiên thất bại");
+      const newSession: ChatSession = {
+        id: session.id,
+        title: titlePlain,
+        persona: persona.id,
+        createdAt: new Date(session.created_at).getTime(),
+        updatedAt: new Date(session.updated_at).getTime(),
+        messages: [
+          {
+            id: `msg-welcome-1`,
+            role: "model",
+            content: persona.defaultGreeting,
+            timestamp: "1995-INIT",
+          },
+        ],
+      };
+      // Lưu greeting đã mã hóa
+      try {
+        const payload = await encryptJson(
+          { content: persona.defaultGreeting, timestamp: "1995-INIT" },
+          k
+        );
+        await fetch("/api/ai/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: session.id,
+            role: "model",
+            ciphertext: payload.ciphertext,
+            iv: payload.iv,
+          }),
+        });
+      } catch {}
+      setSessions(prev => [newSession, ...prev]);
+      setActiveSessionId(newSession.id);
+      setSelectedPersonaId(persona.id);
+      return newSession;
+    } catch (e) {
+      console.error("createNewSessionEncrypted failed:", e);
+      return null;
+    }
+  };
+
+  // Legacy fallback (khi chưa unlock, vẫn tạo local để không crash)
   const createNewSession = (personaId = "cybercat") => {
+    if (isUnlocked && masterKey) {
+      createNewSessionEncrypted(personaId, masterKey);
+      return null as any;
+    }
     const persona = PERSONAS.find(p => p.id === personaId) || PERSONAS[0];
     const newSession: ChatSession = {
       id: `session-${Date.now()}`,
@@ -327,60 +494,164 @@ export const AiChatStation: React.FC = () => {
         }
       ]
     };
-
     setSessions(prev => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
     setSelectedPersonaId(persona.id);
     return newSession;
   };
 
-  // Nạp lịch sử và cấu hình tự động khi khởi động
-  useEffect(() => {
+  // E2EE: Thiết lập / mở khóa
+  const handleSetupPassphrase = async (passphrase: string) => {
+    if (!isPassphraseStrong(passphrase)) {
+      setUnlockError("Mật khẩu phải ít nhất 8 ký tự.");
+      return;
+    }
+    setUnlockError("");
+    setIsE2ELoading(true);
     try {
-      // 1. Kiểm tra hệ thống có cấu hình AI mặc định không (chỉ nhận boolean hasKey)
-      fetch("/api/ai/config")
-        .then(res => res.json())
-        .then(data => {
-          if (data?.hasKey) {
-            setHasSystemKey(true);
-          }
-        })
-        .catch(e => console.warn("Không thể lấy cấu hình AI mặc định:", e));
-
-      // 2. Nạp key cá nhân nếu người dùng đã từng lưu
-      const savedCustomKey = localStorage.getItem(API_KEY_STORAGE);
-      if (savedCustomKey) {
-        setUserCustomApiKey(savedCustomKey);
-        setInlineKeyInput(savedCustomKey);
+      const salt = generateSalt();
+      const kek = await deriveKEK(passphrase, salt);
+      const mk = await generateMasterKey();
+      const { encryptedMasterKey, ivWrap } = await wrapMasterKey(mk, kek);
+      const res = await fetch("/api/ai/keys", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          encrypted_master_key: encryptedMasterKey,
+          kek_salt: toBase64(salt),
+          kek_iterations: 250000,
+          iv_wrap: ivWrap,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Không thể lưu khóa");
       }
+      // Lưu recovery key (masterKey raw) để user in ra
+      const raw = await exportMasterKeyRaw(mk);
+      setRecoveryKey(toBase64(raw));
+      setShowRecoveryModal(true);
+      setMasterKey(mk);
+      setIsUnlocked(true);
+      setShowPassphraseModal(false);
+      setPassphraseInput("");
+      // Migrate localStorage cũ nếu có (đã mã hóa xong sẽ xóa)
+      await loadSessionsFromSupabase(mk);
+    } catch (e: any) {
+      setUnlockError(e.message || "Thiết lập thất bại");
+    } finally {
+      setIsE2ELoading(false);
+    }
+  };
 
-      // 3. Nạp lịch sử chat
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed: ChatSession[] = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSessions(parsed);
-          setActiveSessionId(parsed[0].id);
-          setSelectedPersonaId(parsed[0].persona || "cybercat");
+  const handleUnlock = async (passphrase: string) => {
+    if (!passphrase) {
+      setUnlockError("Vui lòng nhập mật khẩu mã hóa.");
+      return;
+    }
+    setUnlockError("");
+    setIsE2ELoading(true);
+    try {
+      const res = await fetch("/api/ai/keys");
+      const data = await res.json();
+      if (!data.exists) throw new Error("Chưa có khóa, vui lòng thiết lập mới.");
+      const kek = await deriveKEK(passphrase, fromBase64(data.kek_salt));
+      const mk = await unwrapMasterKey(data.encrypted_master_key, data.iv_wrap, kek);
+      setMasterKey(mk);
+      setIsUnlocked(true);
+      setShowPassphraseModal(false);
+      setPassphraseInput("");
+      await loadSessionsFromSupabase(mk);
+    } catch (e: any) {
+      setUnlockError("Mật khẩu không đúng hoặc dữ liệu bị hỏng. Vui lòng thử lại.");
+    } finally {
+      setIsE2ELoading(false);
+    }
+  };
+
+  const handleLock = () => {
+    setMasterKey(null);
+    setIsUnlocked(false);
+    setSessions([]);
+    setPassphraseInput("");
+  };
+
+  // Nạp cấu hình và kiểm tra trạng thái E2EE khi khởi động
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      try {
+        // 1. Kiểm tra hệ thống có cấu hình AI mặc định không
+        fetch("/api/ai/config")
+          .then(res => res.json())
+          .then(data => {
+            if (!cancelled && data?.hasKey) setHasSystemKey(true);
+          })
+          .catch(e => console.warn("Không thể lấy cấu hình AI mặc định:", e));
+
+        // 2. Nạp key cá nhân nếu người dùng đã từng lưu (sẽ mã hóa sau khi unlock)
+        const savedCustomKey = localStorage.getItem(API_KEY_STORAGE);
+        if (savedCustomKey) {
+          setUserCustomApiKey(savedCustomKey);
+          setInlineKeyInput(savedCustomKey);
+        }
+
+        // 3. Kiểm tra đăng nhập & trạng thái khóa E2EE
+        const supabase = getSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          if (!cancelled) {
+            setNeedsLogin(true);
+            setAuthChecked(true);
+            setLoadingKeys(false);
+          }
           return;
         }
-      }
-    } catch (e) {
-      console.warn("Không thể nạp lịch sử chat từ localStorage:", e);
-    }
-    createNewSession("cybercat");
-  }, []);
+        // Kiểm tra tài khoản hoạt động (profile is_banned)
+        const { data: profile } = await supabase.from("profiles").select("is_banned").eq("id", user.id).maybeSingle();
+        if ((profile as any)?.is_banned) {
+          if (!cancelled) {
+            setIsAccountBanned(true);
+            setAuthChecked(true);
+            setLoadingKeys(false);
+          }
+          return;
+        }
+        if (!cancelled) {
+          setAuthChecked(true);
+          setNeedsLogin(false);
+        }
 
-  // Tự động lưu sessions vào LocalStorage
-  useEffect(() => {
-    if (sessions.length > 0) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        // 4. Kiểm tra đã có khóa E2EE chưa
+        const keyRes = await fetch("/api/ai/keys");
+        if (keyRes.status === 401 || keyRes.status === 403) {
+          if (keyRes.status === 401) setNeedsLogin(true);
+          if (keyRes.status === 403) setIsAccountBanned(true);
+          setLoadingKeys(false);
+          return;
+        }
+        const keyData = await keyRes.json();
+        if (!cancelled) {
+          if (!keyData.exists) {
+            setIsFirstSetup(true);
+            setShowPassphraseModal(true);
+          } else {
+            setIsFirstSetup(false);
+            setShowPassphraseModal(true);
+          }
+          setLoadingKeys(false);
+        }
       } catch (e) {
-        console.warn("Không thể lưu sessions vào localStorage:", e);
+        console.warn("Init E2EE failed:", e);
+        if (!cancelled) {
+          setLoadingKeys(false);
+          setAuthChecked(true);
+        }
       }
-    }
-  }, [sessions]);
+    };
+    init();
+    return () => { cancelled = true; };
+  }, []);
 
   // Lấy phiên chat hiện tại
   const currentSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
@@ -407,8 +678,21 @@ export const AiChatStation: React.FC = () => {
     }
   };
 
-  // Xử lý gửi tin nhắn
+  // Xử lý gửi tin nhắn — E2EE bắt buộc
   const handleSendMessage = async (textToSend?: string, overrideApiKey?: string) => {
+    if (needsLogin) {
+      alert("Vui lòng đăng nhập bằng tài khoản hoạt động để sử dụng AI. E2EE yêu cầu xác thực.");
+      return;
+    }
+    if (isAccountBanned) {
+      alert("Tài khoản của bạn đã bị chặn, không thể sử dụng AI.");
+      return;
+    }
+    if (!isUnlocked || !masterKey) {
+      setShowPassphraseModal(true);
+      setUnlockError("Vui lòng mở khóa bằng mật khẩu mã hóa trước khi trò chuyện. Đây là yêu cầu bắt buộc để đảm bảo E2EE.");
+      return;
+    }
     const content = (textToSend || inputVal).trim();
     if (!content || isTyping || !currentSession) return;
 
@@ -426,11 +710,21 @@ export const AiChatStation: React.FC = () => {
 
     const updatedMessages = [...currentSession.messages, userMsg];
 
-    // Cập nhật title của phiên nếu là tin nhắn đầu của user
+    // Cập nhật title của phiên nếu là tin nhắn đầu của user — mã hóa và PATCH
     const userMessageCount = updatedMessages.filter(m => m.role === "user").length;
     let newTitle = currentSession.title;
     if (userMessageCount === 1) {
       newTitle = content.length > 30 ? content.substring(0, 30) + "..." : content;
+      // Mã hóa title mới và cập nhật server (không chặn UI)
+      if (masterKey) {
+        encryptString(newTitle, masterKey).then(payload => {
+          fetch("/api/ai/sessions", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: currentSession.id, title_encrypted: payload.ciphertext, title_iv: payload.iv }),
+          }).catch(() => {});
+        });
+      }
     }
 
     setSessions(prev =>
@@ -441,8 +735,32 @@ export const AiChatStation: React.FC = () => {
       )
     );
 
-    setInputVal("");
-    setIsTyping(true);
+    // Lưu userMsg đã mã hóa lên Supabase (fire-and-forget, không chặn Gemini)
+    if (masterKey) {
+      encryptJson({ content: userMsg.content, timestamp: userMsg.timestamp }, masterKey)
+        .then(payload => {
+          return fetch("/api/ai/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: currentSession.id,
+              role: "user",
+              ciphertext: payload.ciphertext,
+              iv: payload.iv,
+            }),
+          });
+        })
+        .then(res => {
+          if (res) return res.json();
+        })
+        .then(data => {
+          if (data?.message?.id) {
+            // Đồng bộ id server cho userMsg (tùy chọn)
+            setSessions(prev => prev.map(s => s.id === currentSession.id ? { ...s, messages: s.messages.map(m => m.id === userMsg.id ? { ...m, id: data.message.id } : m) } : s));
+          }
+        })
+        .catch(() => {});
+    }
 
     // CHỈ key cá nhân do người dùng tự cung cấp (BYOK) mới được gọi trực tiếp từ trình duyệt.
     // Key hệ thống luôn đi qua proxy /api/ai/chat phía server và không bao giờ rời khỏi máy chủ.
@@ -515,6 +833,33 @@ export const AiChatStation: React.FC = () => {
               : s
           )
         );
+
+        // Lưu reply đã mã hóa (E2EE)
+        if (masterKey) {
+          encryptJson(
+            {
+              content: modelMsg.content,
+              timestamp: modelMsg.timestamp,
+              modelName: modelMsg.modelName,
+              durationMs: modelMsg.durationMs,
+            },
+            masterKey
+          )
+            .then(payload =>
+              fetch("/api/ai/messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  session_id: currentSession.id,
+                  role: "model",
+                  ciphertext: payload.ciphertext,
+                  iv: payload.iv,
+                  model_name: modelMsg.modelName,
+                }),
+              })
+            )
+            .catch(() => {});
+        }
       } else {
         throw new Error(result.error || "Không nhận được phản hồi từ AI.");
       }
@@ -568,20 +913,40 @@ export const AiChatStation: React.FC = () => {
     );
   };
 
-  // Xóa một phiên hội thoại
-  const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
+  // Xóa một phiên hội thoại (E2EE: xóa trên Supabase)
+  const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (sessions.length <= 1) {
-      localStorage.removeItem(STORAGE_KEY);
-      createNewSession(selectedPersonaId);
+    if (!isUnlocked || !masterKey) {
+      // Chưa unlock: chỉ xóa local
+      const filteredLocal = sessions.filter(s => s.id !== sessionId);
+      if (filteredLocal.length === 0) {
+        createNewSession(selectedPersonaId);
+      } else {
+        setSessions(filteredLocal);
+        if (activeSessionId === sessionId) {
+          setActiveSessionId(filteredLocal[0].id);
+          setSelectedPersonaId(filteredLocal[0].persona || "cybercat");
+        }
+      }
       return;
     }
-
-    const filtered = sessions.filter(s => s.id !== sessionId);
-    setSessions(filtered);
-    if (activeSessionId === sessionId) {
-      setActiveSessionId(filtered[0].id);
-      setSelectedPersonaId(filtered[0].persona || "cybercat");
+    try {
+      const res = await fetch(`/api/ai/sessions?id=${sessionId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Xóa phiên thất bại");
+      const filtered = sessions.filter(s => s.id !== sessionId);
+      if (filtered.length === 0) {
+        // Tạo phiên mới mã hóa
+        await createNewSessionEncrypted(selectedPersonaId, masterKey);
+      } else {
+        setSessions(filtered);
+        if (activeSessionId === sessionId) {
+          setActiveSessionId(filtered[0].id);
+          setSelectedPersonaId(filtered[0].persona || "cybercat");
+        }
+      }
+    } catch (err) {
+      console.error("Delete session failed:", err);
+      alert("Không thể xóa phiên. Vui lòng thử lại.");
     }
   };
 
@@ -658,8 +1023,104 @@ export const AiChatStation: React.FC = () => {
 
   const activePersonaObj = PERSONAS.find(p => p.id === (currentSession?.persona || selectedPersonaId)) || PERSONAS[0];
 
+  // Helpers for UI
+  const renderE2EEBanner = () => (
+    <div className="win95-container bg-[#0b001a] border border-vapor-purple p-2 text-[10px] font-mono text-vapor-green flex items-center gap-2">
+      <span className="w-2 h-2 bg-vapor-green rounded-full animate-pulse"></span>
+      🔐 E2EE BẮT BUỘC — Lịch sử được mã hóa AES-GCM 256, lưu vĩnh viễn theo tài khoản, admin KHÔNG thể đọc (cam kết /terms)
+      {isUnlocked ? <span className="ml-auto bg-vapor-green text-black px-1 font-bold">ĐÃ MỞ KHÓA</span> : <span className="ml-auto bg-red-600 text-white px-1 font-bold">ĐÃ KHÓA</span>}
+    </div>
+  );
+
   return (
     <div className="font-retro text-black select-none max-w-7xl mx-auto my-4 space-y-4">
+      {renderE2EEBanner()}
+
+      {/* ===== E2EE Passphrase Modal — BẮT BUỘC ===== */}
+      {showPassphraseModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="win95-container bg-win-gray w-full max-w-md shadow-2xl">
+            <div className="win95-header">
+              <span>🔐 VAPOR_ENCRYPT.EXE — {isFirstSetup ? "THIẾT LẬP MẬT KHẨU" : "MỞ KHÓA PHIÊN"}</span>
+            </div>
+            <div className="p-4 bg-win-gray space-y-3">
+              <div className="bg-[#fffb96]/40 border border-win-dark p-2 text-[11px] leading-relaxed">
+                {isFirstSetup ? (
+                  <p><strong>Chào mừng!</strong> Để đảm bảo <strong>E2EE bắt buộc</strong>, bạn cần đặt <strong>mật khẩu mã hóa</strong> (≥8 ký tự). Mật khẩu này dùng để dẫn xuất khóa mã hóa lịch sử. <strong>Quên = mất dữ liệu</strong> — hãy ghi nhớ hoặc lưu khóa khôi phục sẽ hiện sau khi tạo.</p>
+                ) : (
+                  <p>Nhập <strong>mật khẩu mã hóa</strong> để mở khóa lịch sử. Máy chủ <strong>không bao giờ</strong> thấy mật khẩu hay nội dung chat.</p>
+                )}
+                <p className="mt-2 text-[10px] text-win-dark">Chỉ tài khoản hoạt động mới được sử dụng AI. Dữ liệu lưu vĩnh viễn theo tài khoản, tuân thủ <a href="/terms" target="_blank" className="underline text-vapor-purple">/terms</a>.</p>
+              </div>
+              <input
+                type="password"
+                placeholder={isFirstSetup ? "Đặt mật khẩu mới (≥8 ký tự)" : "Nhập mật khẩu mã hóa"}
+                value={passphraseInput}
+                onChange={(e) => setPassphraseInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") isFirstSetup ? handleSetupPassphrase(passphraseInput) : handleUnlock(passphraseInput); }}
+                className="w-full p-2 border border-win-dark bg-white font-mono text-xs"
+                autoFocus
+              />
+              {unlockError && <p className="text-red-700 text-xs font-bold bg-red-100 border border-red-300 p-2">{unlockError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={isE2EELoading}
+                  onClick={() => isFirstSetup ? handleSetupPassphrase(passphraseInput) : handleUnlock(passphraseInput)}
+                  className="win95-btn flex-1 py-2 font-bold bg-vapor-purple text-white disabled:opacity-50"
+                >
+                  {isE2EELoading ? "⏳ Đang xử lý..." : isFirstSetup ? "🔐 THIẾT LẬP & MÃ HÓA" : "🔓 MỞ KHÓA"}
+                </button>
+                {!isFirstSetup && (
+                  <button type="button" onClick={() => { setShowPassphraseModal(false); }} className="win95-btn px-3 py-2">Đóng</button>
+                )}
+              </div>
+              <p className="text-[10px] text-win-dark text-center">Mật khẩu được dùng với PBKDF2 250k vòng + AES-GCM 256 ngay trên trình duyệt của bạn.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recovery Key Modal */}
+      {showRecoveryModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="win95-container bg-win-gray w-full max-w-lg shadow-2xl">
+            <div className="win95-header bg-gradient-to-r from-vapor-pink to-vapor-purple"><span>🔑 KHÓA KHÔI PHỤC — LƯU NGAY!</span></div>
+            <div className="p-4 space-y-3 bg-win-gray text-xs">
+              <p className="font-bold text-red-700 bg-red-100 border border-red-300 p-2">⚠️ Đây là lần DUY NHẤT bạn thấy khóa này. In ra hoặc lưu vào trình quản lý mật khẩu. Mất mật khẩu + mất khóa này = mất vĩnh viễn lịch sử (admin cũng không khôi phục được).</p>
+              <div className="bg-black text-vapor-green p-3 font-mono text-xs break-all select-all border-2 border-win-dark">{recoveryKey}</div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { navigator.clipboard.writeText(recoveryKey); alert("Đã sao chép!"); }} className="win95-btn flex-1 py-2 font-bold">📋 Sao chép</button>
+                <button type="button" onClick={() => setShowRecoveryModal(false)} className="win95-btn flex-1 py-2 font-bold bg-vapor-green">✅ ĐÃ LƯU AN TOÀN</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trạng thái cần đăng nhập / bị chặn */}
+      {needsLogin && (
+        <div className="win95-container bg-red-100 border-2 border-red-600 p-4 text-center space-y-2">
+          <p className="font-bold text-red-700">🔒 YÊU CẦU ĐĂNG NHẬP</p>
+          <p className="text-xs">Chỉ tài khoản hoạt động mới được sử dụng AI (E2EE bắt buộc). Vui lòng đăng nhập bằng Google để tiếp tục.</p>
+          <a href="/api/auth/signin" className="win95-btn inline-block px-4 py-2 bg-white font-bold no-underline">🔑 Đăng nhập với Google</a>
+        </div>
+      )}
+      {isAccountBanned && (
+        <div className="win95-container bg-red-100 border-2 border-red-600 p-4 text-center">
+          <p className="font-bold text-red-700">⛔ TÀI KHOẢN BỊ CHẶN</p>
+          <p className="text-xs">Tài khoản của bạn đã bị chặn, không thể sử dụng tính năng AI. Liên hệ quản trị viên.</p>
+        </div>
+      )}
+      {loadingKeys && !needsLogin && !isAccountBanned && (
+        <div className="win95-container bg-win-gray p-4 text-center text-xs">⏳ Đang kiểm tra khóa mã hóa...</div>
+      )}
+      {!isUnlocked && !loadingKeys && !needsLogin && !isAccountBanned && !showPassphraseModal && (
+        <div className="win95-container bg-[#fffb96] border-2 border-win-dark p-3 text-center">
+          <p className="text-xs font-bold">🔐 Phiên đang khóa — <button onClick={() => setShowPassphraseModal(true)} className="underline text-vapor-purple">Mở khóa để trò chuyện</button></p>
+        </div>
+      )}
+
       {/* 3D Main Workstation Window */}
       <div className="win95-container bg-win-gray shadow-2xl flex flex-col min-h-[680px]">
         {/* Main Title bar */}
@@ -738,6 +1199,15 @@ export const AiChatStation: React.FC = () => {
             >
               <span>{soundEnabled ? "🔊 Âm Thanh: BẬT" : "🔇 Âm Thanh: TẮT"}</span>
             </button>
+            {isUnlocked ? (
+              <button type="button" onClick={handleLock} className="win95-btn py-0.5 px-2 text-[10px] font-mono bg-red-100 text-red-700" title="Khóa phiên, xóa khóa khỏi RAM">
+                🔒 Khóa
+              </button>
+            ) : (
+              <button type="button" onClick={() => setShowPassphraseModal(true)} className="win95-btn py-0.5 px-2 text-[10px] font-mono bg-vapor-yellow" title="Mở khóa E2EE">
+                🔓 Mở khóa
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleExportChat("txt")}
@@ -899,6 +1369,17 @@ export const AiChatStation: React.FC = () => {
                     </p>
                   </div>
 
+                  {/* E2EE Locked Placeholder */}
+                  {!isUnlocked ? (
+                    <div className="text-center py-16 space-y-3">
+                      <p className="text-4xl">🔐</p>
+                      <p className="font-bold text-sm">Phiên đang khóa — E2EE bắt buộc</p>
+                      <p className="text-xs text-win-dark max-w-md mx-auto">Lịch sử được mã hóa AES-GCM 256 và lưu vĩnh viễn theo tài khoản. Chỉ bạn với mật khẩu mới giải mã được. Admin không thể đọc (cam kết /terms).</p>
+                      <button type="button" onClick={() => setShowPassphraseModal(true)} className="win95-btn px-6 py-2 bg-vapor-purple text-white font-bold">🔓 MỞ KHÓA ĐỂ XEM</button>
+                      {isE2EELoading && <p className="text-xs">⏳ Đang giải mã...</p>}
+                    </div>
+                  ) : (
+                    <>
                   {/* Message Bubbles */}
                   {currentSession?.messages.map((msg) => (
                     <div
@@ -1061,9 +1542,11 @@ export const AiChatStation: React.FC = () => {
                       )}
                     </div>
                   ))}
+                    </>
+                  )}
 
                   {/* Typing animation */}
-                  {isTyping && (
+                  {isUnlocked && isTyping && (
                     <div className="flex gap-2.5 items-center justify-start">
                       <div className={`w-8 h-8 rounded-sm bg-gradient-to-br ${activePersonaObj.avatarBg} border border-black flex items-center justify-center text-sm shrink-0 shadow-md animate-pulse`}>
                         {activePersonaObj.icon}
@@ -1117,6 +1600,17 @@ export const AiChatStation: React.FC = () => {
                   </div>
                 </div>
 
+                {/* E2EE Locked Overlay cho chat */}
+                {!isUnlocked && !loadingKeys && !needsLogin && !isAccountBanned && (
+                  <div className="win95-container bg-[#fffb96] border-2 border-vapor-purple p-3 text-center">
+                    <p className="text-xs font-bold">🔐 Phiên đang khóa — Vui lòng mở khóa E2EE để trò chuyện</p>
+                    <button type="button" onClick={() => setShowPassphraseModal(true)} className="win95-btn mt-2 px-4 py-2 bg-vapor-purple text-white font-bold">🔓 MỞ KHÓA NGAY</button>
+                  </div>
+                )}
+                {isE2EELoading && (
+                  <div className="text-center text-xs py-2">⏳ Đang xử lý mã hóa...</div>
+                )}
+
                 {/* Input Form Terminal */}
                 <form
                   onSubmit={(e) => {
@@ -1137,14 +1631,17 @@ export const AiChatStation: React.FC = () => {
                           handleSendMessage();
                         }
                       }}
-                      placeholder={`Trò chuyện cùng ${activePersonaObj.name}... (Nhấn Enter để gửi, Shift+Enter để xuống dòng)`}
-                      disabled={isTyping}
-                      className="w-full bg-transparent border-none outline-none text-xs sm:text-sm text-black font-body resize-none"
+                      placeholder={
+                        !isUnlocked ? "🔒 Vui lòng mở khóa E2EE trước khi trò chuyện..." :
+                        `Trò chuyện cùng ${activePersonaObj.name}... (Nhấn Enter để gửi, Shift+Enter để xuống dòng)`
+                      }
+                      disabled={isTyping || !isUnlocked || needsLogin || isAccountBanned}
+                      className="w-full bg-transparent border-none outline-none text-xs sm:text-sm text-black font-body resize-none disabled:opacity-50"
                       maxLength={1000}
                     />
                     <button
                       type="submit"
-                      disabled={isTyping || !inputVal.trim()}
+                      disabled={isTyping || !inputVal.trim() || !isUnlocked || needsLogin || isAccountBanned}
                       className="win95-btn font-extrabold text-xs sm:text-sm px-5 py-2 text-vapor-purple bg-[#fffb96]/40 border-2 border-black disabled:opacity-50 flex items-center gap-1.5 shrink-0 hover:bg-vapor-yellow"
                       style={{ minHeight: "38px" }}
                     >
@@ -1153,7 +1650,7 @@ export const AiChatStation: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex justify-between items-center text-[10px] font-mono text-win-dark">
-                    <span>💡 Nhấn Enter để gửi tin nhắn ngay</span>
+                    <span>🔐 E2EE: {isUnlocked ? "Đã mã hóa" : "Chưa mở khóa" } · 💡 Nhấn Enter để gửi</span>
                     <span>{inputVal.length} / 1000 ký tự</span>
                   </div>
                 </form>
@@ -1202,6 +1699,42 @@ export const AiChatStation: React.FC = () => {
                 </div>
 
                 <div className="win95-container bg-white p-4 space-y-4 text-xs">
+                  {/* E2EE Trạng thái */}
+                  <div className="p-3 border-2 border-vapor-purple bg-[#f3e8ff]/50 space-y-2">
+                    <h4 className="font-bold text-vapor-purple uppercase flex items-center gap-1">🔐 Trạng thái Mã hóa E2EE</h4>
+                    <div className="text-[11px] leading-relaxed space-y-1">
+                      <p><strong>Chế độ:</strong> BẮT BUỘC — mọi phiên và tin nhắn được mã hóa AES-GCM 256 trước khi lưu Supabase.</p>
+                      <p><strong>Lưu trữ:</strong> Vĩnh viễn theo tài khoản, chỉ bạn giải mã được. Admin <strong>không thể đọc</strong> (cam kết /terms).</p>
+                      <p><strong>Yêu cầu:</strong> Chỉ tài khoản hoạt động (không bị chặn) mới được dùng.</p>
+                      <p className="flex items-center gap-2">Trạng thái: {isUnlocked ? <span className="bg-vapor-green text-black px-1 font-bold">🔓 ĐÃ MỞ KHÓA</span> : <span className="bg-red-600 text-white px-1 font-bold">🔒 ĐANG KHÓA</span>}
+                        {isUnlocked && <button type="button" onClick={handleLock} className="win95-btn text-[10px] py-1 px-2 bg-red-100 text-red-700">Khóa lại</button>}
+                        {!isUnlocked && <button type="button" onClick={() => setShowPassphraseModal(true)} className="win95-btn text-[10px] py-1 px-2 bg-vapor-yellow">Mở khóa</button>}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button type="button" onClick={async () => {
+                        if (confirm("Xóa TOÀN BỘ lịch sử mã hóa trên Supabase? Không thể khôi phục nếu không có khóa khôi phục.")) {
+                          try {
+                            const res = await fetch("/api/ai/sessions");
+                            const data = await res.json();
+                            for (const s of data.sessions || []) {
+                              await fetch(`/api/ai/sessions?id=${s.id}`, { method: "DELETE" });
+                            }
+                            setSessions([]);
+                            createNewSessionEncrypted(selectedPersonaId, masterKey || undefined);
+                            alert("Đã xóa toàn bộ.");
+                          } catch {}
+                        }
+                      }} className="win95-btn text-[10px] py-1 px-2 bg-red-100 text-red-700">🗑️ Xóa vĩnh viễn trên Supabase</button>
+                      <button type="button" onClick={async () => {
+                        if (!masterKey) { alert("Cần mở khóa trước."); return; }
+                        const raw = await exportMasterKeyRaw(masterKey);
+                        const b64 = toBase64(raw);
+                        prompt("Khóa khôi phục (lưu an toàn, mất = mất dữ liệu):", b64);
+                      }} className="win95-btn text-[10px] py-1 px-2">🔑 Xuất khóa khôi phục</button>
+                    </div>
+                  </div>
+
                   {/* Model Choice */}
                   <div className="space-y-1.5">
                     <label className="font-bold uppercase tracking-wide block">

@@ -47,6 +47,44 @@ const userProfile = await getCurrentUserProfile(supabase);
     </div>
   </div>
 
+  <!-- 🔐 Nguyên tắc Bảo mật — Hiển thị rõ ràng ngay trên Trạm AI -->
+  <div class="win95-container bg-[#0b001a] border-2 border-vapor-purple max-w-7xl mx-auto mb-6 overflow-hidden">
+    <div class="win95-header bg-gradient-to-r from-vapor-purple to-[#ff71ce]">
+      <span>🔐 VAPOR_ENCRYPT.SYS — NGUYÊN TẮC BẢO MẬT LƯU TRỮ HỘI THOẠI</span>
+      <span class="text-[9px] bg-black text-vapor-green px-2 py-0.5 font-mono">E2EE · AES-GCM 256</span>
+    </div>
+    <div class="p-4 bg-win-gray text-xs leading-relaxed space-y-3 text-black">
+      <div class="grid md:grid-cols-3 gap-3">
+        <div class="bg-white border border-win-dark p-3 space-y-1">
+          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">🔒 Mã hóa đầu-cuối bắt buộc</h3>
+          <p class="text-[11px] text-win-darkest leading-snug">Mọi phiên và tin nhắn được <strong>mã hóa AES-GCM 256</strong> ngay trên trình duyệt <strong>trước khi gửi</strong>. Supabase chỉ lưu <code class="bg-black text-vapor-green px-1">ciphertext + iv</code> — không có khóa thì không thể đọc.</p>
+        </div>
+        <div class="bg-white border border-win-dark p-3 space-y-1">
+          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">👤 Chỉ tài khoản hoạt động</h3>
+          <p class="text-[11px] text-win-darkest leading-snug">Chỉ tài khoản đã đăng nhập và <strong>không bị chặn</strong> mới được tạo khóa và sử dụng AI. Ẩn danh / bị chặn → <code class="bg-red-100 px-1">401/403</code>.</p>
+        </div>
+        <div class="bg-white border border-win-dark p-3 space-y-1">
+          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">♾️ Lưu trữ vĩnh viễn</h3>
+          <p class="text-[11px] text-win-darkest leading-snug">Lịch sử gắn với <strong>tài khoản của bạn</strong>, lưu <strong>vĩnh viễn</strong> đến khi bạn tự xóa. Chỉ xóa tài khoản mới xóa cascade.</p>
+        </div>
+      </div>
+
+      <div class="bg-white border border-win-dark p-3 space-y-2">
+        <h4 class="font-bold uppercase text-[11px] tracking-wide text-black border-b border-win-dark pb-1">📜 Cam kết chi tiết</h4>
+        <ul class="list-disc pl-5 space-y-1.5 text-[11px] text-win-darkest">
+          <li><strong class="text-black">Admin không thể đọc:</strong> RLS <code class="bg-black text-vapor-green px-1 text-[10px]">auth.uid() = user_id</code> — kể cả admin cũng bị chặn ở cấp DB, tuân thủ <a href="/terms" class="underline text-vapor-purple">/terms</a> “người dùng có toàn quyền với dữ liệu”.</li>
+          <li><strong class="text-black">Khóa do bạn nắm:</strong> Mật khẩu (≥8 ký tự) → PBKDF2 250k vòng → KEK bọc masterKey ngẫu nhiên. Đổi mật khẩu chỉ bọc lại masterKey, không mã hóa lại toàn bộ.</li>
+          <li><strong class="text-black">Quên = mất:</strong> Mất mật khẩu + mất khóa khôi phục → mất vĩnh viễn (zero-knowledge, không backdoor). Hãy lưu khóa khôi phục hiện 1 lần khi thiết lập.</li>
+          <li><strong class="text-black">Chuẩn hạ tầng:</strong> Web Crypto API (trình duyệt + Cloudflare Workers), Vault cho <code class="bg-black text-vapor-green px-1 text-[10px]">GEMINI_API_KEY</code>, rate limit 30 msg/phút.</li>
+        </ul>
+        <div class="flex flex-wrap gap-2 pt-2">
+          <a href="/terms" class="win95-btn text-[10px] px-3 py-1.5 no-underline font-bold">📜 Xem Điều Khoản Đầy Đủ</a>
+          <span class="text-[10px] text-win-dark self-center">PBKDF2 · AES-GCM 256 · iv 12B random · Base64</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {/* Main AI Chat Workstation Component */}
   <div class="w-full">
     <AiChatStation client:idle />

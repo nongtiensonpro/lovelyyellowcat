@@ -174,9 +174,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // ────────────────────────────────────────────────
-  // 3) Chặn tài khoản bị cấm ở các route cần xác thực
+  // 3) Chặn tài khoản bị cấm ở các route cần xác thực (bao gồm AI E2EE)
   // ────────────────────────────────────────────────
-  if (pathname.startsWith("/submit") || pathname.startsWith("/api/submissions") || pathname.startsWith("/api/comments") || pathname.startsWith("/api/reactions")) {
+  if (pathname.startsWith("/submit") || pathname.startsWith("/ai") || pathname.startsWith("/api/ai") || pathname.startsWith("/api/submissions") || pathname.startsWith("/api/comments") || pathname.startsWith("/api/reactions")) {
     try {
       const supabase = createSupabaseServerClient(context);
       const { data: { user } } = await supabase.auth.getUser();

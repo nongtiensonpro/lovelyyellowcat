@@ -296,6 +296,80 @@ const userProfile = await getCurrentUserProfile(supabase);
                 </div>
             </div>
 
+            <!-- Section 6: Bảo Mật & Lưu Trữ Hội Thoại AI (E2EE) -->
+            <div
+                class="win95-container bg-white p-4 shadow-sm border-2 border-vapor-purple"
+            >
+                <div
+                    class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3"
+                >
+                    <span class="text-xl">6</span>
+                    <h2 class="font-bold text-sm uppercase text-black">
+                        Bảo Mật & Lưu Trữ Hội Thoại AI — Mã Hóa Đầu-Cuối (E2EE)
+                    </h2>
+                    <span
+                        class="ml-auto bg-vapor-purple text-white text-[9px] font-bold px-2 py-1 border border-black"
+                        >E2EE · ZERO-KNOWLEDGE</span
+                    >
+                </div>
+                <div class="text-xs space-y-4 leading-relaxed text-black/85">
+                    <div class="bg-[#0b001a] text-vapor-green p-3 border-2 border-win-dark font-mono text-xs flex items-center gap-2">
+                        <span class="w-2 h-2 bg-vapor-green rounded-full animate-pulse"></span>
+                        🔐 E2EE BẮT BUỘC — MỌI HỘI THOẠI ĐỀU ĐƯỢC MÃ HÓA AES-GCM 256 TRƯỚC KHI RỜI THIẾT BỊ CỦA BẠN
+                    </div>
+
+                    <div>
+                        <strong class="text-vapor-purple">✦ Nguyên tắc Zero-Knowledge (Máy chủ mù):</strong>
+                        <ul class="list-disc pl-5 space-y-1.5 mt-2 text-win-dark">
+                            <li>Mọi tiêu đề phiên và tin nhắn (của bạn và của AI) được mã hóa bằng <strong class="text-black">AES-GCM 256-bit</strong> ngay trên trình duyệt của bạn trước khi gửi tới Supabase.</li>
+                            <li>Supabase chỉ lưu <code class="bg-black text-vapor-green px-1">ciphertext + iv (Base64)</code> — không có khóa, không thể giải mã. Kể cả khi rò rỉ toàn bộ cơ sở dữ liệu, nội dung vẫn không thể đọc.</li>
+                            <li>Quá trình dẫn xuất khóa dùng <strong class="text-black">PBKDF2 với 250.000 vòng SHA-256</strong> và salt 16 byte ngẫu nhiên. Mỗi lần mã hóa dùng <strong class="text-black">iv 12 byte ngẫu nhiên mới</strong> — không bao giờ tái sử dụng.</li>
+                            <li>Quản trị viên (kể cả <code class="bg-red-100 px-1">admin</code>) <strong class="text-red-700">KHÔNG có quyền đọc</strong> lịch sử AI của bạn — RLS <code class="bg-black text-vapor-green px-1">auth.uid() = user_id</code> chặn ở cấp cơ sở dữ liệu, tuân thủ cam kết “người dùng có toàn quyền với dữ liệu của mình”.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <strong class="text-vapor-purple">✦ Chỉ tài khoản hoạt động mới được sử dụng:</strong>
+                        <p class="mt-1 text-win-dark">
+                            Chỉ tài khoản đã đăng nhập và <strong class="text-black">không bị chặn (is_banned = false)</strong> mới được tạo khóa, gửi tin nhắn và lưu trữ. Tài khoản bị chặn sẽ nhận <code class="bg-red-100 px-1">403 Forbidden</code> ở mọi API <code class="bg-black text-vapor-green px-1">/api/ai/*</code> và bị chuyển hướng tới trang chặn. Tài khoản ẩn danh không thể sử dụng AI.
+                        </p>
+                    </div>
+
+                    <div>
+                        <strong class="text-vapor-purple">✦ Lưu trữ vĩnh viễn theo tài khoản:</strong>
+                        <ul class="list-disc pl-5 space-y-1.5 mt-2 text-win-dark">
+                            <li>Dữ liệu được lưu <strong class="text-black">vĩnh viễn</strong> trong các bảng <code class="bg-black text-vapor-green px-1">ai_sessions</code> / <code class="bg-black text-vapor-green px-1">ai_messages</code> gắn với <code class="bg-black text-[#05ffa1] px-1">user_id</code> của bạn, chỉ xóa khi bạn chủ động xóa phiên hoặc xóa tài khoản (cascade).</li>
+                            <li>Bạn có toàn quyền: <strong class="text-black">xem, xuất file (.txt/.json), xóa từng phiên hoặc xóa toàn bộ vĩnh viễn</strong> ngay trong Trạm AI (tab Cấu hình).</li>
+                            <li>Không có tự động xóa sau 30/90 ngày — trừ khi bạn yêu cầu.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <strong class="text-vapor-purple">✦ Quản lý khóa & khôi phục:</strong>
+                        <ul class="list-disc pl-5 space-y-1.5 mt-2 text-win-dark">
+                            <li><strong class="text-black">Mật khẩu mã hóa</strong> do bạn tự đặt (≥8 ký tự) — không bao giờ gửi lên server. Từ đó dẫn xuất KEK để bọc (wrap) <code class="bg-black text-vapor-green px-1">masterKey</code> ngẫu nhiên 256-bit.</li>
+                            <li>Bản bọc <code class="bg-black text-vapor-green px-1">encrypted_master_key + kek_salt + iv_wrap</code> lưu tại <code class="bg-black text-vapor-green px-1">ai_user_keys</code> (RLS chỉ owner). Đổi mật khẩu chỉ cần bọc lại masterKey, không cần mã hóa lại toàn bộ lịch sử.</li>
+                            <li><strong class="text-red-700">Quên mật khẩu + mất khóa khôi phục = mất vĩnh viễn lịch sử</strong> — đây là hệ quả của zero-knowledge, không có backdoor cho admin.</li>
+                            <li>Khi thiết lập lần đầu, hệ thống hiển thị <strong class="text-black">khóa khôi phục (Base64 masterKey)</strong> — hãy in ra hoặc lưu vào trình quản lý mật khẩu.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <strong class="text-vapor-purple">✦ Hạ tầng & tuân thủ:</strong>
+                        <ul class="list-disc pl-5 space-y-1.5 mt-2 text-win-dark">
+                            <li>Chạy trên <strong class="text-black">Astro SSR + Cloudflare Workers</strong> với <code class="bg-black text-vapor-green px-1">Web Crypto API</code> (native, không phụ thuộc thư viện JS mã hóa).</li>
+                            <li>Khóa hệ thống <code class="bg-black text-vapor-green px-1">GEMINI_API_KEY</code> lưu trong <strong class="text-black">Supabase Vault</strong> (<code class="bg-black text-vapor-green px-1">vault.secrets</code>), không nằm trong code hay localStorage. BYOK của bạn cũng được bọc bằng masterKey.</li>
+                            <li>Toán bộ bảng AI bật <strong class="text-black">Row Level Security</strong> — anon không đọc/ghi được gì (khắc phục CVE-2025-48757).</li>
+                            <li>Giới hạn tần suất: 30 tin nhắn / phút / user (trigger <code class="bg-black text-vapor-green px-1">check_ai_message_rate_limit</code>).</li>
+                        </ul>
+                    </div>
+
+                    <p class="text-[11px] bg-[#fffb96]/30 p-2.5 border border-win-dark">
+                        <strong>Cam kết pháp lý:</strong> Nội dung AI của bạn là <strong>tài sản riêng</strong> — chúng tôi không dùng để train mô hình, không chia sẻ, không cho phép admin đọc. Bạn có quyền xuất và xóa vĩnh viễn bất kỳ lúc nào, phù hợp tinh thần <strong>/terms</strong> và quy định bảo vệ dữ liệu cá nhân.
+                    </p>
+                </div>
+            </div>
+
             <!-- Prominent Contact / Helpdesk Alert Box -->
             <div
                 class="win95-container bg-[#fffb96]/10 border-2 border-win-dark p-6 shadow-sm text-center space-y-3"
