@@ -45,6 +45,8 @@ export interface ModelStats {
   maxOutputTokens: number;
   contextMessages: number;
   finishReason?: string;
+  incomplete?: boolean;
+  incompleteReason?: string;
   usage?: ModelUsage;
 }
 
@@ -194,6 +196,25 @@ export const TOPIC_CATEGORIES = [
 const STORAGE_KEY = "vapor_ai_chat_sessions_v2"; // legacy, chỉ dùng để migrate 1 lần rồi xóa
 const API_KEY_STORAGE = "user_gemini_api_key";
 const MAX_CONTEXT_MESSAGES = 24;
+const CLIENT_MAX_OUTPUT_TOKENS = 4096;
+const CLIENT_INITIAL_RESPONSE_TIMEOUT_MS = 180_000;
+const CLIENT_STREAM_IDLE_TIMEOUT_MS = 90_000;
+const CLIENT_MAX_MODEL_RETRIES = 2;
+const CLIENT_MAX_CONTINUATIONS = 2;
+const CLIENT_CONTINUATION_PROMPT = "Hãy tiếp tục câu trả lời ngay từ chỗ đang dừng, không lặp lại phần đã viết và hoàn thành ý cuối cùng.";
+
+function mergeModelUsage(previous: ModelUsage | undefined, next: ModelUsage | undefined): ModelUsage | undefined {
+  if (!previous && !next) return undefined;
+  const sum = (a?: number, b?: number) =>
+    typeof a === "number" || typeof b === "number" ? (a || 0) + (b || 0) : undefined;
+  return {
+    promptTokenCount: sum(previous?.promptTokenCount, next?.promptTokenCount),
+    candidatesTokenCount: sum(previous?.candidatesTokenCount, next?.candidatesTokenCount),
+    totalTokenCount: sum(previous?.totalTokenCount, next?.totalTokenCount),
+    thoughtsTokenCount: sum(previous?.thoughtsTokenCount, next?.thoughtsTokenCount),
+    cachedContentTokenCount: sum(previous?.cachedContentTokenCount, next?.cachedContentTokenCount),
+  };
+}
 
 function formatClientGeminiContents(messages: Array<{ role: string; content: string }>) {
   const context = messages
@@ -275,7 +296,7 @@ async function executeClientDirectChat(
           systemInstruction: { parts: [{ text: systemPrompt }] },
           generationConfig: {
             temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
-            maxOutputTokens: 1200,
+            maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
           },
         }),
       });
@@ -339,7 +360,7 @@ async function executeClientDirectChatStream(
   temperature: number,
   onChunk: (text: string, model: string) => void,
   onModelStart?: (model: string) => void
-): Promise<{ success: boolean; model: string; durationMs: number; usage?: ModelUsage; finishReason?: string; hasQuotaError?: boolean; isLocationBlocked?: boolean; incomplete?: boolean; reply?: string; errorDetail?: string }> {
+): Promise<{ success: boolean; model: string; durationMs: number; usage?: ModelUsage; finishReason?: string; incomplete?: boolean; incompleteReason?: string; hasQuotaError?: boolean; isLocationBlocked?: boolean; reply?: string; errorDetail?: string }> {
   const systemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat;
   let modelsToTry: string[] = [];
   if (preferredModel && preferredModel !== "auto") {
@@ -350,9 +371,19 @@ async function executeClientDirectChatStream(
   const formattedContents = formatClientGeminiContents(messages);
   const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
   const startTime = Date.now();
-  const upstreamTimeoutMs = 120_000;
+  const generationTemperature = Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7));
 
   const isLocationError = (error: string) => /user\s+location\s+is\s+not\s+supported|location\s+not\s+supported|unsupported\s+location/i.test(error);
+  const isPolicyFinishReason = (reason: string) => /SAFETY|BLOCKLIST|PROHIBITED|RECITATION|SPII|LANGUAGE/i.test(reason);
+  const isPolicyError = (error: string) => /safety|blocked|blocklist|prohibited|recitation|spii|policy/i.test(error);
+  const isRecoverableStreamFailure = (error: string) => !isLocationError(error)
+    && !/quota|rate.?limit|api\s*key|unauthenticated|permission|forbidden/i.test(error)
+    && !isPolicyError(error);
+  const buildContinuationContents = (partialText: string) => [
+    ...formattedContents,
+    { role: "model", parts: [{ text: partialText }] },
+    { role: "user", parts: [{ text: CLIENT_CONTINUATION_PROMPT }] },
+  ];
   const readError = async (response: Response) => {
     const raw = await response.text().catch(() => "");
     if (!raw) return `HTTP ${response.status}`;
@@ -365,96 +396,206 @@ async function executeClientDirectChatStream(
   };
 
   for (const model of modelsToTry) {
-    const abortController = new AbortController();
-    const timeout = window.setTimeout(() => abortController.abort(), upstreamTimeoutMs);
-    let partialText = "";
-    try {
-      if (onModelStart) onModelStart(model);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey.trim() },
-        signal: abortController.signal,
-        body: JSON.stringify({
-          contents: formattedContents,
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          generationConfig: {
-            temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
-            maxOutputTokens: 1200,
-          },
-        }),
-      });
-      if (!response.ok || !response.body) {
-        const error = await readError(response);
-        attemptLogs.push({ model, status: response.status, error });
-        if (isLocationError(error)) break;
-        continue;
-      }
-      const reader = (response.body as ReadableStream<Uint8Array>).getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let hasContent = false;
-      let streamError = "";
-      let usage: ModelUsage | undefined;
+    const maxAttempts = allowFallback ? CLIENT_MAX_MODEL_RETRIES : 1;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      let partialText = "";
+      let totalUsage: ModelUsage | undefined;
       let finishReason = "";
-      const consumeLine = (rawLine: string) => {
-        const line = rawLine.replace(/\r$/, "");
-        if (!line.startsWith("data:")) return;
-        const jsonStr = line.slice(5).trim();
-        if (!jsonStr || jsonStr === "[DONE]") return;
-        try {
-          const data = JSON.parse(jsonStr);
-          if (data?.usageMetadata && typeof data.usageMetadata === "object") {
-            usage = data.usageMetadata as ModelUsage;
-          }
-          const candidateFinishReason = data?.candidates?.[0]?.finishReason;
-          if (typeof candidateFinishReason === "string" && candidateFinishReason) {
-            finishReason = candidateFinishReason;
-          }
-          const error = data?.error?.message || data?.error || data?.message;
-          if (error) {
-            streamError = String(error);
-            return;
-          }
-          const text = (data?.candidates || [])
-            .flatMap((candidate: any) => candidate?.content?.parts || [])
-            .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
-            .join("");
-          if (text) {
-            hasContent = true;
-            partialText += text;
-            onChunk(text, model);
-          }
-        } catch {}
-      };
+      let failureReason = "";
+      let failureStatus = 0;
+      let policyBlocked = false;
+      let continuationCount = 0;
+      let requestContents = formattedContents;
+
+      if (onModelStart) onModelStart(model);
+
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value as Uint8Array, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) consumeLine(line);
-        if (streamError) break;
+        finishReason = "";
+        const abortController = new AbortController();
+        let timeoutPhase: "initial" | "idle" = "initial";
+        let timeoutHandle = 0;
+        const armTimeout = (phase: "initial" | "idle") => {
+          window.clearTimeout(timeoutHandle);
+          timeoutPhase = phase;
+          timeoutHandle = window.setTimeout(
+            () => abortController.abort(),
+            phase === "initial" ? CLIENT_INITIAL_RESPONSE_TIMEOUT_MS : CLIENT_STREAM_IDLE_TIMEOUT_MS,
+          );
+        };
+
+        try {
+          armTimeout("initial");
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey.trim() },
+            signal: abortController.signal,
+            body: JSON.stringify({
+              contents: requestContents,
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              generationConfig: {
+                temperature: generationTemperature,
+                maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
+              },
+            }),
+          });
+          if (!response.ok || !response.body) {
+            failureReason = await readError(response);
+            failureStatus = response.status;
+            break;
+          }
+
+          failureStatus = 200;
+          armTimeout("idle");
+          const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let hasContent = false;
+          let streamError = "";
+          let segmentUsage: ModelUsage | undefined;
+          let parseErrorCount = 0;
+          let sawDoneMarker = false;
+          const consumeLine = (rawLine: string) => {
+            const line = rawLine.replace(/\r$/, "");
+            if (!line.startsWith("data:")) return;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr) return;
+            if (jsonStr === "[DONE]") {
+              sawDoneMarker = true;
+              return;
+            }
+            try {
+              const data = JSON.parse(jsonStr);
+              if (data?.usageMetadata && typeof data.usageMetadata === "object") {
+                segmentUsage = data.usageMetadata as ModelUsage;
+              }
+              const candidateFinishReason = data?.candidates?.[0]?.finishReason;
+              if (typeof candidateFinishReason === "string" && candidateFinishReason) {
+                finishReason = candidateFinishReason;
+              }
+              const error = data?.error?.message || data?.error || data?.message;
+              if (error) {
+                streamError = String(error);
+                return;
+              }
+              const text = (data?.candidates || [])
+                .flatMap((candidate: any) => candidate?.content?.parts || [])
+                .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
+                .join("");
+              if (text) {
+                hasContent = true;
+                partialText += text;
+                onChunk(text, model);
+              }
+            } catch {
+              parseErrorCount += 1;
+            }
+          };
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            armTimeout("idle");
+            buffer += decoder.decode(value as Uint8Array, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const line of lines) consumeLine(line);
+            if (streamError) break;
+          }
+          buffer += decoder.decode();
+          if (buffer) consumeLine(buffer);
+          if (sawDoneMarker && !finishReason) finishReason = "STOP";
+          totalUsage = mergeModelUsage(totalUsage, segmentUsage);
+
+          if (streamError) {
+            failureReason = streamError;
+            policyBlocked = isPolicyError(streamError);
+            if (partialText && !policyBlocked && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
+              continuationCount += 1;
+              requestContents = buildContinuationContents(partialText);
+              continue;
+            }
+            break;
+          }
+          if (!hasContent) {
+            failureReason = "Stream kết thúc không có nội dung.";
+            break;
+          }
+          if (parseErrorCount > 0) {
+            failureReason = `Stream có ${parseErrorCount} chunk SSE không đọc được.`;
+            if (partialText && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
+              continuationCount += 1;
+              requestContents = buildContinuationContents(partialText);
+              continue;
+            }
+            break;
+          }
+
+          const hasTerminalSignal = Boolean(sawDoneMarker || (finishReason && finishReason !== "FINISH_REASON_UNSPECIFIED"));
+          if (!hasTerminalSignal) {
+            failureReason = "Stream đóng trước khi Gemini gửi tín hiệu hoàn tất (finishReason/[DONE]).";
+            if (partialText && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
+              continuationCount += 1;
+              requestContents = buildContinuationContents(partialText);
+              continue;
+            }
+            break;
+          }
+
+          if (finishReason === "MAX_TOKENS") {
+            if (continuationCount < CLIENT_MAX_CONTINUATIONS) {
+              continuationCount += 1;
+              requestContents = buildContinuationContents(partialText);
+              continue;
+            }
+            failureReason = `Đã chạm giới hạn ${CLIENT_MAX_OUTPUT_TOKENS} output tokens sau ${CLIENT_MAX_CONTINUATIONS + 1} đoạn.`;
+          } else if (finishReason && finishReason !== "STOP") {
+            failureReason = `Gemini kết thúc với finishReason: ${finishReason}.`;
+            policyBlocked = isPolicyFinishReason(finishReason);
+          } else {
+            return {
+              success: true,
+              model,
+              durationMs: Date.now() - startTime,
+              usage: totalUsage,
+              finishReason: finishReason || "STOP",
+              incomplete: false,
+            };
+          }
+          break;
+        } catch (err: any) {
+          failureReason = err?.name === "AbortError"
+            ? timeoutPhase === "idle"
+              ? `Stream không có dữ liệu mới trong ${Math.round(CLIENT_STREAM_IDLE_TIMEOUT_MS / 1000)} giây.`
+              : `Không nhận được response trong ${Math.round(CLIENT_INITIAL_RESPONSE_TIMEOUT_MS / 1000)} giây.`
+            : err?.message || String(err);
+          if (partialText && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
+            continuationCount += 1;
+            requestContents = buildContinuationContents(partialText);
+            continue;
+          }
+          break;
+        } finally {
+          window.clearTimeout(timeoutHandle);
+        }
       }
-      buffer += decoder.decode();
-      if (buffer) consumeLine(buffer);
-      if (hasContent) {
-        return { success: true, model, durationMs: Date.now() - startTime, usage, finishReason, incomplete: Boolean(streamError) };
-      } else {
-        const error = streamError || "Stream kết thúc không có nội dung.";
-        attemptLogs.push({ model, status: 200, error });
-        if (isLocationError(error)) break;
+
+      const hasPartialText = Boolean(partialText);
+      if (failureReason) {
+        attemptLogs.push({ model, status: failureStatus, error: failureReason });
       }
-    } catch (err: any) {
-      const error = err?.name === "AbortError"
-        ? `Timeout sau ${Math.round(upstreamTimeoutMs / 1000)} giây.`
-        : err?.message || String(err);
-      attemptLogs.push({ model, status: 0, error });
-      if (partialText) {
-        return { success: true, model, durationMs: Date.now() - startTime, incomplete: true };
+      if (hasPartialText && (policyBlocked || attempt === maxAttempts - 1)) {
+        return {
+          success: true,
+          model,
+          durationMs: Date.now() - startTime,
+          usage: totalUsage,
+          finishReason,
+          incomplete: true,
+          incompleteReason: failureReason || "Stream bị ngắt trước khi hoàn tất.",
+        };
       }
-    } finally {
-      window.clearTimeout(timeout);
+      if (isLocationError(failureReason)) break;
     }
   }
   const logDetails = attemptLogs.map((a, i) => `${i + 1}. [${a.model}] (HTTP ${a.status}): ${a.error}`).join("\n");
@@ -1004,6 +1145,15 @@ export const AiChatStation: React.FC = () => {
           streamModel = model;
           setSessions(prev => prev.map(s => s.id === session.id ? { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: fullText, modelName: streamModel } : m) } : s));
         };
+        const onModelStart = (model: string) => {
+          // Một retry phải thay thế partial cũ, nếu không người dùng sẽ thấy
+          // đoạn đầu bị lặp khi model gửi lại từ đầu.
+          fullText = "";
+          streamModel = model;
+          setSessions(prev => prev.map(s => s.id === session.id
+            ? { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: "", modelName: model, modelStats: undefined } : m) }
+            : s));
+        };
         const result: any = await executeClientDirectChatStream(
           effectiveApiKey,
           updatedMessages.map(m => ({ role: m.role, content: m.content })),
@@ -1011,7 +1161,8 @@ export const AiChatStation: React.FC = () => {
           selectedModel,
           allowFallback,
           temperature,
-          onChunk
+          onChunk,
+          onModelStart,
         );
         if (result.success) {
           const modelStats: ModelStats = {
@@ -1019,9 +1170,11 @@ export const AiChatStation: React.FC = () => {
             requestedModel: selectedModel,
             transport: "browser-direct",
             temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
-            maxOutputTokens: 1200,
+            maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
             contextMessages: formatClientGeminiContents(updatedMessages).length,
             finishReason: result.finishReason,
+            incomplete: Boolean(result.incomplete),
+            incompleteReason: result.incompleteReason,
             usage: result.usage,
           };
           setSessions(prev => prev.map(s => {
@@ -1080,6 +1233,108 @@ export const AiChatStation: React.FC = () => {
       setIsTyping(false);
       isSendingRef.current = false;
       setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  // Nối tiếp một câu trả lời đã bị cắt mà không tạo thêm tin nhắn người dùng.
+  // Phần nối được lưu thành một message model riêng trên server để không mất dữ liệu
+  // ngay cả khi message cũ đã được lưu trước lúc stream bị ngắt.
+  const handleContinueIncomplete = async (messageId: string) => {
+    if (needsLogin || isAccountBanned || isTyping || isSendingRef.current) return;
+    if (!isUnlocked || !masterKey) {
+      setShowPassphraseModal(true);
+      setUnlockError("Vui lòng mở khóa bằng mật khẩu mã hóa trước khi tiếp tục câu trả lời.");
+      return;
+    }
+
+    const session = currentSession;
+    const messageIndex = session?.messages.findIndex(m => m.id === messageId) ?? -1;
+    const partialMessage = messageIndex >= 0 ? session?.messages[messageIndex] : undefined;
+    if (!session || !partialMessage || partialMessage.role !== "model" || !partialMessage.content || !partialMessage.modelStats?.incomplete) return;
+
+    const effectiveApiKey = (userCustomApiKey || systemApiKey).trim();
+    if (!effectiveApiKey) {
+      setKeyRequiredNotice(true);
+      setActiveTab("settings");
+      return;
+    }
+
+    isSendingRef.current = true;
+    setIsTyping(true);
+    const baseContent = partialMessage.content;
+    const continuationContext = [
+      ...session.messages.slice(0, messageIndex).map(m => ({ role: m.role, content: m.content })),
+      { role: "model", content: baseContent },
+      { role: "user", content: CLIENT_CONTINUATION_PROMPT },
+    ];
+    let appendedText = "";
+    let streamModel = partialMessage.modelStats.model;
+    const onChunk = (text: string, model: string) => {
+      appendedText += text;
+      streamModel = model;
+      setSessions(prev => prev.map(s => s.id === session.id
+        ? { ...s, messages: s.messages.map(m => m.id === messageId ? { ...m, content: baseContent + appendedText, modelName: streamModel } : m) }
+        : s));
+    };
+    const onModelStart = (model: string) => {
+      appendedText = "";
+      streamModel = model;
+      setSessions(prev => prev.map(s => s.id === session.id
+        ? { ...s, messages: s.messages.map(m => m.id === messageId ? { ...m, content: baseContent, modelName: model } : m) }
+        : s));
+    };
+
+    try {
+      const result: any = await executeClientDirectChatStream(
+        effectiveApiKey,
+        continuationContext,
+        session.persona,
+        partialMessage.modelStats.model,
+        true,
+        temperature,
+        onChunk,
+        onModelStart,
+      );
+      if (result.success) {
+        const modelStats: ModelStats = {
+          model: result.model,
+          requestedModel: partialMessage.modelStats.requestedModel,
+          transport: "browser-direct",
+          temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+          maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
+          contextMessages: formatClientGeminiContents(continuationContext).length,
+          finishReason: result.finishReason,
+          incomplete: Boolean(result.incomplete),
+          incompleteReason: result.incompleteReason,
+          usage: mergeModelUsage(partialMessage.modelStats.usage, result.usage),
+        };
+        const combinedContent = baseContent + appendedText;
+        setSessions(prev => prev.map(s => s.id === session.id
+          ? { ...s, messages: s.messages.map(m => m.id === messageId
+            ? { ...m, content: combinedContent, modelName: result.model, durationMs: (m.durationMs || 0) + result.durationMs, modelStats }
+            : m), updatedAt: Date.now() }
+          : s));
+
+        // Ghi phần nối thành message riêng để không nhân đôi phần partial đã lưu trước đó.
+        if (masterKey && !session.isLocalOnly && appendedText) {
+          encryptJson({ content: appendedText, timestamp: new Date().toISOString(), modelName: result.model, durationMs: result.durationMs, modelStats }, masterKey)
+            .then(payload => fetch("/api/ai/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ session_id: session.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: result.model }),
+            }))
+            .catch(() => {});
+        }
+      } else if (result.errorDetail) {
+        setSessions(prev => prev.map(s => s.id === session.id
+          ? { ...s, messages: s.messages.map(m => m.id === messageId
+            ? { ...m, modelStats: { ...partialMessage.modelStats!, incomplete: true, incompleteReason: result.errorDetail } }
+            : m) }
+          : s));
+      }
+    } finally {
+      setIsTyping(false);
+      isSendingRef.current = false;
     }
   };
 
@@ -1675,6 +1930,12 @@ export const AiChatStation: React.FC = () => {
                                       <span className="text-black">{msg.modelStats.finishReason}</span>
                                     </>
                                   )}
+                                  <span className="text-win-dark">Trạng thái:</span>
+                                  <span className={msg.modelStats.incomplete ? "text-red-700 font-bold" : "text-green-700 font-bold"}>
+                                    {msg.modelStats.incomplete
+                                      ? `CHƯA HOÀN TẤT${msg.modelStats.incompleteReason ? ` — ${msg.modelStats.incompleteReason}` : ""}`
+                                      : "HOÀN TẤT"}
+                                  </span>
                                   {msg.modelStats.usage ? (
                                     <>
                                       <span className="text-win-dark">Prompt tokens:</span>
@@ -1706,6 +1967,18 @@ export const AiChatStation: React.FC = () => {
                               )}
                             </div>
                           </details>
+                        )}
+
+                        {msg.role === "model" && msg.modelStats?.incomplete && msg.content && (
+                          <button
+                            type="button"
+                            onClick={() => handleContinueIncomplete(msg.id)}
+                            disabled={isTyping}
+                            className="win95-btn mt-2 px-2 py-1 text-[10px] font-bold text-black bg-vapor-yellow disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Gửi phần đã nhận làm ngữ cảnh để Gemini viết tiếp"
+                          >
+                            ↻ TIẾP TỤC NHẬN ĐỦ CÂU TRẢ LỜI
+                          </button>
                         )}
 
                         {/* BYOK retry when the direct browser request fails */}
