@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { buildSiteKnowledgePrompt } from "../../../lib/siteKnowledge";
 import { env } from "cloudflare:workers";
 
 type AttemptLog = {
@@ -299,7 +300,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Chọn System Prompt theo persona
-    const systemPrompt = PERSONA_INSTRUCTIONS[persona] || PERSONA_INSTRUCTIONS.cybercat;
+    const systemPrompt = `${PERSONA_INSTRUCTIONS[persona] || PERSONA_INSTRUCTIONS.cybercat}\n\n${buildSiteKnowledgePrompt(messages)}`;
 
     // Sắp xếp danh sách Model thử nghiệm
     let modelsToTry: string[] = [];

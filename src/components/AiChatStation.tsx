@@ -15,6 +15,7 @@ import {
   isPassphraseStrong,
   exportMasterKeyRaw,
 } from "../lib/aiCrypto";
+import { buildSiteKnowledgePrompt } from "../lib/siteKnowledge";
 
 export interface ChatMessage {
   id: string;
@@ -262,7 +263,7 @@ async function executeClientDirectChat(
   allowFallback: boolean,
   temperature: number
 ) {
-  const systemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat;
+  const systemPrompt = `${PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat}\n\n${buildSiteKnowledgePrompt(messages)}`;
   let modelsToTry: string[] = [];
 
   if (preferredModel && preferredModel !== "auto") {
@@ -361,7 +362,7 @@ async function executeClientDirectChatStream(
   onChunk: (text: string, model: string) => void,
   onModelStart?: (model: string) => void
 ): Promise<{ success: boolean; model: string; durationMs: number; usage?: ModelUsage; finishReason?: string; incomplete?: boolean; incompleteReason?: string; hasQuotaError?: boolean; isLocationBlocked?: boolean; reply?: string; errorDetail?: string }> {
-  const systemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat;
+  const systemPrompt = `${PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat}\n\n${buildSiteKnowledgePrompt(messages)}`;
   let modelsToTry: string[] = [];
   if (preferredModel && preferredModel !== "auto") {
     modelsToTry = allowFallback ? [preferredModel, ...FALLBACK_MODEL_ORDER.filter(m => m !== preferredModel)] : [preferredModel];
