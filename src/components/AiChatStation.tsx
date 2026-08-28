@@ -173,7 +173,6 @@ export const TOPIC_CATEGORIES = [
 
 const STORAGE_KEY = "vapor_ai_chat_sessions_v2"; // legacy, chỉ dùng để migrate 1 lần rồi xóa
 const API_KEY_STORAGE = "user_gemini_api_key";
-const LEGACY_API_KEY_STORAGE = "user_gemini_api_key"; // giữ để tương thích, nhưng sẽ mã hóa khi có masterKey
 const MAX_CONTEXT_MESSAGES = 24;
 
 function formatClientGeminiContents(messages: Array<{ role: string; content: string }>) {
@@ -304,7 +303,7 @@ async function executeClientDirectChat(
     success: false,
     hasQuotaError,
     reply: hasQuotaError
-      ? "Meow~! Hạn mức miễn phí (Quota) của Key AI hiện đang bị quá tải. Bạn hãy thử chọn Model khác (như Gemini 2.0 Flash / 1.5 Flash) hoặc đổi sang API Key cá nhân trong Cài đặt nhé! 🐱💾"
+      ? "Meow~! Hạn mức miễn phí của API Key BYOK hiện đang bị quá tải. Bạn hãy thử model khác hoặc nhập một API Key Gemini khác trong Cài đặt nhé! 🐱💾"
       : "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi phản hồi. Bạn hãy mở chi tiết lỗi bên dưới để xem thêm nhé! 🐱💾",
     errorDetail: `[CLIENT-SIDE DIRECT EXECUTION]\nChi tiết từng model:\n${logDetails}`,
   };
@@ -439,7 +438,7 @@ async function executeClientDirectChatStream(
     reply: locationBlocked
       ? "Meow~! Key cá nhân cũng đang bị Google từ chối theo vị trí mạng (`User location not supported`). Hãy kiểm tra giới hạn khu vực của key hoặc thử mạng khác nhé! 🐱🌐"
       : hasQuotaError
-      ? "Meow~! Hạn mức miễn phí (Quota) của Key AI hiện đang bị quá tải. Bạn hãy thử chọn Model khác (như Gemini 2.0 Flash / 1.5 Flash) hoặc đổi sang API Key cá nhân trong Cài đặt nhé! 🐱💾"
+      ? "Meow~! Hạn mức miễn phí của API Key BYOK hiện đang bị quá tải. Bạn hãy thử model khác hoặc nhập một API Key Gemini khác trong Cài đặt nhé! 🐱💾"
       : "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi phản hồi. Bạn hãy mở chi tiết lỗi bên dưới để xem thêm nhé! 🐱💾",
     errorDetail: `[CLIENT-SIDE STREAM]\nChi tiết từng model:\n${logDetails}`,
   };
@@ -460,13 +459,11 @@ export const AiChatStation: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"chat" | "topics" | "settings">("chat");
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({});
   
-  // Cờ cho biết hệ thống có key AI mặc định hay không.
-  // Server CHỈ trả boolean — key gốc không bao giờ được gửi xuống trình duyệt.
-  const [hasSystemKey, setHasSystemKey] = useState(false);
-  
-  // Custom API Key do người dùng tự đổi khi hệ thống quá tải
+  // Direct-browser mode: user BYOK overrides the deliberately exposed system key.
+  const [systemApiKey, setSystemApiKey] = useState<string>("");
   const [userCustomApiKey, setUserCustomApiKey] = useState<string>("");
   const [inlineKeyInput, setInlineKeyInput] = useState<string>("");
+  const [keyRequiredNotice, setKeyRequiredNotice] = useState(false);
 
   // ===== E2EE Zero-Knowledge States (bắt buộc) =====
   const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
@@ -736,22 +733,25 @@ export const AiChatStation: React.FC = () => {
     let cancelled = false;
     const init = async () => {
       try {
-        // 1. Kiểm tra hệ thống có cấu hình AI mặc định không
-        fetch("/api/ai/config")
-          .then(res => res.json())
-          .then(data => {
-            if (!cancelled && data?.hasKey) setHasSystemKey(true);
-          })
-          .catch(e => console.warn("Không thể lấy cấu hình AI mặc định:", e));
-
-        // 2. Nạp key cá nhân nếu người dùng đã từng lưu (sẽ mã hóa sau khi unlock)
+        // Nạp BYOK đã lưu trên thiết bị trước; key này luôn được ưu tiên hơn key hệ thống.
         const savedCustomKey = localStorage.getItem(API_KEY_STORAGE);
         if (savedCustomKey) {
           setUserCustomApiKey(savedCustomKey);
           setInlineKeyInput(savedCustomKey);
         }
 
-        // 3. Kiểm tra đăng nhập & trạng thái khóa E2EE qua API server-side (cookie httpOnly)
+        // Chủ đích của chế độ hiện tại: cấp key free giới hạn xuống browser để
+        // request Gemini đi thẳng từ IP của người dùng, không qua proxy AI.
+        fetch("/api/ai/config", { credentials: "same-origin" })
+          .then(res => res.json())
+          .then(data => {
+            if (!cancelled && typeof data?.exposedApiKey === "string") {
+              setSystemApiKey(data.exposedApiKey.trim());
+            }
+          })
+          .catch(() => {});
+
+        // Kiểm tra đăng nhập & trạng thái khóa E2EE qua API server-side (cookie httpOnly)
         // Không dùng getSupabaseBrowserClient().auth.getUser() vì nó đọc localStorage, không thấy session cookie httpOnly do SSR đặt.
         // Thay vào đó gọi trực tiếp /api/ai/keys — server sẽ trả 401/403 chính xác.
         if (!cancelled) {
@@ -809,11 +809,17 @@ export const AiChatStation: React.FC = () => {
     if (!trimmed) {
       localStorage.removeItem(API_KEY_STORAGE);
       setUserCustomApiKey("");
-      alert("Đã khôi phục về sử dụng API Key mặc định của hệ thống.");
+      setInlineKeyInput("");
+      setKeyRequiredNotice(!systemApiKey);
+      alert(systemApiKey
+        ? "Đã xóa Key cá nhân khỏi thiết bị. Hệ thống sẽ dùng Key miễn phí trực tiếp trong trình duyệt."
+        : "Đã xóa API Key khỏi thiết bị. Hãy nhập key để tiếp tục trò chuyện.");
     } else {
       localStorage.setItem(API_KEY_STORAGE, trimmed);
       setUserCustomApiKey(trimmed);
-      alert("✓ Đã lưu API Key cá nhân thành công!");
+      setInlineKeyInput(trimmed);
+      setKeyRequiredNotice(false);
+      alert("✓ Đã lưu API Key BYOK trên thiết bị và kích hoạt gọi trực tiếp!");
     }
   };
 
@@ -832,6 +838,16 @@ export const AiChatStation: React.FC = () => {
     }
     const content = (textToSend || inputVal).trim();
     if (!content || isTyping || isSendingRef.current) return;
+
+    // User BYOK wins; otherwise use the deliberately exposed limited system key.
+    const effectiveApiKey = (overrideApiKey || userCustomApiKey || systemApiKey).trim();
+    if (!effectiveApiKey) {
+      setKeyRequiredNotice(true);
+      setInputVal(content);
+      setActiveTab("settings");
+      return;
+    }
+
     isSendingRef.current = true;
     setIsTyping(true);
     setInputVal("");
@@ -939,13 +955,9 @@ export const AiChatStation: React.FC = () => {
         .catch(() => {});
     }
 
-    // CHỈ key cá nhân do người dùng tự cung cấp (BYOK) mới được gọi trực tiếp từ trình duyệt.
-    // Key hệ thống luôn đi qua proxy /api/ai/chat phía server và không bao giờ rời khỏi máy chủ.
-    const effectiveApiKey = (overrideApiKey || userCustomApiKey).trim();
-
     try {
-      // NẾU NGƯỜI DÙNG TỰ DÁN KEY CÁ NHÂN -> GỌI TRỰC TIẾP VỚI STREAMING (gõ dần)
-      if (effectiveApiKey) {
+      // Key đã được kiểm tra ở trên: luôn gọi trực tiếp với streaming.
+      {
         const placeholderId = `model-${Date.now()}`;
         let streamModel = selectedModel === "auto" ? "streaming" : selectedModel;
         const placeholderMsg: ChatMessage = {
@@ -1007,172 +1019,6 @@ export const AiChatStation: React.FC = () => {
         return;
       }
 
-      // ===== STREAMING VIA SERVER PROXY (hiển thị gõ dần) =====
-      // Tạo placeholder trước khi chờ mạng để người dùng luôn thấy trạng thái
-      // đang xử lý, kể cả khi server/upstream phản hồi chậm.
-      const placeholderId = `model-${Date.now()}`;
-      const streamStartTime = Date.now();
-      let streamModel = selectedModel === "auto" ? "streaming" : selectedModel;
-      const placeholderMsg: ChatMessage = {
-        id: placeholderId,
-        role: "model",
-        content: "",
-        timestamp: timeStr,
-        modelName: streamModel,
-      };
-      setSessions(prev => prev.map(s => s.id === session.id ? { ...s, messages: [...updatedMessages, placeholderMsg], updatedAt: Date.now() } : s));
-
-      const streamRes = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
-          persona: session.persona,
-          preferredModel: selectedModel === "auto" ? undefined : selectedModel,
-          allowFallback,
-          temperature,
-          stream: true,
-        }),
-      });
-
-      if (!streamRes.ok || !streamRes.body) {
-        throw new Error(`Stream HTTP ${streamRes.status}`);
-      }
-
-      const reader = streamRes.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
-      let doneReceived = false;
-      let messageFinalized = false;
-      let streamError = "";
-      let streamErrorDetail = "";
-
-      const updatePlaceholder = (text: string, model?: string) => {
-        setSessions(prev => prev.map(s => {
-          if (s.id !== session.id) return s;
-          return {
-            ...s,
-            messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: text, modelName: model || m.modelName } : m),
-          };
-        }));
-      };
-
-      const persistModelMessage = (durationMs: number) => {
-        if (!masterKey || session.isLocalOnly || !fullText) return;
-        encryptJson({ content: fullText, timestamp: timeStr, modelName: streamModel, durationMs }, masterKey)
-          .then(payload => fetch("/api/ai/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ session_id: session.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: streamModel }),
-          }))
-          .catch(() => {});
-      };
-
-      const finalizeAnswer = (durationMs: number, incomplete = false) => {
-        if (messageFinalized) return;
-        messageFinalized = true;
-        setSessions(prev => prev.map(s => {
-          if (s.id !== session.id) return s;
-          return {
-            ...s,
-            messages: s.messages.map(m => m.id === placeholderId
-              ? { ...m, durationMs, modelName: streamModel, ...(incomplete ? { errorDetail: "Phản hồi bị ngắt giữa chừng; nội dung đã nhận vẫn được giữ lại." } : {}) }
-              : m),
-            updatedAt: Date.now(),
-          };
-        }));
-        persistModelMessage(durationMs);
-        if (soundEnabled) playRetroBeep(incomplete ? 659.25 : 880, incomplete ? "sine" : "triangle", 0.09);
-      };
-
-      const finalizeError = (message: string, detail = message, locationBlocked = false) => {
-        if (messageFinalized) return;
-        messageFinalized = true;
-        const friendlyMessage = message.startsWith("Meow~!") || locationBlocked
-          ? message
-          : `Meow~! ${message} Bạn hãy thử lại hoặc đổi model nhé! 🐱💾`;
-        setSessions(prev => prev.map(s => {
-          if (s.id !== session.id) return s;
-          const msgs = s.messages.filter(m => m.id !== placeholderId);
-          const errMsg: ChatMessage = {
-            id: `err-${Date.now()}`,
-            role: "model",
-            content: friendlyMessage,
-            timestamp: timeStr,
-            isError: true,
-            errorDetail: detail,
-            isLocationBlocked: locationBlocked,
-          };
-          return { ...s, messages: [...msgs, errMsg], updatedAt: Date.now() };
-        }));
-        if (soundEnabled) playRetroBeep(locationBlocked ? 440 : 330, "sine", 0.1);
-      };
-
-      const consumeEvent = (data: any): boolean => {
-        if (data.text) {
-          fullText += data.text;
-          if (data.model) streamModel = data.model;
-          updatePlaceholder(fullText, streamModel);
-        }
-        if (data.error) {
-          streamError = data.reply || data.error;
-          streamErrorDetail = data.errorDetail || data.error;
-          doneReceived = true;
-          if (fullText) {
-            finalizeAnswer(data.durationMs || (Date.now() - streamStartTime), true);
-          } else {
-            finalizeError(streamError, streamErrorDetail, Boolean(data.isLocationBlocked));
-          }
-          return true;
-        }
-        if (data.done) {
-          doneReceived = true;
-          if (data.model) streamModel = data.model;
-          if (fullText) {
-            finalizeAnswer(data.durationMs || (Date.now() - streamStartTime), Boolean(data.incomplete));
-          } else {
-            finalizeError("Stream kết thúc mà không có nội dung.");
-          }
-          return true;
-        }
-        return false;
-      };
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-          for (const rawLine of lines) {
-            const line = rawLine.replace(/\r$/, "");
-            if (!line.startsWith("data:")) continue;
-            const jsonStr = line.slice(5).trim();
-            if (!jsonStr) continue;
-            try {
-              if (consumeEvent(JSON.parse(jsonStr))) break;
-            } catch {}
-          }
-          if (doneReceived) break;
-        }
-        buffer += decoder.decode();
-        if (!doneReceived && buffer.trim().startsWith("data:")) {
-          try { consumeEvent(JSON.parse(buffer.trim().slice(5).trim())); } catch {}
-        }
-        if (!messageFinalized) {
-          if (fullText) finalizeAnswer(Date.now() - streamStartTime, !doneReceived);
-          else finalizeError(streamError || "Stream kết thúc bất ngờ, không nhận được nội dung.", streamErrorDetail || "Stream không có dữ liệu.");
-        }
-      } catch (err: any) {
-        if (fullText) {
-          finalizeAnswer(Date.now() - streamStartTime, true);
-        } else {
-          finalizeError("Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy thử lại sau nhé! 🐱💾", `[CLIENT_STREAM_EXCEPTION]: ${err?.message || err}`);
-        }
-      }
-      return;
     } catch (err: any) {
       console.error(err);
       const errMsg: ChatMessage = {
@@ -1457,17 +1303,13 @@ export const AiChatStation: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] font-mono">
-            {userCustomApiKey ? (
+            {userCustomApiKey || systemApiKey ? (
               <span className="bg-vapor-yellow text-black px-2 py-0.5 font-bold border border-black shadow-xs">
-                🔑 KEY CÁ NHÂN
-              </span>
-            ) : hasSystemKey ? (
-              <span className="bg-[#05ffa1] text-black px-2 py-0.5 font-bold border border-black shadow-xs">
-                ⚡ KEY HỆ THỐNG (PROXY)
+                {userCustomApiKey ? "🔑 BYOK TRỰC TIẾP" : "🔑 KEY HỆ THỐNG TRỰC TIẾP"}
               </span>
             ) : (
-              <span className="bg-black text-vapor-green px-2 py-0.5 font-bold">
-                ☁️ CLOUDFLARE EDGE
+              <span className="bg-red-600 text-white px-2 py-0.5 font-bold border border-black shadow-xs">
+                🔐 CẦN NHẬP KEY
               </span>
             )}
           </div>
@@ -1656,8 +1498,8 @@ export const AiChatStation: React.FC = () => {
             <div className="p-2 bg-[#c0c0c0] border border-win-dark text-[10px] font-mono space-y-1">
               <div className="flex justify-between items-center">
                 <span>Nguồn API Key:</span>
-                <span className={`font-bold px-1 py-0.2 ${userCustomApiKey ? 'bg-vapor-yellow text-black' : hasSystemKey ? 'bg-[#05ffa1] text-black' : 'bg-black text-white'}`}>
-                  {userCustomApiKey ? '🔑 Key Cá Nhân' : hasSystemKey ? '⚡ Key Hệ Thống (Proxy)' : '☁️ Server Cloudflare'}
+                <span className={`font-bold px-1 py-0.2 ${userCustomApiKey ? 'bg-vapor-yellow text-black' : 'bg-red-600 text-white'}`}>
+                  {userCustomApiKey ? '🔑 BYOK trực tiếp' : systemApiKey ? '🔑 Key hệ thống trực tiếp' : '🔐 Cần nhập Key'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1698,6 +1540,22 @@ export const AiChatStation: React.FC = () => {
                       // TRẠM AI MÈO VÀNG VAPORWAVE // GOOGLE AI STUDIO ENGINE //
                     </p>
                   </div>
+
+                  {isUnlocked && !userCustomApiKey && !systemApiKey && (
+                    <div className={`p-3 border-2 ${keyRequiredNotice ? "border-red-600 bg-red-100" : "border-vapor-purple bg-[#fffb96]/60"} text-center space-y-2`}>
+                      <p className="font-bold text-xs">🔑 Chế độ BYOK bắt buộc</p>
+                      <p className="text-[11px] leading-relaxed">
+                        Chưa có key khả dụng. Nhập API Key Gemini trong tab <strong>CÀI ĐẶT</strong> để trình duyệt gọi thẳng Google.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("settings"); setKeyRequiredNotice(false); }}
+                        className="win95-btn px-3 py-1.5 bg-vapor-purple text-white font-bold text-xs"
+                      >
+                        🔐 NHẬP API KEY
+                      </button>
+                    </div>
+                  )}
 
                   {/* E2EE Locked Placeholder */}
                   {!isUnlocked ? (
@@ -1751,13 +1609,13 @@ export const AiChatStation: React.FC = () => {
                           ))}
                         </div>
 
-                        {/* Optional Key Switcher if Quota Error occurs */}
+                        {/* BYOK retry when the direct browser request fails */}
                         {msg.isError && (
                           <div className="mt-3 pt-2 border-t border-red-300 font-mono space-y-2">
                             <div className="bg-[#fffb96]/60 border border-win-dark p-2.5 space-y-2 rounded-xs">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-xs text-vapor-purple flex items-center gap-1">
-                                  <span>⚡</span> TÙY CHỌN: ĐỔI SANG API KEY CÁ NHÂN KHI HỆ THỐNG QUÁ TẢI
+                                  <span>🔑</span> NHẬP API KEY GEMINI ĐỂ THỬ LẠI
                                 </span>
                                 <a
                                   href="https://aistudio.google.com/"
@@ -1769,7 +1627,7 @@ export const AiChatStation: React.FC = () => {
                                 </a>
                               </div>
                               <p className="text-[11px] text-black font-body leading-tight">
-                                Nếu khóa AI mặc định của trang web đang bị quá tải hoặc hết hạn mức trong ngày, bạn có thể tự đổi sang API Key cá nhân của bạn để tiếp tục trò chuyện.
+                                Mỗi lượt chat được gọi trực tiếp từ trình duyệt bằng key bạn cung cấp; website không gửi key này qua máy chủ riêng.
                               </p>
                               <div className="flex flex-col sm:flex-row gap-1.5">
                                 <input
@@ -2095,11 +1953,11 @@ export const AiChatStation: React.FC = () => {
                     </label>
                   </div>
 
-                  {/* Optional Custom API Key Config */}
+                  {/* Direct Browser API Key Config */}
                   <div className="p-3 bg-[#fffb96]/30 border-2 border-win-dark space-y-2">
                     <div className="flex justify-between items-center">
                       <label className="font-bold uppercase tracking-wide text-vapor-purple flex items-center gap-1.5">
-                        <span>🔑</span> Tự Đổi API Key Khi Quá Tải:
+                        <span>🔑</span> API KEY GEMINI (GỌI TRỰC TIẾP):
                       </label>
                       <a
                         href="https://aistudio.google.com/"
@@ -2111,7 +1969,7 @@ export const AiChatStation: React.FC = () => {
                       </a>
                     </div>
                     <p className="text-[11px] text-black leading-relaxed font-body">
-                      Hệ thống đã tự động tích hợp sẵn API Key mặc định của trang web. Bạn chỉ cần nhập API Key cá nhân vào đây khi khóa mặc định bị hết hạn mức Quota trong ngày hoặc khi bạn muốn dùng hạn mức riêng.
+                      Trạm AI cấp Key hệ thống miễn phí giới hạn xuống trình duyệt để request đi thẳng tới Google, không qua proxy AI. Người dùng có thể xem key này trong DevTools. Bạn vẫn có thể nhập key riêng để dùng hạn mức riêng; key riêng chỉ lưu trên thiết bị.
                     </p>
                     <div className="flex gap-2">
                       <input
@@ -2121,31 +1979,31 @@ export const AiChatStation: React.FC = () => {
                         onChange={(e) => setUserCustomApiKey(e.target.value)}
                         className="w-full p-2 border border-win-dark bg-white font-mono text-xs"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleSaveCustomApiKey(userCustomApiKey)}
+                        <button
+                          type="button"
+                          onClick={() => handleSaveCustomApiKey(userCustomApiKey)}
                         className="win95-btn py-1.5 px-4 font-bold text-xs bg-[#05ffa1] text-black border border-black shrink-0"
                       >
-                        💾 Lưu
+                        💾 Lưu & Kích hoạt
                       </button>
                       {userCustomApiKey && (
                         <button
                           type="button"
                           onClick={() => handleSaveCustomApiKey("")}
                           className="win95-btn py-1.5 px-3 font-bold text-xs bg-red-100 text-red-700 shrink-0"
-                          title="Khôi phục về dùng Key mặc định của hệ thống"
+                          title="Xóa Key khỏi thiết bị"
                         >
-                          🔄 Khôi Phục Mặc Định
+                          🗑️ Xóa Key
                         </button>
                       )}
                     </div>
                     <div className="text-[10px] font-mono">
                       {userCustomApiKey ? (
-                        <span className="text-vapor-purple font-bold">● Đang dùng API Key Cá Nhân (Đã ghi đè thành công)</span>
-                      ) : hasSystemKey ? (
-                        <span className="text-green-700 font-bold">● Đang dùng Key hệ thống qua proxy bảo mật phía máy chủ</span>
+                        <span className="text-vapor-purple font-bold">● BYOK đã kích hoạt — request đi trực tiếp từ trình duyệt</span>
+                      ) : systemApiKey ? (
+                        <span className="text-green-700 font-bold">● Key hệ thống đã cấp — request đi trực tiếp từ trình duyệt</span>
                       ) : (
-                        <span className="text-win-dark font-bold">● Đang kết nối máy chủ Cloudflare</span>
+                        <span className="text-red-700 font-bold">● Chưa có key — bắt buộc nhập key trước khi chat</span>
                       )}
                     </div>
                   </div>

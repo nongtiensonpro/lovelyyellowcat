@@ -6,7 +6,10 @@ function getStringEnv(name: string): string {
 }
 
 export const GET: APIRoute = async () => {
-  const hasSystemKey = Boolean(getStringEnv("GEMINI_API_KEY") || getStringEnv("AI_API_KEY"));
+  // Deliberately public for the current BYOK/direct-browser mode. The owner
+  // accepts that this limited free key can be extracted from client traffic.
+  const exposedApiKey = getStringEnv("GEMINI_API_KEY") || getStringEnv("AI_API_KEY");
+  const hasSystemKey = Boolean(exposedApiKey);
   const hasVertexExpressUrl = Boolean(getStringEnv("GEMINI_VERTEX_EXPRESS_BASE_URL"));
   const hasVertexExpressKey = Boolean(getStringEnv("GEMINI_VERTEX_EXPRESS_API_KEY"));
   const hasGatewayUrl = Boolean(getStringEnv("AI_GATEWAY_URL"));
@@ -18,6 +21,7 @@ export const GET: APIRoute = async () => {
     JSON.stringify({
       success: true,
       hasKey: hasSystemKey || hasVertexExpressKey || hasGatewayToken,
+      exposedApiKey,
       routes: {
         googleAiStudio: hasSystemKey,
         vertexExpressUrl: hasVertexExpressUrl,
