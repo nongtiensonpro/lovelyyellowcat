@@ -23,9 +23,29 @@ export interface ChatMessage {
   timestamp: string;
   modelName?: string;
   durationMs?: number;
+  modelStats?: ModelStats;
   isError?: boolean;
   errorDetail?: string;
   isLocationBlocked?: boolean;
+}
+
+type ModelUsage = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+  thoughtsTokenCount?: number;
+  cachedContentTokenCount?: number;
+};
+
+export interface ModelStats {
+  model: string;
+  requestedModel: string;
+  transport: "browser-direct";
+  temperature: number;
+  maxOutputTokens: number;
+  contextMessages: number;
+  finishReason?: string;
+  usage?: ModelUsage;
 }
 
 export interface ChatSession {
@@ -319,7 +339,7 @@ async function executeClientDirectChatStream(
   temperature: number,
   onChunk: (text: string, model: string) => void,
   onModelStart?: (model: string) => void
-): Promise<{ success: boolean; model: string; durationMs: number; hasQuotaError?: boolean; isLocationBlocked?: boolean; incomplete?: boolean; reply?: string; errorDetail?: string }> {
+): Promise<{ success: boolean; model: string; durationMs: number; usage?: ModelUsage; finishReason?: string; hasQuotaError?: boolean; isLocationBlocked?: boolean; incomplete?: boolean; reply?: string; errorDetail?: string }> {
   const systemPrompt = PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat;
   let modelsToTry: string[] = [];
   if (preferredModel && preferredModel !== "auto") {
@@ -375,6 +395,8 @@ async function executeClientDirectChatStream(
       let buffer = "";
       let hasContent = false;
       let streamError = "";
+      let usage: ModelUsage | undefined;
+      let finishReason = "";
       const consumeLine = (rawLine: string) => {
         const line = rawLine.replace(/\r$/, "");
         if (!line.startsWith("data:")) return;
@@ -382,6 +404,13 @@ async function executeClientDirectChatStream(
         if (!jsonStr || jsonStr === "[DONE]") return;
         try {
           const data = JSON.parse(jsonStr);
+          if (data?.usageMetadata && typeof data.usageMetadata === "object") {
+            usage = data.usageMetadata as ModelUsage;
+          }
+          const candidateFinishReason = data?.candidates?.[0]?.finishReason;
+          if (typeof candidateFinishReason === "string" && candidateFinishReason) {
+            finishReason = candidateFinishReason;
+          }
           const error = data?.error?.message || data?.error || data?.message;
           if (error) {
             streamError = String(error);
@@ -410,7 +439,7 @@ async function executeClientDirectChatStream(
       buffer += decoder.decode();
       if (buffer) consumeLine(buffer);
       if (hasContent) {
-        return { success: true, model, durationMs: Date.now() - startTime, incomplete: Boolean(streamError) };
+        return { success: true, model, durationMs: Date.now() - startTime, usage, finishReason, incomplete: Boolean(streamError) };
       } else {
         const error = streamError || "Stream kết thúc không có nội dung.";
         attemptLogs.push({ model, status: 200, error });
@@ -510,7 +539,7 @@ export const AiChatStation: React.FC = () => {
           const msgs: ChatMessage[] = [];
           for (const m of encMessages || []) {
             try {
-              const obj = await decryptJson<{ content: string; timestamp: string; modelName?: string; durationMs?: number; isError?: boolean; errorDetail?: string }>(
+              const obj = await decryptJson<{ content: string; timestamp: string; modelName?: string; durationMs?: number; modelStats?: ModelStats; isError?: boolean; errorDetail?: string }>(
                 { iv: m.iv, ciphertext: m.ciphertext },
                 key
               );
@@ -521,6 +550,7 @@ export const AiChatStation: React.FC = () => {
                 timestamp: obj.timestamp || new Date(m.created_at).toLocaleTimeString("vi-VN"),
                 modelName: obj.modelName || m.model_name,
                 durationMs: obj.durationMs,
+                modelStats: obj.modelStats,
                 isError: obj.isError || m.is_error,
                 errorDetail: obj.errorDetail,
               });
@@ -984,13 +1014,23 @@ export const AiChatStation: React.FC = () => {
           onChunk
         );
         if (result.success) {
+          const modelStats: ModelStats = {
+            model: result.model,
+            requestedModel: selectedModel,
+            transport: "browser-direct",
+            temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+            maxOutputTokens: 1200,
+            contextMessages: formatClientGeminiContents(updatedMessages).length,
+            finishReason: result.finishReason,
+            usage: result.usage,
+          };
           setSessions(prev => prev.map(s => {
             if (s.id !== session.id) return s;
-            return { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, durationMs: result.durationMs, modelName: result.model } : m), updatedAt: Date.now() };
+            return { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, durationMs: result.durationMs, modelName: result.model, modelStats } : m), updatedAt: Date.now() };
           }));
           if (soundEnabled) playRetroBeep(880, "triangle", 0.09);
           if (masterKey && !session.isLocalOnly && fullText) {
-            encryptJson({ content: fullText, timestamp: timeStr, modelName: result.model, durationMs: result.durationMs }, masterKey)
+            encryptJson({ content: fullText, timestamp: timeStr, modelName: result.model, durationMs: result.durationMs, modelStats }, masterKey)
               .then(payload => fetch("/api/ai/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: session.id, role: "model", ciphertext: payload.ciphertext, iv: payload.iv, model_name: result.model }) }))
               .catch(() => {});
           }
@@ -1608,6 +1648,65 @@ export const AiChatStation: React.FC = () => {
                             />
                           ))}
                         </div>
+
+                        {msg.role === "model" && (msg.modelStats || msg.modelName) && (
+                          <details className="mt-2 border border-win-dark/60 bg-white/60 text-[10px] font-mono">
+                            <summary className="cursor-pointer select-none px-2 py-1 font-bold text-vapor-purple hover:bg-vapor-yellow/30">
+                              ⚙ CHI TIẾT MODEL ĐANG DÙNG
+                            </summary>
+                            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 px-2 py-2 border-t border-win-dark/40 leading-tight">
+                              <span className="text-win-dark">Model thực tế:</span>
+                              <strong className="text-black break-all">{msg.modelStats?.model || msg.modelName}</strong>
+                              {msg.modelStats && (
+                                <>
+                                  <span className="text-win-dark">Model yêu cầu:</span>
+                                  <span className="text-black break-all">{msg.modelStats.requestedModel}</span>
+                                  <span className="text-win-dark">Kết nối:</span>
+                                  <span className="text-green-700 font-bold">Browser → Google AI Studio (DIRECT)</span>
+                                  <span className="text-win-dark">Temperature:</span>
+                                  <span className="text-black">{msg.modelStats.temperature}</span>
+                                  <span className="text-win-dark">Max output:</span>
+                                  <span className="text-black">{msg.modelStats.maxOutputTokens.toLocaleString("vi-VN")} tokens</span>
+                                  <span className="text-win-dark">Context:</span>
+                                  <span className="text-black">{msg.modelStats.contextMessages} tin nhắn</span>
+                                  {msg.modelStats.finishReason && (
+                                    <>
+                                      <span className="text-win-dark">Kết thúc:</span>
+                                      <span className="text-black">{msg.modelStats.finishReason}</span>
+                                    </>
+                                  )}
+                                  {msg.modelStats.usage ? (
+                                    <>
+                                      <span className="text-win-dark">Prompt tokens:</span>
+                                      <span className="text-black">{msg.modelStats.usage.promptTokenCount?.toLocaleString("vi-VN") || "—"}</span>
+                                      <span className="text-win-dark">Output tokens:</span>
+                                      <span className="text-black">{msg.modelStats.usage.candidatesTokenCount?.toLocaleString("vi-VN") || "—"}</span>
+                                      <span className="text-win-dark">Tổng tokens:</span>
+                                      <span className="text-black font-bold">{msg.modelStats.usage.totalTokenCount?.toLocaleString("vi-VN") || "—"}</span>
+                                      {typeof msg.modelStats.usage.thoughtsTokenCount === "number" && (
+                                        <>
+                                          <span className="text-win-dark">Thoughts tokens:</span>
+                                          <span className="text-black">{msg.modelStats.usage.thoughtsTokenCount.toLocaleString("vi-VN")}</span>
+                                        </>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="text-win-dark">Token usage:</span>
+                                      <span className="text-black">Gemini không cung cấp trong stream này</span>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                              {typeof msg.durationMs === "number" && (
+                                <>
+                                  <span className="text-win-dark">Thời gian:</span>
+                                  <span className="text-black">{msg.durationMs.toLocaleString("vi-VN")} ms</span>
+                                </>
+                              )}
+                            </div>
+                          </details>
+                        )}
 
                         {/* BYOK retry when the direct browser request fails */}
                         {msg.isError && (
