@@ -520,14 +520,22 @@ if (dbArticle && relatedData && relatedData.length > 0) {
 </BaseLayout>
 
 <script>
+  // Phase 5: pure helpers (unit-tested) — progress math + wordpad state
+  import { readingProgressPct } from "../../components/article/readingProgress";
+  import {
+    textDecorationFor, zoomStep, zoomStyleFor, formatStatusFor, wordCount,
+    INITIAL_WORDPAD, type WordPadState, type WpAlign,
+  } from "../../components/article/wordpadState";
+
   // ─── Reading Progress Bar ───
   window.addEventListener("scroll", () => {
-    const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-    if (totalHeight > 0) {
-      const progress = (window.scrollY / totalHeight) * 100;
-      const bar = document.getElementById("reading-progress-bar");
-      if (bar) bar.style.width = `${progress}%`;
-    }
+    const progress = readingProgressPct(
+      window.scrollY,
+      window.innerHeight,
+      document.documentElement.scrollHeight
+    );
+    const bar = document.getElementById("reading-progress-bar");
+    if (bar) bar.style.width = `${progress}%`;
   });
 
   // ─── Share Article: Web Share API + Copy Link ───
@@ -582,39 +590,21 @@ if (dbArticle && relatedData && relatedData.length > 0) {
 
     if (!doc || !body) return;
 
-    // ─ State ─
-    let isNightMode = false;
-    let isBold = false;
-    let isItalic = false;
-    let isUnderline = false;
-    let isStrike = false;
-    let currentAlign = "left";
-    let zoomLevel = 100;
+    // ─ State — Phase 5: một object duy nhất, logic qua wordpadState module ─
+    let wp: WordPadState = { ...INITIAL_WORDPAD };
 
     // ─ Đếm chữ ─
     function updateWordCount() {
       if (!wordCountEl) return;
-      const text = body.textContent || "";
-      const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-      wordCountEl.textContent = `${words.toLocaleString("vi-VN")} từ`;
+      const n = wordCount(body.textContent || "");
+      wordCountEl.textContent = `${n.toLocaleString("vi-VN")} từ`;
     }
     updateWordCount();
 
     // ─ Status Bar cập nhật ─
     function updateFormatStatus() {
       if (!formatInfo) return;
-      const parts = [];
-      if (isBold) parts.push("Đậm");
-      if (isItalic) parts.push("Nghiêng");
-      if (isUnderline) parts.push("Gạch chân");
-      if (isStrike) parts.push("Gạch ngang");
-      if (isNightMode) parts.push("🌙 Đêm");
-
-      const alignMap: Record<string, string> = { left: "Trái", center: "Giữa", right: "Phải", justify: "Đều" };
-      if (currentAlign !== "left") parts.push(`Căn: ${alignMap[currentAlign] || currentAlign}`);
-      if (zoomLevel !== 100) parts.push(`${zoomLevel}%`);
-
-      formatInfo.textContent = parts.length > 0 ? parts.join(" · ") : "Định dạng: Mặc định";
+      formatInfo.textContent = formatStatusFor(wp);
     }
 
     function flashStatus(msg: string) {
@@ -661,10 +651,10 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     const boldBtn = document.getElementById("wp-btn-bold");
     if (boldBtn) {
       boldBtn.addEventListener("click", () => {
-        isBold = !isBold;
-        body.style.fontWeight = isBold ? "bold" : "";
-        toggleBtnActive("wp-btn-bold", isBold);
-        flashStatus(isBold ? "In đậm: BẬT" : "In đậm: TẮT");
+        wp.bold = !wp.bold;
+        body.style.fontWeight = wp.bold ? "bold" : "";
+        toggleBtnActive("wp-btn-bold", wp.bold);
+        flashStatus(wp.bold ? "In đậm: BẬT" : "In đậm: TẮT");
         updateFormatStatus();
       });
     }
@@ -673,34 +663,35 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     const italicBtn = document.getElementById("wp-btn-italic");
     if (italicBtn) {
       italicBtn.addEventListener("click", () => {
-        isItalic = !isItalic;
-        body.style.fontStyle = isItalic ? "italic" : "";
-        toggleBtnActive("wp-btn-italic", isItalic);
-        flashStatus(isItalic ? "In nghiêng: BẬT" : "In nghiêng: TẮT");
+        wp.italic = !wp.italic;
+        body.style.fontStyle = wp.italic ? "italic" : "";
+        toggleBtnActive("wp-btn-italic", wp.italic);
+        flashStatus(wp.italic ? "In nghiêng: BẬT" : "In nghiêng: TẮT");
         updateFormatStatus();
       });
     }
 
-    // ═══ UNDERLINE ═══
+    // ═══ UNDERLINE + STRIKETHROUGH (cùng textDecorationFor) ═══
     const underlineBtn = document.getElementById("wp-btn-underline");
+    const strikeBtn = document.getElementById("wp-btn-strike");
+    const applyTextDecoration = () => {
+      body.style.textDecoration = textDecorationFor(wp);
+    };
     if (underlineBtn) {
       underlineBtn.addEventListener("click", () => {
-        isUnderline = !isUnderline;
-        body.style.textDecoration = isUnderline && isStrike ? "underline line-through" : isUnderline ? "underline" : isStrike ? "line-through" : "";
-        toggleBtnActive("wp-btn-underline", isUnderline);
-        flashStatus(isUnderline ? "Gạch chân: BẬT" : "Gạch chân: TẮT");
+        wp.underline = !wp.underline;
+        applyTextDecoration();
+        toggleBtnActive("wp-btn-underline", wp.underline);
+        flashStatus(wp.underline ? "Gạch chân: BẬT" : "Gạch chân: TẮT");
         updateFormatStatus();
       });
     }
-
-    // ═══ STRIKETHROUGH ═══
-    const strikeBtn = document.getElementById("wp-btn-strike");
     if (strikeBtn) {
       strikeBtn.addEventListener("click", () => {
-        isStrike = !isStrike;
-        body.style.textDecoration = isUnderline && isStrike ? "underline line-through" : isUnderline ? "underline" : isStrike ? "line-through" : "";
-        toggleBtnActive("wp-btn-strike", isStrike);
-        flashStatus(isStrike ? "Gạch ngang: BẬT" : "Gạch ngang: TẮT");
+        wp.strike = !wp.strike;
+        applyTextDecoration();
+        toggleBtnActive("wp-btn-strike", wp.strike);
+        flashStatus(wp.strike ? "Gạch ngang: BẬT" : "Gạch ngang: TẮT");
         updateFormatStatus();
       });
     }
@@ -709,8 +700,8 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     const alignBtns = document.querySelectorAll(".wp-align-btn");
     alignBtns.forEach(btn => {
       btn.addEventListener("click", () => {
-        const align = btn.getAttribute("data-align") || "left";
-        currentAlign = align;
+        const align = (btn.getAttribute("data-align") || "left") as WpAlign;
+        wp.align = align;
         body.style.textAlign = align;
 
         // Toggle visual active
@@ -737,8 +728,8 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     const nightBtn = document.getElementById("wp-btn-nightmode");
     if (nightBtn) {
       nightBtn.addEventListener("click", () => {
-        isNightMode = !isNightMode;
-        if (isNightMode) {
+        wp.nightMode = !wp.nightMode;
+        if (wp.nightMode) {
           doc.style.backgroundColor = "#1a1a2e";
           doc.style.color = "#e0e0e0";
           doc.style.borderColor = "#333";
@@ -772,7 +763,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
           nightBtn.textContent = "🌙";
           toggleBtnActive("wp-btn-nightmode", false);
         }
-        flashStatus(isNightMode ? "Chế độ ban đêm: BẬT" : "Chế độ ban ngày: BẬT");
+        flashStatus(wp.nightMode ? "Chế độ ban đêm: BẬT" : "Chế độ ban ngày: BẬT");
         updateFormatStatus();
       });
     }
@@ -782,28 +773,25 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     const zoomOutBtn = document.getElementById("wp-btn-zoom-out");
 
     function applyZoom() {
-      doc.style.transform = `scale(${zoomLevel / 100})`;
-      doc.style.transformOrigin = "top left";
-      doc.style.width = `${10000 / zoomLevel}%`;
-      if (zoomLabel) zoomLabel.textContent = `${zoomLevel}%`;
-      flashStatus(`Thu phóng: ${zoomLevel}%`);
+      const style = zoomStyleFor(wp.zoom);
+      doc.style.transform = style.transform;
+      doc.style.transformOrigin = style.transformOrigin;
+      doc.style.width = style.width;
+      if (zoomLabel) zoomLabel.textContent = `${wp.zoom}%`;
+      flashStatus(`Thu phóng: ${wp.zoom}%`);
       updateFormatStatus();
     }
 
     if (zoomInBtn) {
       zoomInBtn.addEventListener("click", () => {
-        if (zoomLevel < 150) {
-          zoomLevel += 10;
-          applyZoom();
-        }
+        wp.zoom = zoomStep(wp.zoom, "in");
+        applyZoom();
       });
     }
     if (zoomOutBtn) {
       zoomOutBtn.addEventListener("click", () => {
-        if (zoomLevel > 70) {
-          zoomLevel -= 10;
-          applyZoom();
-        }
+        wp.zoom = zoomStep(wp.zoom, "out");
+        applyZoom();
       });
     }
 
@@ -811,9 +799,8 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     const resetBtn = document.getElementById("wp-btn-reset");
     if (resetBtn) {
       resetBtn.addEventListener("click", () => {
-        // Reset state
-        isBold = false; isItalic = false; isUnderline = false; isStrike = false;
-        isNightMode = false; currentAlign = "left"; zoomLevel = 100;
+        // Reset state — Phase 5: một phép gán
+        wp = { ...INITIAL_WORDPAD };
 
         // Reset body styles
         body.style.fontFamily = "";

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
+// Phase 5: pure particle physics (unit-tested) — spawn + step
+import { spawnBurst, stepParticles, type Particle } from "./article/particleBurst";
 
 const supabaseClient = getSupabaseBrowserClient();
 
@@ -8,17 +10,6 @@ const EMOJIS = ["💾", "📼", "🌊", "🎮", "🌸"];
 interface Reaction {
   emoji: string;
   profile_id: string;
-}
-
-interface Particle {
-  id: number;
-  emoji: string;
-  x: number;
-  y: number;
-  angle: number;
-  velocity: number;
-  opacity: number;
-  scale: number;
 }
 
 interface ReactionBarProps {
@@ -82,21 +73,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
     if (particles.length === 0) return;
 
     const updateParticles = () => {
-      setParticles((prev) =>
-        prev
-          .map((p) => {
-            const rad = (p.angle * Math.PI) / 180;
-            return {
-              ...p,
-              x: p.x + Math.cos(rad) * p.velocity,
-              y: p.y + Math.sin(rad) * p.velocity + 0.3, // Trọng lực nhẹ kéo rơi xuống
-              velocity: p.velocity * 0.96, // Ma sát không khí
-              opacity: p.opacity - 0.02,
-              scale: p.scale * 0.98
-            };
-          })
-          .filter((p) => p.opacity > 0)
-      );
+      setParticles((prev) => stepParticles(prev));
 
       animationFrameRef.current = requestAnimationFrame(updateParticles);
     };
@@ -119,19 +96,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
     const originX = buttonRect.left + buttonRect.width / 2 + window.scrollX;
     const originY = buttonRect.top + buttonRect.height / 2 + window.scrollY;
 
-    const newParticles: Particle[] = Array.from({ length: 8 }).map(() => {
-      particleIdRef.current += 1;
-      return {
-        id: particleIdRef.current,
-        emoji,
-        x: originX,
-        y: originY,
-        angle: Math.random() * 360,
-        velocity: 2 + Math.random() * 4,
-        opacity: 1,
-        scale: 0.8 + Math.random() * 0.7
-      };
-    });
+    const newParticles = spawnBurst(emoji, originX, originY, 8);
 
     setParticles((prev) => [...prev, ...newParticles]);
   };

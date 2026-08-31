@@ -433,6 +433,39 @@ Mỗi phase là PR nhỏ có baseline/screenshot; không đổi API/database cù
 
 **Chỉ số sau Phase 3:** 69/69 unit tests (9 file) · build/tokens/policy rc=0 · bundle JS 630KB (+18KB cho WM runtime) · policy ratchet 142 giữ nguyên (0 hex mới)
 
+
+### ✅ Phase 4 — HOÀN THÀNH (2026-08-31)
+
+**Pure modules (tách từ GalleryLightbox 1.111 LOC + GalleryGrid 563 LOC):**
+- [x] `gallery/galleryTransform.ts` — zoom/pan/rotate/flip math, clamp [0.8,4.0], zoom≤1 auto reset pan, transformToCss — 13 tests
+- [x] `gallery/galleryNavigation.ts` — wrap-around index, indexOfId, autoplayProgress, neighborUrls (preload không trùng) — 11 tests
+- [x] `gallery/galleryFilters.ts` — 7 filter CRT/VHS/GameBoy/Cyber/Dither/Marble dạng data + CSS chain — 5 tests
+- [x] `gallery/galleryQuery.ts` — collectTags/matchesTag/matchesQuery/sortItems (newest/reactions/**random deterministic djb2** thay Math.sin cũ)/paginate/shouldRefetch debounce — 16 tests
+- [x] `gallery/galleryShare.ts` — copyText fallback execCommand, nativeShare, downloadImage blob
+
+**Refactor component (giữ nguyên behavior + API):**
+- [x] GalleryLightbox: 8 state zoom/pan/rotate/flip → 1 `TransformState` reducer; wheel/double-click/drag-pan qua pure handlers; getFilterStyle switch-case → `filterCss()`; nav → nextIndex/prevIndex; autoplay → autoplayProgress; preload → neighborUrls; dead refs = 0; VISUAL_FILTERS re-export từ module
+- [x] GalleryGrid: inline filter/sort → `processGalleryItems`; realtime subscriptions **debounce 250ms** (chống burst khi nhiều events)
+- [x] LazyImage: **srcset Cloudinary** (400/800/1200w) + `sizes` + `decoding=async` — giữ nguyên placeholder/fallback behavior
+
+**Verify:** 107→123 gallery tests tổng (5 file mới, 45 tests) · test/tokens/stylelint/build/policy rc=0 · bundle 631KB (+1KB) · policy ratchet 142 giữ nguyên
+
+
+### ✅ Phase 5 — HOÀN THÀNH (2026-08-31)
+
+**Pure modules (tách từ articles/[slug].astro 892 LOC + RealtimeComments 335 LOC + ReactionBar 255 LOC):**
+- [x] `article/wordpadState.ts` — WordPad state machine: textDecoration tổng hợp, zoomStep clamp [70,150], zoomStyleFor (công thức 10000/zoom cũ), formatStatusFor, wordCount — 11 tests
+- [x] `article/commentTree.ts` — cây bình luận: rootComments/repliesFor/nextReplyDepth (**MAX_DEPTH=3 là rule nghiệp vụ trung tâm**)/depthClassFor — 10 tests
+- [x] `article/readingProgress.ts` — % tiến độ đọc, clamp, chia-0 safe — 4 tests
+- [x] `article/particleBurst.ts` — physics hạt nổ reaction: spawnBurst (rng inject được), stepParticles (gravity/friction/fade như bản cũ) — 8 tests
+
+**Refactor (giữ nguyên behavior + API):**
+- [x] RealtimeComments: filter/getRepliesFor/depthClass/depth-check inline → commentTree helpers (phát hiện + sửa crash tiềm ẩn: rootComments bị shadow giữa import-hàm và biến-mảng)
+- [x] ReactionBar: particle physics → spawnBurst/stepParticles (bỏ ~20 dòng inline, bỏ Particle interface trùng)
+- [x] articles/[slug].astro script: 7 biến state rời rạc → 1 `WordPadState`; textDecoration ternary lặp 2 chỗ → 1 hàm; zoom clamp inline → zoomStep; reading progress inline → module. Script giờ bundle được (import ESM thay vì copy-paste logic)
+
+**Số liệu:** 151/151 tests (19 files, +33 tests Phase 5) · 5 gates rc=0 · bundle 632KB (+1KB) · policy ratchet 142 giữ nguyên
+
 ### ⏭ Bước tiếp theo
 - Phase 2: AppShell hợp nhất, preference store, FXBudget, font self-host, hạ client:load 14→≤4
 - Phase 3: WM/95 thật (drag/z-order/taskbar) + command palette Ctrl+K

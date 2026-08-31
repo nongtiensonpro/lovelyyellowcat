@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+// Phase 4: image policy (ADR-0003) — srcset Cloudinary sinh tự động, decoding async
+import { buildCloudinarySrcSet } from "../ui/kernel/RetroImage";
 
 interface LazyImageProps {
   src: string;
@@ -7,6 +9,8 @@ interface LazyImageProps {
   width?: string | number;
   height?: string | number;
   style?: React.CSSProperties;
+  /** Cloudinary width descriptors (mặc định 400/800/1200). */
+  widths?: number[];
 }
 
 export const LazyImage: React.FC<LazyImageProps> = ({
@@ -15,8 +19,10 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   className = "",
   width,
   height,
-  style
+  style,
+  widths = [400, 800, 1200],
 }) => {
+  const srcSet = buildCloudinarySrcSet(src, widths);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -72,6 +78,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
       <img
         ref={imgRef}
         src={src}
+        srcSet={srcSet || undefined}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
+        decoding="async"
         alt={alt}
         loading="lazy"
         onLoad={handleImageLoad}

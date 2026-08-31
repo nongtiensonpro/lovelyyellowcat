@@ -44,6 +44,8 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Phase 4: debounce realtime refetch (≥250ms giữa các lần) — tránh burst khi nhiều event
+  const lastRefetchRef = useRef<number | null>(null);
 
   // 1. Tải tất cả reactions
   const fetchAllReactions = async () => {
@@ -121,7 +123,10 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
               filter: "status=eq.approved"
             },
         () => {
-          fetchSubmissions();
+          if (shouldRefetch(lastRefetchRef.current, Date.now())) {
+            lastRefetchRef.current = Date.now();
+            fetchSubmissions();
+          }
         }
       )
       .on(
@@ -132,7 +137,10 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
           table: "reactions"
         },
         () => {
-          fetchAllReactions();
+          if (shouldRefetch(lastRefetchRef.current, Date.now())) {
+            lastRefetchRef.current = Date.now();
+            fetchAllReactions();
+          }
         }
       )
       .subscribe();
@@ -179,32 +187,14 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     }
   });
 
-  // 5. Áp dụng Lọc Tag & Tìm Kiếm
-  let processed = submissions.filter((sub) => {
-    const matchTag = selectedTag === "Tất Cả" || sub.tags?.some((t) => t.trim() === selectedTag);
-    const matchQuery = !searchQuery.trim() || 
-      sub.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      sub.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sub.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchTag && matchQuery;
+  // 5+6. Phase 4: filter/sort qua pure pipeline (unit-tested) — deterministic random theo ngày
+  const processed = processGalleryItems(submissions, {
+    selectedTag,
+    searchQuery,
+    sortBy: sortBy as SortMode,
+    reactionCounts: reactionsMap,
+    seed: new Date().toDateString(),
   });
-
-  // 6. Sắp Xếp
-  if (sortBy === "newest") {
-    processed = [...processed].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-  } else if (sortBy === "reactions") {
-    processed = [...processed].sort(
-      (a, b) => (reactionsMap[b.id] || 0) - (reactionsMap[a.id] || 0)
-    );
-  } else if (sortBy === "random") {
-    processed = [...processed].sort((a, b) => {
-      const hashA = a.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const hashB = b.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      return Math.sin(hashA) - Math.sin(hashB);
-    });
-  }
 
   // 7. Infinite Scroll
   useEffect(() => {

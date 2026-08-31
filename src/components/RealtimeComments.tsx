@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
+// Phase 5: pure comment tree helpers (unit-tested) — depth rule + thụt đầu dòng
+import { rootComments, repliesFor, nextReplyDepth, depthClassFor } from "./article/commentTree";
 
 const supabaseClient = getSupabaseBrowserClient();
 
@@ -150,8 +152,8 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
     }
     if (!replyInputText.trim() || isSending) return;
 
-    const nextDepth = (parentComment.depth ?? 0) + 1;
-    if (nextDepth > 3) {
+    const nextDepth = nextReplyDepth(parentComment);
+    if (nextDepth === null) {
       setErrorMessage("Hệ thống chỉ hỗ trợ lồng bình luận tối đa 3 cấp.");
       return;
     }
@@ -164,25 +166,14 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
     }
   };
 
-  // Phân tách cây bình luận cấp 0 làm gốc
-  const rootComments = comments.filter((c) => !c.parent_id);
-
-  // Lấy danh sách con của bình luận đệ quy
-  const getRepliesFor = (parentId: string) => {
-    return comments.filter((c) => c.parent_id === parentId);
-  };
+  // Phase 5: cây bình luận qua pure helpers
+  const roots = rootComments(comments);
+  const getRepliesFor = (parentId: string) => repliesFor(comments, parentId);
 
   // Đệ quy render các bình luận lồng nhau
   const renderCommentNode = (comment: Comment) => {
     const replies = getRepliesFor(comment.id);
-    let depthClass = "";
-    if (comment.depth === 1) {
-      depthClass = "ml-4 sm:ml-6 border-l border-dashed border-win-dark/50 pl-2 sm:pl-3";
-    } else if (comment.depth === 2) {
-      depthClass = "ml-8 sm:ml-12 border-l border-dashed border-win-dark/50 pl-2 sm:pl-3";
-    } else if (comment.depth === 3) {
-      depthClass = "ml-12 sm:ml-16 border-l border-dashed border-win-dark/50 pl-2 sm:pl-3";
-    }
+    const depthClass = depthClassFor(comment.depth);
 
     const profile = comment.profiles || { id: undefined, full_name: "Ẩn danh", avatar_url: "/images/default-avatar.png" };
 
@@ -301,13 +292,13 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
 
       {/* Danh sách bình luận */}
       <div className="p-3 bg-web-gray-light space-y-3 h-80 overflow-y-auto border-b-2 border-win-dark shadow-inner">
-        {rootComments.length === 0 ? (
+        {roots.length === 0 ? (
           <div className="text-center text-win-dark py-12">
             <span className="text-2xl block mb-2">💾</span>
             <p>CHƯA CÓ DỮ LIỆU TRÒ CHUYỆN.</p>
           </div>
         ) : (
-          rootComments.map((comment) => renderCommentNode(comment))
+          roots.map((comment) => renderCommentNode(comment))
         )}
       </div>
 

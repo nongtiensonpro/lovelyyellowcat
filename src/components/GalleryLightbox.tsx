@@ -3,6 +3,15 @@ import ReactDOM from "react-dom";
 import { ReactionBar } from "./ReactionBar";
 import { FavoriteButton } from "./FavoriteButton";
 import { useFocusTrap } from "../lib/a11y";
+// Phase 4: pure gallery modules — logic đã unit-test (galleryTransform/Navigation/Filters)
+import {
+  zoomIn as xfZoomIn, zoomOut as xfZoomOut, rotate as xfRotate, flipH as xfFlipH,
+  panTo as xfPanTo, zoomTo as xfZoomTo, transformToCss, zoomPercent,
+  INITIAL_TRANSFORM, type TransformState,
+} from "./gallery/galleryTransform";
+import { nextIndex, prevIndex, neighborUrls, autoplayProgress } from "./gallery/galleryNavigation";
+import { filterCss, type VisualFilter } from "./gallery/galleryFilters";
+export { VISUAL_FILTERS } from "./gallery/galleryFilters";
 
 export interface Submission {
   id: string;
@@ -30,15 +39,6 @@ export interface GalleryLightboxProps {
 // Danh sách các bộ lọc hiệu ứng thị giác (Retro Display Shaders)
 export type VisualFilter = "normal" | "crt" | "vhs" | "gameboy" | "cyber" | "dither" | "marble";
 
-export const VISUAL_FILTERS: { id: VisualFilter; label: string; icon: string; desc: string }[] = [
-  { id: "normal", label: "Gốc (Original)", icon: "🖼️", desc: "Màu sắc nguyên bản chuẩn xác của tác phẩm" },
-  { id: "crt", label: "CRT Monitor 1995", icon: "📺", desc: "Đường quét scanline & bóng đèn hình Trinitron" },
-  { id: "vhs", label: "VHS Tape Glitch", icon: "📼", desc: "Lệch màu quang sai RGB & vệt tĩnh điện analog" },
-  { id: "gameboy", label: "GameBoy 1989", icon: "👾", desc: "Bảng màu 4 sắc độ xanh lá kinh điển của Game Boy" },
-  { id: "cyber", label: "Cyberpunk HUD", icon: "📟", desc: "Kính nhìn đêm neon xanh ngọc & thước đo kỹ thuật" },
-  { id: "dither", label: "PC-98 16-Bit", icon: "🕹️", desc: "Hạ bảng màu pixel art sắc nét phong cách máy tính Nhật" },
-  { id: "marble", label: "Vapor Marble", icon: "🏛️", desc: "Đen trắng tượng thần Hy Lạp ánh tím mơ màng" }
-];
 
 // Hook hỗ trợ nhận diện cử chỉ vuốt ngang (Swipe) trên thiết bị cảm ứng
 function useSwipe(onSwipeLeft: () => void, onSwipeRight: () => void) {
@@ -110,13 +110,14 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   const [showFilmstrip, setShowFilmstrip] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
-  // Zoom & Pan State
-  const [zoomScale, setZoomScale] = useState<number>(1);
-  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // Zoom & Pan State — Phase 4: một reducer duy nhất (pure module galleryTransform)
+  const [transform, setTransform] = useState<TransformState>(INITIAL_TRANSFORM);
+  const zoomScale = transform.zoom;
+  const panOffset = transform.pan;
+  const rotation = transform.rotation;
+  const isFlippedH = transform.flipH;
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [rotation, setRotation] = useState<number>(0);
-  const [isFlippedH, setIsFlippedH] = useState<boolean>(false);
 
   // UI Toast thông báo nhanh
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -165,10 +166,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
   // Reset Zoom/Pan khi đổi ảnh
   const resetTransform = useCallback(() => {
-    setZoomScale(1);
-    setPanOffset({ x: 0, y: 0 });
-    setRotation(0);
-    setIsFlippedH(false);
+    setTransform(INITIAL_TRANSFORM);
   }, []);
 
   useEffect(() => {
@@ -193,11 +191,8 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
       img.src = url;
     };
 
-    const nextIndex = (currentIndex + 1) % submissions.length;
-    const prevIndex = (currentIndex - 1 + submissions.length) % submissions.length;
-
-    preloadImage(submissions[nextIndex].image_url);
-    preloadImage(submissions[prevIndex].image_url);
+    const urls = submissions.map((s) => s.image_url);
+    for (const u of neighborUrls(currentIndex, urls)) preloadImage(u);
   }, [currentIndex, submissions]);
 
   // Xử lý tự động chạy Slideshow (Autoplay)
@@ -217,7 +212,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
     progressIntervalRef.current = window.setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
-      const percentage = Math.min((elapsed / autoplaySpeed) * 100, 100);
+      const percentage = autoplayProgress(elapsed, autoplaySpeed);
       setProgress(percentage);
 
       if (percentage >= 100) {
@@ -238,7 +233,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   const handleNext = useCallback(() => {
     if (submissions.length === 0) return;
     if (soundEnabled) playRetroClick(750, 0.03);
-    setCurrentIndex((prev) => (prev + 1) % submissions.length);
+    setCurrentIndex((prev) => nextIndex(prev, submissions.length));
     if (isAutoplay) {
       startTimeRef.current = Date.now();
       setProgress(0);
@@ -248,7 +243,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   const handlePrev = useCallback(() => {
     if (submissions.length === 0) return;
     if (soundEnabled) playRetroClick(550, 0.03);
-    setCurrentIndex((prev) => (prev - 1 + submissions.length) % submissions.length);
+    setCurrentIndex((prev) => prevIndex(prev, submissions.length));
     if (isAutoplay) {
       startTimeRef.current = Date.now();
       setProgress(0);
@@ -293,36 +288,33 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
   // Zoom Handler
   const handleZoomIn = () => {
-    setZoomScale((prev) => {
-      const next = Math.min(prev + 0.35, 4.0);
-      showToast(`🔍 Phóng to: ${Math.round(next * 100)}%`);
+    setTransform((prev) => {
+      const next = xfZoomIn(prev);
+      showToast(`\u{1F50D} Phóng to: ${zoomPercent(next.zoom)}%`);
       return next;
     });
   };
 
   const handleZoomOut = () => {
-    setZoomScale((prev) => {
-      const next = Math.max(prev - 0.35, 0.8);
-      if (next <= 1) {
-        setPanOffset({ x: 0, y: 0 });
-      }
-      showToast(`🔍 Thu nhỏ: ${Math.round(next * 100)}%`);
+    setTransform((prev) => {
+      const next = xfZoomOut(prev);
+      showToast(`\u{1F50D} Thu nhỏ: ${zoomPercent(next.zoom)}%`);
       return next;
     });
   };
 
   const handleRotate = () => {
-    setRotation((prev) => {
-      const next = (prev + 90) % 360;
-      showToast(`🔄 Xoay góc: ${next}°`);
+    setTransform((prev) => {
+      const next = xfRotate(prev);
+      showToast(`\u{1F504} Xoay góc: ${next.rotation}\u00B0`);
       return next;
     });
   };
 
   const handleFlipH = () => {
-    setIsFlippedH((prev) => {
-      const next = !prev;
-      showToast(next ? "🪞 Đã lật gương ngang" : "🪞 Đã khôi phục hướng gốc");
+    setTransform((prev) => {
+      const next = xfFlipH(prev);
+      showToast(next ? "\u{1FA9E} Đã lật gương ngang" : "\u{1FA9E} Đã khôi phục hướng gốc");
       return next;
     });
   };
@@ -330,17 +322,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   // Wheel Zoom
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    if (e.deltaY < 0) {
-      // Zoom In
-      setZoomScale((prev) => Math.min(prev + 0.2, 4.0));
-    } else {
-      // Zoom Out
-      setZoomScale((prev) => {
-        const next = Math.max(prev - 0.2, 0.8);
-        if (next <= 1) setPanOffset({ x: 0, y: 0 });
-        return next;
-      });
-    }
+    setTransform((prev) => (e.deltaY < 0 ? xfZoomIn(prev, 0.2) : xfZoomOut(prev, 0.2)));
   };
 
   // Drag to Pan
@@ -353,10 +335,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && zoomScale > 1) {
-      setPanOffset({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
-      });
+      setTransform((prev) => xfPanTo(prev, e.clientX - dragStart.x, e.clientY - dragStart.y));
     }
   };
 
@@ -368,10 +347,10 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   const handleDoubleClick = () => {
     if (zoomScale > 1.2) {
       resetTransform();
-      showToast("🔍 Khôi phục kích thước vừa khung (Fit)");
+      showToast("\u{1F50D} Khôi phục kích thước vừa khung (Fit)");
     } else {
-      setZoomScale(2.2);
-      showToast("🔍 Phóng to chi tiết 220%");
+      setTransform((prev) => xfZoomTo(prev, 2.2));
+      showToast("\u{1F50D} Phóng to chi tiết 220%");
     }
   };
 
@@ -543,38 +522,15 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
   // Tính toán CSS filter string tương ứng với activeFilter
   const getFilterStyle = (): React.CSSProperties => {
-    let filterString = "";
-    let imageRendering: any = "auto";
-
-    switch (activeFilter) {
-      case "crt":
-        filterString = "contrast(115%) brightness(105%) saturate(120%)";
-        break;
-      case "vhs":
-        filterString = "contrast(125%) saturate(150%) hue-rotate(10deg)";
-        break;
-      case "gameboy":
-        filterString = "contrast(180%) brightness(85%) sepia(100%) hue-rotate(50deg) saturate(320%)";
-        break;
-      case "cyber":
-        filterString = "contrast(135%) brightness(110%) hue-rotate(140deg) saturate(220%)";
-        break;
-      case "dither":
-        filterString = "contrast(140%) saturate(130%) brightness(105%)";
-        imageRendering = "pixelated";
-        break;
-      case "marble":
-        filterString = "grayscale(100%) contrast(130%) brightness(105%)";
-        break;
-      default:
-        filterString = "saturate(115%) contrast(105%)";
-        break;
-    }
-
+    // Phase 4: filter chain + transform từ pure modules (đã unit-test)
+    const filterString = filterCss(activeFilter as VisualFilter);
+    const base = { ...transform };
+    // Giữ đúng hành vi cũ: pan chia zoom để pan không "trôi" nhanh khi phóng
+    const css = transformToCss({ ...base, pan: { x: panOffset.x / (zoomScale || 1), y: panOffset.y / (zoomScale || 1) } });
     return {
       filter: filterString,
-      imageRendering,
-      transform: `scale(${zoomScale}) translate(${panOffset.x / zoomScale}px, ${panOffset.y / zoomScale}px) rotate(${rotation}deg) scaleX(${isFlippedH ? -1 : 1})`,
+      imageRendering: activeFilter === "dither" ? ("pixelated" as const) : ("auto" as const),
+      transform: css,
       transition: isDragging ? "none" : "transform 0.15s ease-out, filter 0.3s ease",
       cursor: zoomScale > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
       maxWidth: "100%",
