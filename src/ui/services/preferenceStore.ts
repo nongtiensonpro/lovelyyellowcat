@@ -46,10 +46,11 @@ function safeParse(raw: string | null): Partial<Preferences> | null {
     if (data.schema !== SCHEMA || !data.prefs) return null;
     // Chỉ nhận key hợp lệ, bỏ key lạ
     const out: Partial<Preferences> = {};
-    const P = DEFAULT_PREFERENCES as Record<string, unknown>;
+    const P = DEFAULT_PREFERENCES as unknown as Record<string, unknown>;
+    const incoming = data.prefs as unknown as Record<string, unknown>;
     for (const k of Object.keys(P)) {
-      if (data.prefs[k] !== undefined && typeof data.prefs[k] === typeof P[k]) {
-        (out as Record<string, unknown>)[k] = data.prefs[k];
+      if (incoming[k] !== undefined && typeof incoming[k] === typeof P[k]) {
+        (out as Record<string, unknown>)[k] = incoming[k];
       }
     }
     return out;

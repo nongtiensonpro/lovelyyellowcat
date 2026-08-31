@@ -7,7 +7,11 @@ import { logAdminAction } from "../../../lib/adminAudit";
  * Helper: Xác thực editor/admin cho các thao tác trên bài viết.
  * Trả về { error } hoặc { supabase, userId, role, isAdmin }.
  */
-async function authenticateStaff(context: any) {
+type SupabaseClientAA = ReturnType<typeof import("../../../lib/supabase").createSupabaseServerClient>;
+type StaffAuthResult =
+  | { error: Response }
+  | { supabase: SupabaseClientAA; userId: string; role: "editor" | "admin"; isAdmin: boolean };
+async function authenticateStaff(context: any): Promise<StaffAuthResult> {
   const supabase = createSupabaseServerClient({
     request: context.request,
     cookies: context.cookies,

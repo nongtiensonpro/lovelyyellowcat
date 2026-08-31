@@ -95,7 +95,7 @@ export function openWindow(entry: { id: string; title: string; icon?: string; va
       title: entry.title,
       icon: entry.icon,
       variant: entry.variant,
-      rect: entry.rect,
+      rect: entry.rect ?? DEFAULT_RECT,
       modalParentId: entry.modal ? entry.id : undefined,
       persistKey: entry.persistKey,
     },

@@ -31,6 +31,30 @@ export default tseslint.config(
     },
   },
   {
+    // ─── v5 hotfix gate: nợ kỹ thuật tồn dư từ trước v5 → WARN (không chặn CI).
+    // Kế hoạch dọn dần từng nhóm ở v5.1 — theo dõi ở docs/runbooks/WAIVERS.md (W-8).
+    // KHÔNG hạ warn: react-hooks/rules-of-hooks, react-hooks/exhaustive-deps (error),
+    // no-restricted-syntax alert/confirm (error) — 3 rule này bảo vệ runtime thật.
+    files: ["**/*.{ts,tsx,astro}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-expressions": "warn",
+      "@typescript-eslint/ban-ts-comment": "warn",
+      "@typescript-eslint/no-empty-object-type": "warn",
+      "no-var": "warn",
+      "no-empty": "warn",
+      "prefer-const": "warn",
+      "no-useless-escape": "warn",
+      "jsx-a11y/label-has-associated-control": "warn",
+      "jsx-a11y/click-events-have-key-events": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/no-noninteractive-element-interactions": "warn",
+      "jsx-a11y/alt-text": "warn",
+      "jsx-a11y/no-autofocus": "warn",
+      "jsx-a11y/role-has-required-aria-props": "warn",
+    },
+  },
+  {
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   }
 );

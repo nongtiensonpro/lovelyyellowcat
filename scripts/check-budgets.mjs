@@ -37,4 +37,9 @@ for (const [k, v] of Object.entries(budgets.hydration)) check(`hydration ${k}`, 
 // tests_min: đọc số test từ vitest output là tốn — thay bằng đếm file test tồn tại
 const testFiles = (() => { let n = 0; const w = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); if (statSync(p).isDirectory()) w(p); else if (/\.test\.tsx?$/.test(f)) n++; } }; if (existsSync(join(root, "tests"))) w(join(root, "tests")); return n; })();
 checkMin("test_files", testFiles, budgets.test_files_min ?? 20);
-failures.length ? (console.error("BUDGET FAIL:", failures.join(", ")), process.exit(1)) : console.log("BUDGET OK");
+if (failures.length > 0) {
+  console.error("BUDGET FAIL:", failures.join(", "));
+  process.exit(1);
+} else {
+  console.log("BUDGET OK");
+}

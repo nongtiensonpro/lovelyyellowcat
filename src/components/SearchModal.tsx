@@ -34,6 +34,11 @@ interface UnifiedResults {
 
 const EMPTY_RESULTS: UnifiedResults = { articles: [], artworks: [], artists: [] };
 
+// v5 fix: const này từng ĐƯỢC DÙNG mà KHÔNG ĐỊNH NGHĨA (crash runtime khi search có kết quả —
+// TypeScript gate giờ bắt). Style khớp header section Win95 của modal.
+const sectionHeaderClass =
+  "font-retro text-[10px] font-bold uppercase tracking-widest text-vapor-purple border-b border-vapor-purple/30 pb-1 mb-2 mt-4";
+
 export const SearchModal: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");

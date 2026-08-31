@@ -44,13 +44,6 @@ export interface ChatMessage {
   isLocationBlocked?: boolean;
 }
 
-type ModelUsage = {
-  promptTokenCount?: number;
-  candidatesTokenCount?: number;
-  totalTokenCount?: number;
-  thoughtsTokenCount?: number;
-  cachedContentTokenCount?: number;
-};
 
 export interface ModelStats {
   model: string;
@@ -193,6 +186,8 @@ async function executeClientDirectChat(
 
   return {
     success: false,
+    model: attemptLogs.length > 0 ? attemptLogs[attemptLogs.length - 1].model : preferredModel,
+    durationMs: Date.now() - startTime,
     hasQuotaError,
     reply: hasQuotaError
       ? "Meow~! Hạn mức miễn phí của API Key BYOK hiện đang bị quá tải. Bạn hãy thử model khác hoặc nhập một API Key Gemini khác trong Cài đặt nhé! 🐱💾"
@@ -244,11 +239,11 @@ async function executeClientDirectChatStream(
       while (true) {
         finishReason = "";
         const abortController = new AbortController();
-        let timeoutPhase: "initial" | "idle" = "initial";
         let timeoutHandle = 0;
+        let timeoutPhaseHolder: { phase: "initial" | "idle" } = { phase: "initial" };
         const armTimeout = (phase: "initial" | "idle") => {
           window.clearTimeout(timeoutHandle);
-          timeoutPhase = phase;
+          timeoutPhaseHolder = { phase };
           timeoutHandle = window.setTimeout(
             () => abortController.abort(),
             phase === "initial" ? CLIENT_INITIAL_RESPONSE_TIMEOUT_MS : CLIENT_STREAM_IDLE_TIMEOUT_MS,
@@ -374,7 +369,7 @@ async function executeClientDirectChatStream(
           break;
         } catch (err: any) {
           failureReason = err?.name === "AbortError"
-            ? timeoutPhase === "idle"
+            ? timeoutPhaseHolder.phase === "idle"
               ? `Stream không có dữ liệu mới trong ${Math.round(CLIENT_STREAM_IDLE_TIMEOUT_MS / 1000)} giây.`
               : `Không nhận được response trong ${Math.round(CLIENT_INITIAL_RESPONSE_TIMEOUT_MS / 1000)} giây.`
             : err?.message || String(err);
@@ -412,6 +407,8 @@ async function executeClientDirectChatStream(
   const locationBlocked = attemptLogs.some(a => isLocationError(a.error));
   return {
     success: false,
+    model: attemptLogs.length > 0 ? attemptLogs[attemptLogs.length - 1].model : preferredModel,
+    durationMs: Date.now() - startTime,
     hasQuotaError,
     isLocationBlocked: locationBlocked,
     reply: locationBlocked
@@ -469,7 +466,7 @@ const AiChatStationInner: React.FC = () => {
 
   // ===== E2EE Helpers =====
   const loadSessionsFromSupabase = async (key: CryptoKey) => {
-    setIsE2EELoading(true);
+    setIsE2ELoading(true);
     try {
       const res = await fetch("/api/ai/sessions");
       if (!res.ok) throw new Error("Không thể tải phiên");

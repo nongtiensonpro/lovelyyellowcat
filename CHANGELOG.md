@@ -61,4 +61,9 @@ Mỗi phase đều qua 5 gates: test · tokens:check · stylelint · build · po
 - fix(ui): snapshot cache preferenceStore/commands (React #185)
 - fix(gallery): thiếu import galleryQuery ở GalleryGrid (SSR crash /gallery) + smoke test chặn
 - fix(ui): token gen `@theme` thay `:root` — utility Tailwind sinh đủ; bubble user AI gradient rõ ràng
-- fix(ci): `.gitignore` bỏ ignore `artifacts/` — budget gate CI thiếu ui-budgets.json (ENOENT trên runner)
+- fix(ci): `.gitignore` bỏ ignore `artifacts/` — budget gate CI thiếu ui-budgets.json (ENOENT trên runner)- fix(gallery): GalleryLightbox thiếu import VISUAL_FILTERS — lightbox crash /gallery khi mở ảnh (re-export không tạo biến local); + jsdom test chặn đường code filter
+- fix(a11y): SearchModal `sectionHeaderClass` chưa từng được định nghĩa — Ctrl+K crash khi có kết quả (bug tồn tại từ trước v5, TS gate bắt)
+- fix(ai): AiChatStation `setIsE2EELoading` typo (crash nút MỞ KHÓA), xóa type ModelUsage trùng lặp, return failure thiếu model/durationMs
+- fix(ui): WindowFrame import WindowEntry sai nguồn; windowStore restore action thiếu id; windowRuntime rect fallback; preferenceStore casts; SubmissionWizard `class=` → `className=` (nút đăng nhập mất style)
+- fix(api): 5 file API thêm return type AuthResult — TS narrow `"error" in auth` hoạt động; ambient types cloudflare:sockets/workers; tsconfig types [node]
+- chore: script `typecheck` (tsc --noEmit 78→0 lỗi) — gate khuyến nghị chạy tay trước push- ci: deploy.yml tái cấu trúc thành pipeline 8 bước có chú thích đầy đủ — checkout → npm ci (lockfile) → 7 gates (typecheck/test/lint/stylelint/build/policy/budget) → deploy; typecheck giờ là gate 1 chặn class lỗi thiếu import ngay trên CI

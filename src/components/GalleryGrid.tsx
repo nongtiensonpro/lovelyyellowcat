@@ -384,7 +384,7 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
                     onClick={() => handleOpenLightbox(sub.id)}
                   >
                     <td className="p-2 flex items-center gap-2">
-                      <img src={sub.image_url} alt={sub.title} className="w-8 h-8 object-cover border border-win-dark shrink-0" />
+                      <img src={sub.image_url || ""} alt={sub.title} className="w-8 h-8 object-cover border border-win-dark shrink-0" />
                       <span className="font-bold truncate max-w-[200px]">{sub.title}</span>
                     </td>
                     <td className="p-2 font-mono text-xs">
@@ -438,7 +438,7 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
                 </div>
                 <div className="bg-black p-1.5 rounded border-2 border-win-darkest relative overflow-hidden aspect-video flex items-center justify-center">
                   <LazyImage
-                    src={sub.image_url}
+                    src={sub.image_url || ""}
                     alt={sub.title}
                     className="w-full h-full object-cover filter saturate-[1.15] contrast-[1.05] group-hover:scale-105 transition-transform duration-300"
                     width="480"
@@ -474,7 +474,7 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
                 {/* Khung chứa ảnh */}
                 <div className="relative bg-cosmic-mid/10 overflow-hidden aspect-auto min-h-[160px] max-h-[420px] border border-win-dark flex items-center justify-center">
                   <LazyImage
-                    src={sub.image_url}
+                    src={sub.image_url || ""}
                     alt={sub.title}
                     className="w-full h-auto max-h-full object-cover filter saturate-[1.1] contrast-[1.03] sm:group-hover:scale-[1.02] transition-transform duration-300"
                     width="480"
@@ -539,7 +539,7 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
       {/* 4. Trình xem ảnh Lightbox */}
       {activeViewId && (
         <GalleryLightbox
-          submissions={processed}
+          submissions={processed as unknown as Parameters<typeof GalleryLightbox>[0]["submissions"]}
           activeId={activeViewId}
           currentUser={currentUser}
           onClose={() => {

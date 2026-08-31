@@ -37,7 +37,7 @@ export type WindowAction =
   | { type: "move"; id: string; to: { x: number; y: number } }
   | { type: "resize"; id: string; to: { width: number; height: number } }
   | { type: "snap"; id: string; zone: "left" | "right" | "top" | "topleft" | "topright" | "bottomleft" | "bottomright" | "center" }
-  | { type: "restore" };
+  | { type: "restore"; id: string };
 
 let _zCounter = 100;
 

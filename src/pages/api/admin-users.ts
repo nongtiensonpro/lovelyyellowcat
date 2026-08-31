@@ -9,7 +9,9 @@ const USERS_PER_PAGE = 10;
  * Helper: Xác thực admin — trả về supabase client + admin profile
  * hoặc trả về Response lỗi nếu không đủ quyền.
  */
-async function authenticateAdmin(context: any) {
+type SupabaseClientAU = ReturnType<typeof import("../../lib/supabase").createSupabaseServerClient>;
+type AdminAuthResult = { error: Response } | { supabase: SupabaseClientAU; admin: { id: string; role?: string } };
+async function authenticateAdmin(context: any): Promise<AdminAuthResult> {
   const supabase = createSupabaseServerClient({
     request: context.request,
     cookies: context.cookies,

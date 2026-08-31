@@ -1,7 +1,9 @@
 import type { APIRoute } from "astro";
 import { createSupabaseServerClient } from "../../../lib/supabase";
 
-async function requireActiveUser(context: { request: Request; cookies: any }) {
+type SupabaseClient = ReturnType<typeof import("../../../lib/supabase").createSupabaseServerClient>;
+type AuthResult = { error: Response } | { supabase: SupabaseClient; user: { id: string } };
+async function requireActiveUser(context: { request: Request; cookies: any }): Promise<AuthResult> {
   const supabase = createSupabaseServerClient(context as any);
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {

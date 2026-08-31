@@ -192,7 +192,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
           <p className="text-xs text-black/80 leading-relaxed">
             Bạn cần đăng nhập bằng tài khoản Google để được cấp quyền đăng tải tác phẩm lên phòng triển lãm cộng đồng.
           </p>
-          <a href="/api/auth/signin" class="win95-btn no-underline inline-block px-6 py-2.5 font-bold uppercase text-xs bg-white border-2 border-black" style={{ minHeight: "44px" }}>
+          <a href="/api/auth/signin" className="win95-btn no-underline inline-block px-6 py-2.5 font-bold uppercase text-xs bg-white border-2 border-black" style={{ minHeight: "44px" }}>
             🔑 ĐĂNG NHẬP GOOGLE
           </a>
         </div>

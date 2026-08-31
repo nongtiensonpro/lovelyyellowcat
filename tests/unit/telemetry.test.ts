@@ -6,11 +6,9 @@ import {
 
 describe("safePath", () => {
   it("bỏ query + hash (chống lộ token trong URL)", () => {
-    // jsdom-free: mock location
-    const original = globalThis.location;
-    (globalThis as any).location = new URL("https://x.com/gallery?token=SECRET#hash");
+    vi.stubGlobal("location", new URL("https://x.com/gallery?token=SECRET#hash"));
     expect(safePath()).toBe("/gallery");
-    (globalThis as any).location = original;
+    vi.unstubAllGlobals();
   });
 });
 

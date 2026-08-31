@@ -17,7 +17,7 @@ describe("ErrorBoundary (SSR renderToString)", () => {
   // boundary hoạt động ở client. Test này verify: render OK khi không lỗi + fallback props.
   it("render children bình thường khi không lỗi", () => {
     const html = renderToString(
-      React.createElement(ErrorBoundary, { moduleName: "TEST.EXE" }, React.createElement(Fine))
+      React.createElement(ErrorBoundary, { moduleName: "TEST.EXE", children: React.createElement(Fine) })
     );
     expect(html).toContain("OK");
   });
@@ -27,11 +27,7 @@ describe("ErrorBoundary (SSR renderToString)", () => {
     const onError = vi.fn();
     expect(() =>
       renderToString(
-        React.createElement(
-          ErrorBoundary,
-          { moduleName: "TEST.EXE", onError },
-          React.createElement(Fine)
-        )
+        React.createElement(ErrorBoundary, { moduleName: "TEST.EXE", onError, children: React.createElement(Fine) })
       )
     ).not.toThrow();
     expect(onError).not.toHaveBeenCalled();

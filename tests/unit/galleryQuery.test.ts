@@ -17,7 +17,7 @@ describe("collectTags", () => {
     const tags = collectTags([
       item({ tags: ["neon", " retro ", "neon", ""] }),
       item({ tags: ["retro", "vhs"] }),
-      item({ tags: null }),
+      item({ tags: undefined }),
     ]);
     expect(tags).toEqual(["neon", "retro", "vhs"]);
   });

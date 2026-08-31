@@ -2,7 +2,9 @@
 // Drag bằng Pointer Events; resize qua 8 cạnh; snap zone cạnh màn hình.
 import React, { useRef, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useFocusTrap } from "../../lib/a11y";
-import { subscribeWindows, dispatchWindow, openWindow, getWindows, type WindowEntry } from "../wm95/windowRuntime";
+import { subscribeWindows, dispatchWindow, openWindow, getWindows } from "../wm95/windowRuntime";
+import type { WindowEntry } from "../wm95/windowStore";
+import type { WindowAction } from "../wm95/windowStore";
 import { taskbarWindows } from "../wm95/windowStore";
 
 const VIEWPORT_MARGIN = 16;
@@ -25,11 +27,8 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ entry, onClose, childr
   const bodyRef = useRef<HTMLDivElement>(null);
   const dragOrigin = useRef<{ x: number; y: number; rect: WindowEntry["rect"] } | null>(null);
   const resizeOrigin = useRef<{ x: number; y: number; rect: WindowEntry["rect"]; edge: ResizeEdge } | null>(null);
-  const [snapZone, setSnapZone] = useState<NonNullable<Parameters<typeof dispatchWindow>[0]>["zone"] | null>(null);
-  if (typeof window === "undefined") return null;
-  if (entry.state === "closed") return null;
-  if (entry.state === "minimized") return null;
-
+  type SnapZone = NonNullable<Extract<WindowAction, { type: "snap" }>["zone"]>;
+  const [snapZone, setSnapZone] = useState<SnapZone | null>(null);
   useFocusTrap(bodyRef, true, onClose);
 
   // focus + aria
@@ -61,7 +60,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ entry, onClose, childr
       const newX = rect.x + dx, newY = rect.y + dy;
       // detect snap
       const vw = window.innerWidth, vh = window.innerHeight;
-      const zone: Parameters<typeof dispatchWindow>[0]["zone"] | null =
+      const zone: SnapZone | null =
         newX < SNAP_THRESHOLD ? "left" :
         vw - (newX + rect.width) < SNAP_THRESHOLD ? "right" :
         newY < SNAP_THRESHOLD ? "top" : null;
@@ -141,6 +140,11 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ entry, onClose, childr
   );
 
   const isMax = entry.state === "maximized";
+  // ── Early returns (SAU tất cả hooks — Rules of Hooks: hooks chạy cùng thứ tự mỗi render) ──
+  if (typeof window === "undefined") return null;
+  if (entry.state === "closed") return null;
+  if (entry.state === "minimized") return null;
+
   return (
     <div
       ref={bodyRef}

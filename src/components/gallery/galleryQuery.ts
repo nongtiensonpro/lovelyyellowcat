@@ -7,7 +7,11 @@ export interface GalleryItem {
   description?: string;
   tags?: string[];
   created_at: string;
-  profiles?: { full_name?: string } | null;
+  image_url?: string;
+  status?: string;
+  user_id?: string;
+  author_id?: string;
+  profiles?: { full_name?: string; avatar_url?: string } | null;
 }
 
 export type SortMode = "newest" | "reactions" | "random";

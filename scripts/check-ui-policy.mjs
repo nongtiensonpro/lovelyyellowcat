@@ -69,7 +69,7 @@ if (violations.length) {
   // Chế độ report: chỉ fail nếu số violation TĂNG so với file hiện có (ratchet)
   const baselinePath = join(ROOT, "artifacts", "ui-policy-count.json");
   let prev = null;
-  try { prev = JSON.parse(readFileSync(baselinePath, "utf8")); } catch {}
+  try { prev = JSON.parse(readFileSync(baselinePath, "utf8")); } catch { /* không làm gì — ignore có chủ đích */ }
   const current = violations.length;
   if (prev && typeof prev.count === "number" && current > prev.count) {
     console.error(`check-ui-policy: FAIL — hex markup tăng ${prev.count} -> ${current}`);

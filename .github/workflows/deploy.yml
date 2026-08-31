@@ -1,15 +1,32 @@
-name: Cloudflare Pages Auto Deploy
+# ═══════════════════════════════════════════════════════════════════════════
+# CI/CD — lovelyyellowcat.nongtiensonpro.workers.dev
+#
+# PIPELINE: push/PR vào main → 7 gates kiểm tra chất lượng → deploy Cloudflare
+# Thứ tự nhanh → chậm (fail sớm, đỡ tốn phút runner):
+#   1. typecheck  — TypeScript toàn repo (bắt thiếu import / dùng biến chưa khai:
+#                   class lỗi "VISUAL_FILTERS is not defined" đã nổ production)
+#   2. test       — vitest (pure modules + SSR smoke + jsdom regression)
+#   3. lint       — ESLint (cấm alert/confirm native, catch hooks vi phạm)
+#   4. stylelint  — CSS tokens/style
+#   5. build      — Astro build (prebuild tự chạy tokens:check — contrast WCAG)
+#   6. policy:ui  — ratchet đếm hex/arbitrary trong markup (chặn tăng nợ)
+#   7. budget:ui  — ratchet bundle size + hydration (chặn bundle phình)
+#   8. deploy     — wrangler@4 từ build/server/wrangler.json (outDir "build")
+#
+# Bất kỳ gate nào fail (exit != 0) → các bước sau KHÔNG chạy → không deploy production.
+# Rollback: docs/runbooks/ROLLBACK.md
+# ═══════════════════════════════════════════════════════════════════════════
+name: CI + Deploy Cloudflare Workers
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   deploy:
+    name: Gates → Deploy
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -20,16 +37,53 @@ jobs:
       - name: Checkout mã nguồn
         uses: actions/checkout@v6
 
-      - name: Cài đặt Node.js
+      - name: Cài đặt Node.js 24
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
 
-      - name: Cài đặt gói phụ thuộc
+      # npm ci (không phải npm install) — cài ĐÚNG theo package-lock.json đã commit:
+      # CI dùng cùng version dependency với máy local (không build "may mắn").
+      - name: Cài đặt gói phụ thuộc (theo lockfile)
         run: npm ci
 
-      - name: Biên dịch mã nguồn ứng dụng (Astro Build)
+      # ─── GATE 1: TYPECHECK ────────────────────────────────────────────────
+      # tsc --noEmit --skipLibCheck — chỉ kiểm type, không sinh file.
+      # Bắt TS2304 "Cannot find name" = identifier dùng nhưng thiếu import:
+      # chính là class lỗi VISUAL_FILTERS (lightbox /gallery) + sectionHeaderClass
+      # (SearchModal) mà bundler KHÔNG bắt được vì nó tự chèn reference runtime.
+      - name: Gate 1 — TypeScript typecheck (thiếu import / sai kiểu)
+        run: npm run typecheck
+
+      # ─── GATE 2: UNIT + SSR + REGRESSION TESTS ───────────────────────────
+      # Vitest: pure modules (gallery/article/ai/admin/wm95), snapshot-stability
+      # (chặn React #185), SSR smoke (islands render được server-side — chặn
+      # "missing getServerSnapshot", "X is not defined" khi SSR), jsdom test
+      # render GalleryLightbox thật qua portal (chặn class lỗi lightbox crash).
+      - name: Gate 2 — Unit + SSR + regression tests (vitest)
+        run: npm run test
+
+      # ─── GATE 3: ESLINT ───────────────────────────────────────────────────
+      # AST rule chặn alert()/confirm() native (phải dùng dialogService — ADR-0003),
+      # react-hooks rules (deps useEffect/useCallback sai → bug state cũ).
+      # Lưu ý — no-unused-vars/no-explicit-any đang là "warn", không chặn deploy;
+      # kế hoạch dọn dần theo từng file ở phiên v5.1 (docs/runbooks/WAIVERS.md).
+      - name: Gate 3 — ESLint (cấm native dialog, hooks đúng)
+        run: npm run lint
+
+      # ─── GATE 4: STYLELINT ────────────────────────────────────────────────
+      # Kiểm style CSS — syntax, thứ tự property, không duplicate selector.
+      - name: Gate 4 — Stylelint (CSS)
+        run: npm run stylelint
+
+      # ─── GATE 5: BUILD ────────────────────────────────────────────────────
+      # prebuild hook tự chạy tokens:check TRƯỚC astro build:
+      #   - build-tokens.mjs --check — primitives/semantic JSON vs tokens.gen.css
+      #     đồng bộ + contrast WCAG 12/12 pass → chặn token lệch nguồn chân lý.
+      # Output — build/client (assets) + build/server (worker entry); outDir "build"
+      # vì dist/ bị file .assetsignore khóa quyền Administrators trên máy local.
+      - name: "Gate 5 — Astro build (prebuild: tokens + WCAG contrast)"
         run: npm run build
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
@@ -38,9 +92,26 @@ jobs:
           PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.PUBLIC_CLOUDINARY_CLOUD_NAME }}
           PUBLIC_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.PUBLIC_CLOUDINARY_UPLOAD_PRESET }}
 
-      - name: UI budget gate
+      # ─── GATE 6: UI POLICY RATCHET ────────────────────────────────────────
+      # Đếm hex/arbitrary trong markup so với artifacts/ui-policy.json:
+      # con số MỚI PHẢI <= con số cũ — sửa thêm nợ OK, tăng nợ bị chặn.
+      # artifacts/ PHẢI được commit (đừng gitignore — lesson W-7: CI thiếu file ENOENT).
+      - name: Gate 6 — UI policy ratchet (hex/arbitrary không tăng)
+        run: npm run policy:ui
+
+      # ─── GATE 7: UI BUDGET ────────────────────────────────────────────────
+      # artifacts/ui-budgets.json ratchet — tổng JS 660KB / chunk lớn nhất 210KB /
+      # CSS 185KB / hydration client:load <=4 idle <=6 visible <=16 / test files >=20.
+      # Chặn bundle phình — mỗi KB tăng phải là quyết định có chủ đích.
+      - name: Gate 7 — UI budget (bundle/hydration ratchet)
         run: npm run budget:ui
 
+      # ─── DEPLOY ───────────────────────────────────────────────────────────
+      # Chỉ chạy nếu 7 gates trên đều xanh. wrangler@4 đọc config do Astro adapter
+      # sinh tại build/server/wrangler.json (main=entry.mjs, assets=../client).
+      # Rollback khi cần — docs/runbooks/ROLLBACK.md
+      #   - tức thời:  npx wrangler rollback lovelyyellowcat
+      #   - sạch:      git revert commit lỗi → push → pipeline này tự deploy lại
       - name: Đăng tải lên Cloudflare Workers
         run: npx --yes wrangler@4 deploy --config build/server/wrangler.json
         env:

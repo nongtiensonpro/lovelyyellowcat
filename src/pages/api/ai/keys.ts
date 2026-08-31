@@ -5,7 +5,9 @@ import { createSupabaseServerClient } from "../../../lib/supabase";
  * Helper: yêu cầu đăng nhập + tài khoản hoạt động (is_banned = false)
  * Trả về 401/403 nếu không đạt, ngược lại trả về { supabase, user }
  */
-async function requireActiveUser(context: { request: Request; cookies: any }) {
+type SupabaseServerClient = ReturnType<typeof import("../../../lib/supabase").createSupabaseServerClient>;
+type AuthResult = { error: Response } | { supabase: SupabaseServerClient; user: { id: string; email?: string } };
+async function requireActiveUser(context: { request: Request; cookies: any }): Promise<AuthResult> {
   const supabase = createSupabaseServerClient(context as any);
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {

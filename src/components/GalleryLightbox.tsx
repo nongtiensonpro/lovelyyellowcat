@@ -10,7 +10,7 @@ import {
   INITIAL_TRANSFORM, type TransformState,
 } from "./gallery/galleryTransform";
 import { nextIndex, prevIndex, neighborUrls, autoplayProgress } from "./gallery/galleryNavigation";
-import { filterCss, type VisualFilter } from "./gallery/galleryFilters";
+import { filterCss, VISUAL_FILTERS, type VisualFilter } from "./gallery/galleryFilters";
 export { VISUAL_FILTERS } from "./gallery/galleryFilters";
 
 export interface Submission {
@@ -37,7 +37,7 @@ export interface GalleryLightboxProps {
 }
 
 // Danh sách các bộ lọc hiệu ứng thị giác (Retro Display Shaders)
-export type VisualFilter = "normal" | "crt" | "vhs" | "gameboy" | "cyber" | "dither" | "marble";
+export type { VisualFilter } from "./gallery/galleryFilters";
 
 
 // Hook hỗ trợ nhận diện cử chỉ vuốt ngang (Swipe) trên thiết bị cảm ứng
