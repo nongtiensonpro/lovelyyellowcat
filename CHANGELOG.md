@@ -61,3 +61,4 @@ Mỗi phase đều qua 5 gates: test · tokens:check · stylelint · build · po
 - fix(ui): snapshot cache preferenceStore/commands (React #185)
 - fix(gallery): thiếu import galleryQuery ở GalleryGrid (SSR crash /gallery) + smoke test chặn
 - fix(ui): token gen `@theme` thay `:root` — utility Tailwind sinh đủ; bubble user AI gradient rõ ràng
+- fix(ci): `.gitignore` bỏ ignore `artifacts/` — budget gate CI thiếu ui-budgets.json (ENOENT trên runner)

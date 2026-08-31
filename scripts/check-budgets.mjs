@@ -4,7 +4,12 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const budgets = JSON.parse(readFileSync(join(root, "artifacts/ui-budgets.json"), "utf-8"));
+const budgetsPath = join(root, "artifacts/ui-budgets.json");
+if (!existsSync(budgetsPath)) {
+  console.error("Thiếu artifacts/ui-budgets.json — commit file policy ratchet vào repo (đừng gitignore artifacts/).");
+  process.exit(1);
+}
+const budgets = JSON.parse(readFileSync(budgetsPath, "utf-8"));
 const dir = join(root, "build/client/_astro");
 if (!existsSync(dir)) { console.error("build/client/_astro không tồn tại — chạy npm run build trước."); process.exit(1); }
 

@@ -1,0 +1,100 @@
+feat(ui): v5 ULTIMATE OVERENGINEER — Phase 0-3: token pipeline, retro kernel, WM/95, command palette
+
+Nâng cấp toàn diện tầng giao diện theo kế hoạch v5 (tailieu/Ke_hoach_nang_cap_Giao_dien_v5_ULTIMATE_OVERENGINEER.md).
+Số liệu đo được trước/sau: native alert/confirm 24→0 · hex literal 873→662 · client:load 14→4 · unit tests 0→69 · bundle JS 604→630KB (+WM runtime).
+
+── PHASE 0: NỀN MÓNG ──────────────────────────────────────
+- scripts/ui-audit.mjs: baseline scanner deterministic (strip comment trước khi đếm)
+  → artifacts/ui-baseline.json + ui-baseline-v5.0-start.json + bundle-baseline.json
+- 4 ADR: docs/adr/ADR-0001..0004 (token pipeline, WM/95, progressive enhancement, UI telemetry)
+- Tooling gates: ESLint 9 flat (chặn alert/confirm bằng AST rule, jsx-a11y, react-hooks),
+  Prettier, Stylelint, Vitest, .editorconfig
+- Sửa build fail EPERM: outDir dist→build (file .assetsignore cũ bị khóa quyền Administrators)
+- 12 devDependencies: eslint, typescript-eslint, eslint-plugin-astro, jsx-a11y, react-hooks,
+  globals, prettier, prettier-plugin-astro, stylelint, stylelint-config-standard, vitest
+
+── PHASE 1: TOKEN PIPELINE + RETRO KERNEL ─────────────────
+- Token pipeline DTCG-style (ADR-0001):
+  · src/ui/tokens/primitives.json — 66 token màu + space/touch/radius/z/duration/easing/glow
+  · src/ui/tokens/semantic.json — roles theo 3 mode (catalog/crt/access)
+  · scripts/build-tokens.mjs — validate contrast WCAG (12/12 pass, min 6.67:1)
+    → sinh src/styles/tokens.gen.css + src/ui/tokens/tokens.gen.ts
+  · prebuild gate --check: file gen lệch source => build fail
+- Retro UI Kernel (7 primitives, 0 hex): RetroButton, RetroWindow, RetroInput/Select/Textarea,
+  RetroTable/Th/Td, RetroEmptyState, RetroImage (React + Astro — srcset Cloudinary, aspect-ratio,
+  decoding async, error fallback)
+- Migrate 5 component: Win95Window (adapter giữ API cũ), SearchModal, HeaderNav,
+  CrtMonitorFrame, RibbonCard
+- Codemod 2 vòng: 296 arbitrary-hex class → token class trên 51 file
+  (bg-[#ff71ce] → bg-vapor-pink, shadow-[0_0_6px_...] → .glow-pink, ...)
+- CSS @layer components + container query + helper classes (.glow-*, .z-command/.z-modal/.z-toast,
+  .win95-titlebar-btn, .crt-bezel-shadow, .crt-scanlines-repeating...)
+- Policy gate ratchet: scripts/check-ui-policy.mjs (mốc 142 hex markup — chỉ fail khi TĂNG)
+- Dialog service: dialogStack reducer + dialogService (uiAlert/uiConfirm promise-based)
+  + DialogHost (focus trap, Escape stack, mount cả 2 layout) + confirmDelegate (data-confirm)
+- Native alert/confirm 24 → 0 (BookmarkButton, AiChatStation ×10, ArticleEditor,
+  CloudinaryUpload, 6 trang admin qua data-confirm)
+- Demo /dev/kernel render thật (HTTP 200, 8/8 kernel markers)
+- src/ui/MIGRATION.md — hướng dẫn dùng kernel
+
+── PHASE 2: APP SHELL + PREFERENCE + FX BUDGET ────────────
+- preferenceStore: SSR-safe, localStorage versioned (lyc_prefs_v1) + BroadcastChannel
+  đồng bộ đa tab, migration legacy vapor_crt_mode, typed Preferences
+  (uiMode/motion/sound/density/fontScale/reducedData)
+- fxAbility: FXBudget pure logic (access/crt/catalog × motion × Save-Data × deviceMemory
+  × hardwareConcurrency × connection type → off/low/medium/high), 13 unit tests
+- AppShell.astro: hợp nhất font preconnect + CRT overlay + fxBootstrap — mount chung
+  cho cả BaseLayout và AdminLayout, bỏ toàn bộ script/markup trùng lặp giữa 2 layout
+- fxBootstrap: chạy sớm chống FOUC — gắn data-ui-mode + data-fx + --user-font-scale lên <html>
+- Hydration: client:load 14 → 4 (chỉ giữ SearchModal + NotificationBell cho header shell;
+  GalleryGrid, SubmissionWizard, ArticleEditor, ProfileEditor, BookmarkButton,
+  FavoriteButton, UserManagementActions → client:visible)
+- Hero video policy: inline script chặn fetch video 6MB khi fx=off / reduced-motion /
+  Save-Data / mobile viewport
+- mediaPolicy.ts: quyết định shouldPlay/preload/poster thuần logic, 6 unit tests
+
+── PHASE 3: WM/95 WINDOW MANAGER + COMMAND PALETTE ────────
+- windowStore.ts: pure reducer — open/close/focus/minimize/maximize/move/resize,
+  SNAP 8 VÙNG (¼/½/full), z-order counter, clamp viewport (titlebar luôn thấy),
+  modal parent, 21 unit tests
+- windowRuntime.ts: SSR-safe bridge — localStorage persist (lyc_wm_v1, chỉ persistKey
+  windows), resize listener, openWindow() helper (id trùng = focus)
+- WindowFrame.tsx: cửa sổ live — Pointer Events drag/resize, snap hint overlay khi kéo
+  sát mép, Alt+F4 đóng, nút _/□/✕ chuẩn Win95, resize handle góc
+- Taskbar.tsx: taskbar Win95 thật — liệt kê cửa sổ, toggle minimize/focus,
+  đồng hồ tự pause khi tab ẩn
+- WMHost.tsx: island duy nhất render mọi frame + taskbar; registerWindowContent() slot
+- commands.ts: command registry thuần — role filter (public/auth/admin) + keyword search
+- CommandPalette.tsx: Ctrl+K palette — focus trap, ↑↓/Enter/Esc, đếm lệnh, role badge
+- keyboardManager.ts: global shortcut registry — skipInInput (không nuốt phím khi gõ),
+  preventDefault, Alt+Tab cycle
+- defaultCommands.ts: 8 lệnh mặc định (5 điều hướng + 3 đổi UI mode CRT/CATALOG/ACCESS)
+- AppShell mount CommandPalette + WMHost (client:idle); 2 layout truyền role từ userProfile
+- Verify production bundle: 11/11 module Phase 2+3 vào bundle
+
+── QUALITY GATES (tất cả rc=0) ────────────────────────────
+- npm run test        — 69/69 unit tests (9 files: baseline, tokens, dialogStack,
+                        fxAbility, preferenceStore, mediaPolicy, windowStore, commands, keyboard)
+- npm run build       — prebuild tokens:check + astro build
+- npm run tokens:check— contrast WCAG 12/12 pass
+- npm run policy:ui   — ratchet 142 hex markup (0 hex mới)
+- npm run stylelint   — sạch
+- npm run lint        — gate hoạt động (263 errors là nợ cũ được phát hiện, xử lý theo phase)
+
+── CẤU TRÚC MỚI ───────────────────────────────────────────
+src/ui/
+  tokens/     primitives.json · semantic.json · token-allowlist.json · tokens.gen.ts
+  kernel/     RetroButton · RetroWindow · RetroInput · RetroTable · RetroEmptyState · RetroImage
+  wm95/       dialogStack · dialogService · DialogHost · confirmDelegate
+              windowStore · windowRuntime · WindowFrame · Taskbar · WMHost
+  services/   preferenceStore · fxAbility · mediaPolicy
+  shell/      AppShell.astro · CommandPalette · commands · keyboardManager
+              defaultCommands · fxBootstrap · fonts · crt · snapGrid.css
+  hooks/      usePreferences · useWindowRuntime
+  MIGRATION.md
+tests/unit/   9 test files · 69 tests
+scripts/      ui-audit.mjs · build-tokens.mjs · check-ui-policy.mjs
+docs/adr/     ADR-0001..0004
+artifacts/    ui-baseline.json · bundle-baseline.json · ui-policy-count.json
+
+Ref: tailieu/Ke_hoach_nang_cap_Giao_dien_v5_ULTIMATE_OVERENGINEER.md (progress log từng phase)

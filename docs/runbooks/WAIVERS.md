@@ -10,6 +10,7 @@ Waiver = lỗi/biệt lệ CHẤP NHẬN có chủ đích. Mỗi mục: mô tả
 | W-4 | Hex cũ còn ~142 chỗ trong markup | Ratchet policy chặn tăng; migrate dần theo từng component | user | v5.1 |
 | W-5 | Fonts Google Fonts qua AppShell (chưa self-host woff2) | Không có woff2 local trong public/; self-host = phase riêng | user | v5.1 |
 | W-6 | Đếm test files ≥ 20 (không đếm số test case trong budget gate) | Đếm case cần chạy vitest — tốn hơn; file count đủ chặn xóa test | user | v5.1 |
+| W-7 | `.gitignore` từng chứa `artifacts/` → CI thiếu budgets file (deploy fail 2026-08-31) | Đã fix: bỏ ignore, budgets/policy files vào repo; guard message rõ trong check-budgets.mjs | user | resolved |
 
 ## Rollback đã diễn tập
 - Cách 2 (wrangler rollback) là đường khẩn TỨC THỜI — đã ghi lệnh trong ROLLBACK.md.

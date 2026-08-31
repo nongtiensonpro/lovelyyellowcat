@@ -1,0 +1,14 @@
+{
+  "_comment": "Phase 9 budget gates (ratchet) — nguồn: build 2026-08-31 sau Phase 8. Mọi thay đổi tăng phải cập nhật budgets.json + ghi lý do trong PR/commit.",
+  "js_total_bytes": 660000,
+  "js_largest_chunk_bytes": 210000,
+  "css_total_bytes": 185000,
+  "hydration": {
+    "client:load": 4,
+    "client:idle": 6,
+    "client:visible": 16
+  },
+  "tests_min": 226,
+  "bundle_files": 40,
+  "test_files_min": 20
+}

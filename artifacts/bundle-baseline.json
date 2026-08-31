@@ -1,0 +1,70 @@
+{
+  "schema": "lyc.bundle-baseline/1",
+  "totals": {
+    "js_bytes": 618516,
+    "css_bytes": 173402,
+    "files": 25
+  },
+  "top": [
+    {
+      "file": "supabaseBrowser.sUMOpNyK.js",
+      "bytes": 208309
+    },
+    {
+      "file": "client.CeQHbgwo.js",
+      "bytes": 180675
+    },
+    {
+      "file": "global.DNcPaujS.css",
+      "bytes": 119763
+    },
+    {
+      "file": "AiChatStation.uKbUYjRT.js",
+      "bytes": 80713
+    },
+    {
+      "file": "GalleryGrid.DwLGJ6fx.js",
+      "bytes": 41859
+    },
+    {
+      "file": "about.DSQNJhrr.css",
+      "bytes": 36601
+    },
+    {
+      "file": "ArticleEditor.DQbT_Adb.js",
+      "bytes": 18046
+    },
+    {
+      "file": "SubmissionWizard.B3Bq3hLk.js",
+      "bytes": 11622
+    },
+    {
+      "file": "UserManagementActions.RyXwY1e6.js",
+      "bytes": 9757
+    },
+    {
+      "file": "ProfileEditor.hUHqVyBj.js",
+      "bytes": 9301
+    },
+    {
+      "file": "banned.DzHuzaCh.css",
+      "bytes": 8825
+    },
+    {
+      "file": "unauthorized.CF_rePgO.css",
+      "bytes": 8213
+    },
+    {
+      "file": "react.TnC6C9K-.js",
+      "bytes": 8110
+    },
+    {
+      "file": "SearchModal.BVV5ZuxH.js",
+      "bytes": 7161
+    },
+    {
+      "file": "_slug_.astro_astro_type_script_index_0_lang.CU26EkM0.js",
+      "bytes": 6615
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "lyc.ui-baseline/1",
+  "notes": "Snapshot đầu phiên v5 (trước migration dialog/kernel). Tái tạo từ log chạy ui-audit đầu tiên.",
+  "fileCount": 96,
+  "loc": 25336,
+  "totals": {
+    "hex_literal": 873,
+    "rgb_literal": 0,
+    "arbitrary_tailwind": 1757,
+    "inline_style": 369,
+    "native_alert": 12,
+    "native_confirm": 12,
+    "img_tag": 51,
+    "img_srcset": 0,
+    "client_load": 14,
+    "client_visible": 4,
+    "client_idle": 1,
+    "z_adhoc": 8,
+    "role_dialog": 0,
+    "aria_live": 0,
+    "focus_visible": 0,
+    "any_cast": 198,
+    "win95_container": 0,
+    "win95_btn": 0,
+    "win95_header": 0,
+    "localStorage_direct": 0,
+    "webgl": 0,
+    "intersection_observer": 0,
+    "prefers_reduced_motion": 0,
+    "container_query": 0,
+    "layer_rule": 0
+  }
+}
