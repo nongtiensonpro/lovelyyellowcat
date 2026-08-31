@@ -64,7 +64,7 @@ Kỹ thuật chuẩn: `const body = (await request.json()) as SomeType;` — KH�
 ## Hoàn thành
 - [x] Batch 4 exhaustive-deps (6) — DONE: ReactionBar/GalleryGrid/NotificationBell/RealtimeComments wrap useCallback+deps; GalleryLightbox bọc 8 handler; WindowFrame đã sạch từ fix trước
 - [x] Batch 5 no-unused-vars (50→0) — DONE: imports dead xóa, catch(e) → catch, dead props/refs xóa, AppShell side-effect import; AI dead code -4KB; GalleryLightbox bỏ fetch thừa (tiết kiệm 1 request network mỗi copy)
-- [ ] Batch 6 no-console (58)
+- [x] Batch 6 no-console (58→0) — DONE: đọc 58/58 chỗ, quyết định ops-discipline: error-path logging giữ (error/warn), frontend cấm console.log, server paths (api/lib/middleware/admin) off; override có comment trong eslint.config
 - [ ] Batch 7 label a11y (46)
 - [ ] Batch 8 keyboard a11y (28)
 - [ ] Batch 9 a11y số ít (4)

@@ -27,8 +27,14 @@ export default tseslint.config(
         { selector: "CallExpression[callee.name='confirm']", message: "Dùng dialogService.confirm() thay confirm()" },
       ],
       "@typescript-eslint/no-explicit-any": "warn",
-      "no-console": "warn",
+      // Batch 6: frontend — cho phép error/warn (error-path ops), cấm console.log lỏng
+      "no-console": ["warn", { allow: ["error", "warn"] }],
     },
+  },
+  {
+    // Batch 6: server-side (Cloudflare Worker logs) — console.* là ops logging chuẩn, tắt rule
+    files: ["src/pages/api/**", "src/lib/**", "src/middleware.ts", "src/pages/admin/**"],
+    rules: { "no-console": "off" },
   },
   {
     // ─── v5 hotfix gate: nợ kỹ thuật tồn dư từ trước v5 → WARN (không chặn CI).
