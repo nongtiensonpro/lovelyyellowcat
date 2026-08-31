@@ -459,22 +459,22 @@ const { data: featuredArtworks } = await supabase
       (function () {
         try {
           // computeFxLevel (duplicated inline để tránh import build)
-          var STORAGE_KEY = "lyc_prefs_v1";
-          var parsed = null;
-          try { var raw = localStorage.getItem(STORAGE_KEY); if (raw) parsed = JSON.parse(raw); } catch(e) {}
-          var uiMode = (parsed && parsed.uiMode) || "catalog";
-          var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          var saveData = false;
-          var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+          const STORAGE_KEY = "lyc_prefs_v1";
+          let parsed = null;
+          try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) parsed = JSON.parse(raw); } catch(e) {}
+          const uiMode = (parsed && parsed.uiMode) || "catalog";
+          const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          let saveData = false;
+          const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
           if (conn) saveData = conn.saveData || false;
-          var fxOff = uiMode === "access" || reducedMotion || saveData;
-          var videoEl = document.getElementById("hero-video-bg");
+          const fxOff = uiMode === "access" || reducedMotion || saveData;
+          const videoEl = document.getElementById("hero-video-bg");
           if (!videoEl) return;
           if (fxOff) {
             videoEl.style.display = "none";
           } else {
             videoEl.style.display = "";
-            var play = videoEl.play ? videoEl.play() : Promise.resolve();
+            const play = videoEl.play ? videoEl.play() : Promise.resolve();
             play && play.catch(function() {});
           }
         } catch(e) {

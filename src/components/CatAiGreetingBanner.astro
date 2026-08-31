@@ -95,9 +95,9 @@ const initialGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
   if (btn && textEl) {
     btn.addEventListener("click", () => {
       // Chọn ngẫu nhiên lời chào khác với câu đang hiển thị
-      let currentText = textEl.textContent?.trim() || "";
-      let available = greetings.filter((g) => g !== currentText);
-      let randomPick = available[Math.floor(Math.random() * available.length)] || greetings[0];
+      const currentText = textEl.textContent?.trim() || "";
+      const available = greetings.filter((g) => g !== currentText);
+      const randomPick = available[Math.floor(Math.random() * available.length)] || greetings[0];
       
       textEl.style.opacity = "0.3";
       setTimeout(() => {

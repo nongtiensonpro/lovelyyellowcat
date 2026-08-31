@@ -481,7 +481,7 @@ const {
     }
 
     // Cleanup khi component bị hủy
-    // @ts-ignore
+    // @ts-expect-error — type def thư viện chưa khớp runtime API này
     wrapper.__pixelTextCleanup = () => {
       isDestroyed = true;
       if (animFrameId) cancelAnimationFrame(animFrameId);

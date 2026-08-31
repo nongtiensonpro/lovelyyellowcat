@@ -21,7 +21,7 @@ export const RetroInput = React.forwardRef<HTMLInputElement, RetroInputProps>(
 );
 RetroInput.displayName = "RetroInput";
 
-export interface RetroSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
+export type RetroSelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 export const RetroSelect = React.forwardRef<HTMLSelectElement, RetroSelectProps>(
   ({ className = "", children, ...rest }, ref) => (
     <select
@@ -35,7 +35,7 @@ export const RetroSelect = React.forwardRef<HTMLSelectElement, RetroSelectProps>
 );
 RetroSelect.displayName = "RetroSelect";
 
-export interface RetroTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export type RetroTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 export const RetroTextarea = React.forwardRef<HTMLTextAreaElement, RetroTextareaProps>(
   ({ className = "", ...rest }, ref) => (
     <textarea

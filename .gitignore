@@ -60,3 +60,6 @@ astro.config.verify.mjs
 build/
 # artifacts/ KHÔNG ignore — chứa policy ratchet (ui-budgets.json, ui-policy.json,
 # ui-baseline.json) là nguồn chân lý dùng chung local + CI budget gate
+
+# lint debt ratchet temp file (baseline trong artifacts/ mới là nguồn chân lý)
+.eslint-warnings.json

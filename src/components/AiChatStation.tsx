@@ -1249,7 +1249,7 @@ const AiChatStationInner: React.FC = () => {
     if (!currentSession) return;
     let content = "";
     let mimeType = "text/plain";
-    let fileName = `vapor_chat_${currentSession.id}.${format}`;
+    const fileName = `vapor_chat_${currentSession.id}.${format}`;
 
     if (format === "json") {
       content = JSON.stringify(currentSession, null, 2);

@@ -65,8 +65,8 @@ const hist = (url.searchParams.get("hist") || "").split("|").filter(Boolean);
 const usageParam = url.searchParams.get("usage") || "";
 const usageFilter = (["used", "orphan"].includes(usageParam) ? usageParam : "") as "" | "used" | "orphan";
 
-let savedMsg = url.searchParams.get("msg");
-let savedType = url.searchParams.get("type");
+const savedMsg = url.searchParams.get("msg");
+const savedType = url.searchParams.get("type");
 
 function buildMediaUrl(overrides: Record<string, string>) {
   const u = new URL("/admin/media", Astro.url.origin);
@@ -472,8 +472,8 @@ const pageUsed = resources.length - pageOrphans;
 
   <script is:inline define:vars={{ cloudName }}>
     (function () {
-      var toast = document.getElementById("media-toast");
-      var toastTimer = null;
+      const toast = document.getElementById("media-toast");
+      let toastTimer = null;
       function showToast() {
         if (!toast) return;
         toast.hidden = false;
@@ -494,12 +494,12 @@ const pageUsed = resources.length - pageOrphans;
 
       // ── Copy nhanh trên thẻ ──
       document.querySelectorAll("[data-media-card]").forEach(function (card) {
-        var pid = card.getAttribute("data-pid");
-        var urlBtn = card.querySelector(".copy-url-btn");
-        var mdBtn = card.querySelector(".copy-md-btn");
+        const pid = card.getAttribute("data-pid");
+        const urlBtn = card.querySelector(".copy-url-btn");
+        const mdBtn = card.querySelector(".copy-md-btn");
 
         function delivery(t) {
-          var enc = pid.split("/").map(encodeURIComponent).join("/");
+          const enc = pid.split("/").map(encodeURIComponent).join("/");
           return "https://res.cloudinary.com/" + cloudName + "/image/upload/" + (t ? t + "/" : "") + enc;
         }
 
@@ -507,17 +507,17 @@ const pageUsed = resources.length - pageOrphans;
           copyText(delivery("f_auto,q_auto,w_1200"));
         });
         if (mdBtn) mdBtn.addEventListener("click", function () {
-          var name = (card.querySelector("p[title]") || {}).getAttribute ? card.querySelector("p[title]").textContent.trim() : pid;
-          copyText("![" + name.replace(/[\[\]]/g, "") + "](" + delivery("f_auto,q_auto,w_1200") + ")");
+          const name = (card.querySelector("p[title]") || {}).getAttribute ? card.querySelector("p[title]").textContent.trim() : pid;
+          copyText("![" + name.replace(/[[\]]/g, "") + "](" + delivery("f_auto,q_auto,w_1200") + ")");
         });
 
         // ── Overlay chi tiết ──
-        var infoBtn = card.querySelector(".detail-btn");
+        const infoBtn = card.querySelector(".detail-btn");
         if (infoBtn) {
           infoBtn.addEventListener("click", function () {
-            var overlay = document.getElementById("media-detail");
+            const overlay = document.getElementById("media-detail");
             if (!overlay) return;
-            var w = card.getAttribute("data-w"), h = card.getAttribute("data-h");
+            const w = card.getAttribute("data-w"), h = card.getAttribute("data-h");
             document.getElementById("md-preview").src = delivery("f_auto,q_auto,w_900");
             document.getElementById("md-pid").textContent = pid;
             document.getElementById("md-name").textContent = card.getAttribute("data-fmt")
@@ -526,7 +526,7 @@ const pageUsed = resources.length - pageOrphans;
             document.getElementById("md-size").textContent = (w && h) ? w + " × " + h + " px" : "—";
             document.getElementById("md-fmt").textContent = (card.getAttribute("data-fmt") || "").toUpperCase() || "—";
             document.getElementById("md-bytes").textContent = fmtBytes(parseInt(card.getAttribute("data-bytes")));
-            var d = new Date(card.getAttribute("data-date"));
+            const d = new Date(card.getAttribute("data-date"));
             document.getElementById("md-date").textContent = isNaN(d.getTime()) ? "—" : d.toLocaleString("vi-VN");
             document.getElementById("md-folder").textContent = card.getAttribute("data-folder") || "root";
             overlay.dataset.currentPid = pid;
@@ -536,7 +536,7 @@ const pageUsed = resources.length - pageOrphans;
       });
 
       // ── Đóng overlay chi tiết ──
-      var overlay = document.getElementById("media-detail");
+      const overlay = document.getElementById("media-detail");
       if (overlay) {
         document.getElementById("media-detail-close")?.addEventListener("click", function () { overlay.hidden = true; });
         overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.hidden = true; });
@@ -545,11 +545,11 @@ const pageUsed = resources.length - pageOrphans;
         });
         overlay.querySelectorAll(".copy-variant").forEach(function (btn) {
           btn.addEventListener("click", function () {
-            var pid = overlay.dataset.currentPid;
+            const pid = overlay.dataset.currentPid;
             if (!pid) return;
-            var enc = pid.split("/").map(encodeURIComponent).join("/");
-            var base = "https://res.cloudinary.com/" + cloudName + "/image/upload/";
-            var kind = btn.getAttribute("data-copy");
+            const enc = pid.split("/").map(encodeURIComponent).join("/");
+            const base = "https://res.cloudinary.com/" + cloudName + "/image/upload/";
+            const kind = btn.getAttribute("data-copy");
             if (kind === "full") copyText(base + "f_auto,q_auto,w_1600/" + enc);
             else if (kind === "thumb") copyText(base + "f_auto,q_auto,w_400,h_300,c_fill/" + enc);
             else if (kind === "md") copyText("![" + pid.split("/").pop() + "](" + base + "f_auto,q_auto,w_1200/" + enc + ")");
@@ -559,13 +559,13 @@ const pageUsed = resources.length - pageOrphans;
       }
 
       // ── Chọn tất cả + đếm + xác nhận xóa hàng loạt ──
-      var checkAll = document.getElementById("check-all-media");
-      var countEl = document.getElementById("media-count");
+      const checkAll = document.getElementById("check-all-media");
+      const countEl = document.getElementById("media-count");
       function refreshCount() {
-        var boxes = Array.prototype.slice.call(document.querySelectorAll(".media-check"));
-        var n = boxes.filter(function (b) { return b.checked; }).length;
+        const boxes = Array.prototype.slice.call(document.querySelectorAll(".media-check"));
+        const n = boxes.filter(function (b) { return b.checked; }).length;
         if (countEl) countEl.textContent = String(n);
-        var delBtn = document.querySelector(".bulk-del");
+        const delBtn = document.querySelector(".bulk-del");
         if (delBtn) delBtn.disabled = n === 0;
       }
       if (checkAll) {
@@ -577,15 +577,15 @@ const pageUsed = resources.length - pageOrphans;
       document.querySelectorAll(".media-check").forEach(function (b) {
         b.addEventListener("change", refreshCount);
       });
-      var delBtn = document.querySelector(".bulk-del");
+      const delBtn = document.querySelector(".bulk-del");
       delBtn && delBtn.addEventListener("click", function (e) {
-        var checked = Array.prototype.slice.call(document.querySelectorAll(".media-check")).filter(function (b) { return b.checked; });
+        const checked = Array.prototype.slice.call(document.querySelectorAll(".media-check")).filter(function (b) { return b.checked; });
         if (checked.length === 0) return;
-        var usedCount = checked.filter(function (b) {
-          return b.closest("[data-media-card]")?.getAttribute("data-usage") !== "orphan";
-        }).length;
+        const usedCount = checked.filter(function (b) {
+      return b.closest("[data-media-card]")?.getAttribute("data-usage") !== "orphan";
+    }).length;
 
-        var msg = "🗑 XÓA VĨNH VIỄN " + checked.length + " ảnh khỏi Cloudinary?\n(Thao tác không thể hoàn tác)";
+        let msg = "🗑 XÓA VĨNH VIỄN " + checked.length + " ảnh khỏi Cloudinary?\n(Thao tác không thể hoàn tác)";
         if (usedCount > 0) {
           msg = "⚠️ CẢNH BÁO NGHIÊM TRỌNG!\n\n" + usedCount + "/" + checked.length + " ảnh đang ĐƯỢC SỬ DỤNG trong tranh/bài viết/hồ sơ.\nXóa sẽ làm GÃY LINK hiển thị công khai!\n\n" + msg;
         }

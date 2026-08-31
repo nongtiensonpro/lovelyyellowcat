@@ -11,7 +11,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "audit:ui": "node scripts/ui-audit.mjs",
-    "lint": "eslint .",
+    "lint": "eslint . --format json -o .eslint-warnings.json && node scripts/check-lint-debt.mjs",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -23,7 +23,8 @@
     "prebuild": "node scripts/build-tokens.mjs --check",
     "policy:ui": "node scripts/check-ui-policy.mjs",
     "budget:ui": "node scripts/check-budgets.mjs",
-    "typecheck": "tsc --noEmit --skipLibCheck"
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "lint:baseline": "node scripts/update-lint-baseline.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.2.1",

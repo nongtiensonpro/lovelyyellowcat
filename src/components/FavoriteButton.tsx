@@ -34,7 +34,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   useEffect(() => {
     if (!currentUser) return;
 
-    let isMounted = true;
+    const isMounted = true;
     const checkFavoriteStatus = async () => {
       try {
         const res = await fetch(`/api/favorites?submission_id=${submissionId}`);

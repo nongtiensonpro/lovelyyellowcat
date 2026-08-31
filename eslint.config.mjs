@@ -42,7 +42,7 @@ export default tseslint.config(
       "@typescript-eslint/ban-ts-comment": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
       "no-var": "warn",
-      "no-empty": "warn",
+      "no-empty": ["warn", { allowEmptyCatch: true }],
       "prefer-const": "warn",
       "no-useless-escape": "warn",
       "jsx-a11y/label-has-associated-control": "warn",

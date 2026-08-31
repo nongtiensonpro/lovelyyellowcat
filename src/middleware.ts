@@ -152,7 +152,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       🔑 Bạn là quản trị viên?
       <a href="/api/auth/signin" style="color:#ffff55;font-weight:bold">Đăng nhập tại đây</a>
       — sau khi đăng nhập bằng tài khoản admin/editor, trang sẽ tự mở lại bình thường
-      và bạn có thể tắt bảo trì trong <a href="/admin/settings" style="color:#ffff55">C:\ADMIN\SETTINGS</a>.
+      và bạn có thể tắt bảo trì trong <a href="/admin/settings" style="color:#ffff55">C:\\ADMIN\\SETTINGS</a>.
     </p>
   </div>
 </body>

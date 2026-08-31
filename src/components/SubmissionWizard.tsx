@@ -56,12 +56,12 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
   // Lấy token reCAPTCHA v3
   const executeRecaptcha = async (action: string): Promise<string | null> => {
     return new Promise((resolve) => {
-      // @ts-ignore
+      // @ts-expect-error — type def thư viện chưa khớp runtime API này
       if (window.grecaptcha && window.grecaptcha.execute) {
         const sitekey = window.__RECAPTCHA_SITEKEY__ || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY || "6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5";
-        // @ts-ignore
+        // @ts-expect-error — type def thư viện chưa khớp runtime API này
         window.grecaptcha.ready(() => {
-          // @ts-ignore
+          // @ts-expect-error — type def thư viện chưa khớp runtime API này
           window.grecaptcha.execute(sitekey, { action }).then((token: string) => {
             resolve(token);
           }).catch((err: any) => {
