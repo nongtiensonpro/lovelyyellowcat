@@ -38,3 +38,13 @@ describe("SSR smoke — gallery islands", () => {
     expect(typeof html).toBe("string");
   });
 });
+
+describe("SSR smoke — AI chat", () => {
+  it("AiChatStation render không throw (E2EE states render an toàn server-side)", async () => {
+    process.env.PUBLIC_SUPABASE_URL ??= "https://stub.supabase.co";
+    process.env.PUBLIC_SUPABASE_ANON_KEY ??= "stub-anon-key";
+    const { AiChatStation } = await import("../../src/components/AiChatStation");
+    const html = renderToString(React.createElement(AiChatStation));
+    expect(typeof html).toBe("string");
+  });
+});

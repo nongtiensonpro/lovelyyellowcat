@@ -478,6 +478,29 @@ Mỗi phase là PR nhỏ có baseline/screenshot; không đổi API/database cù
 - [x] **Negative test chứng minh gate hoạt động**: gỡ import → test fail ĐÚNG lỗi `processGalleryItems is not defined` như Worker logs → khôi phục → pass
 - [x] Bài học ghi vào quy trình: mọi patch qua execute_code PHẢI verify lại file trên disk trong CÙNG cell (assert sau write), không tin biến trong bộ nhớ
 
+
+### ✅ Phase 6 — HOÀN THÀNH (2026-08-31)
+
+**Pure modules (tách từ AiChatStation.tsx 2.454 LOC — file lớn nhất dự án):**
+- [x] `ai/aiPersonaData.ts` — 4 persona + system prompts + model config + topics (data thuần, findPersona fallback an toàn, personaSystemPrompt) — 11 tests
+- [x] `ai/aiStreamCore.ts` — SSE parsing (parseSseLine/splitSseBuffer), model fallback (modelsToTryFor), error classifiers (location/policy/recoverable), mergeModelUsage, continuation contents, clampTemperature — 23 tests
+- [x] `ai/aiMarkdown.ts` — **formatAiMarkdown escape-HTML-trước** — fix XSS tiềm ẩn: formatMarkdown cũ không escape, model output (BYOK) có thể inject `<script>`/`onerror` qua dangerouslySetInnerHTML — 8 tests
+
+**Bug phát hiện khi viết test:**
+- `clampTemperature(0)` cũ trả 0.7 (0 falsy → `|| 0.7`) — sửa thành 0 là hợp lệ → 0.1; chỉ NaN/undefined mới fallback 0.7
+- Lỗi escape Python trong lần viết đầu aiMarkdown.ts (regex double-escaped) — phát hiện qua esbuild parse error, viết lại qua node subprocess, verify pattern trên disk
+
+**Refactor AiChatStation (5 patches, mỗi patch verify read-back trong cùng cell):**
+- Imports 3 modules + xóa 8.167 chars data/helpers đã chuyển
+- 12 call sites: findPersona (×3), clampTemperature (×2), formatGeminiContents (×3), personaSystemPrompt, formatMarkdown → formatAiMarkdown
+- Stream loop: consumeLine 35 dòng inline → parseSseLine/splitSseBuffer (giữ nguyên behavior: done marker, usage merge, finishReason, parse error count)
+- Classifiers local xóa → module imports; readError → readErrorBody
+- File: 123KB → **110KB** (‑13KB, ‑~450 LOC); total LOC dự án giảm tương ứng
+
+**SSR smoke:** +AiChatStation renderToString (5 tests trong file smoke)
+
+**Số liệu:** 194/194 tests (22 files, +43) · 5 gates rc=0 · bundle 633KB (+1KB)
+
 ### ⏭ Bước tiếp theo
 - Phase 2: AppShell hợp nhất, preference store, FXBudget, font self-host, hạ client:load 14→≤4
 - Phase 3: WM/95 thật (drag/z-order/taskbar) + command palette Ctrl+K

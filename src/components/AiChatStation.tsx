@@ -17,6 +17,18 @@ import {
 } from "../lib/aiCrypto";
 import { buildSiteKnowledgePrompt } from "../lib/siteKnowledge";
 import { uiAlert, uiConfirm } from "../ui/wm95/dialogService";
+// Phase 6: pure modules (unit-tested) — persona data + stream core + safe markdown
+import { PERSONAS, PERSONA_PROMPTS, FALLBACK_MODEL_ORDER, MODEL_OPTIONS, TOPIC_CATEGORIES, findPersona, personaSystemPrompt } from "./ai/aiPersonaData";
+import {
+  mergeModelUsage, formatGeminiContents, modelsToTryFor,
+  isLocationError, isPolicyError, isPolicyFinishReason, isRecoverableStreamFailure,
+  parseSseLine, splitSseBuffer, buildContinuationContents, clampTemperature,
+  readErrorBody,
+  CLIENT_MAX_OUTPUT_TOKENS, CLIENT_INITIAL_RESPONSE_TIMEOUT_MS, CLIENT_STREAM_IDLE_TIMEOUT_MS,
+  CLIENT_MAX_MODEL_RETRIES, CLIENT_MAX_CONTINUATIONS, CLIENT_CONTINUATION_PROMPT,
+  type ModelUsage,
+} from "./ai/aiStreamCore";
+import { formatAiMarkdown } from "./ai/aiMarkdown";
 
 export interface ChatMessage {
   id: string;
@@ -63,174 +75,10 @@ export interface ChatSession {
   isLocalOnly?: boolean;
 }
 
-// 4 Nhân cách AI độc đáo
-export const PERSONAS = [
-  {
-    id: "cybercat",
-    name: "Mèo Vàng Cybernetic",
-    role: "Linh vật Tạp chí & Hướng dẫn",
-    icon: "🐱",
-    avatarBg: "from-vapor-yellow to-vapor-orange",
-    desc: "Thân thiện, hóm hỉnh, am hiểu sâu sắc về văn hóa Vaporwave, Synthwave và hướng dẫn sử dụng website.",
-    defaultGreeting: "Meow~! Chào mừng bạn đến với Trạm Trí Tuệ Nhân Tạo **Lovely Yellow Cat** 🐱💾! Tôi là Mèo Vàng Cybernetic (CAT_AI.EXE v1995). Tôi có thể giúp gì cho bạn hôm nay?",
-    badgeColor: "bg-vapor-yellow text-black",
-  },
-  {
-    id: "art_critic",
-    name: "Giáo Sư V.A.P.O.R",
-    role: "Nhà Giám Định Mỹ Thuật 1995",
-    icon: "🎨",
-    avatarBg: "from-vapor-purple to-vapor-pink",
-    desc: "Uyên bác, phân tích chuyên sâu về mỹ thuật thị giác, bảng màu neon pastel, bố cục retro và kỹ thuật đổ bóng dither.",
-    defaultGreeting: "Kính chào quý bạn yêu nghệ thuật! Tôi là Giáo sư V.A.P.O.R 🎨🏛️. Rất hân hạnh được đồng hành cùng bạn mổ xẻ các kiệt tác và trào lưu thị giác hoài niệm.",
-    badgeColor: "bg-vapor-purple text-white",
-  },
-  {
-    id: "hacker",
-    name: "CYBER_GHOST_95",
-    role: "Hacker Y2K & Retro Computing",
-    icon: "💾",
-    avatarBg: "from-vapor-green to-vapor-blue",
-    desc: "Chuyên gia kiến trúc máy tính x86 cổ điển, MS-DOS, Windows 95, mạng BBS Dial-up và lập trình hoài niệm.",
-    defaultGreeting: "CONNECT 19200/ARQ... Tín hiệu kết nối Terminal đã thông suốt 💾⚡. Nhập lệnh truy vấn hoặc câu hỏi kỹ thuật của bạn.",
-    badgeColor: "bg-vapor-green text-black",
-  },
-  {
-    id: "synth_dj",
-    name: "DJ NEON PULSE",
-    role: "Synthwave DJ & Lo-Fi Poet",
-    icon: "📼",
-    avatarBg: "from-vapor-pink to-vapor-blue",
-    desc: "Lãng mạn, du dương, gợi ý những giai điệu analog synth huyền ảo, viết thơ phong cách hoài cổ và văn hóa City Pop.",
-    defaultGreeting: "Chào buổi tối từ phòng thu Neon Pulse 📼🎷🌃. Bạn cần một playlist nhạc chill thư giãn hay muốn cùng tôi viết nên những vần thơ dưới ánh đèn đêm?",
-    badgeColor: "bg-vapor-pink text-black",
-  }
-];
-
-const PERSONA_PROMPTS: Record<string, string> = {
-  cybercat: `Bạn là "Mèo Vàng Cybernetic" (CAT_AI.EXE v1995) - linh vật và trợ lý trí tuệ nhân tạo của Tạp chí Nghệ thuật Số Hoài Cổ "Lovely Yellow Cat" (A Cybernetic Oasis 1995-2026).
-Tính cách & Phong cách:
-1. Thân thiện, vui vẻ, hóm hỉnh, am hiểu sâu sắc về văn hóa số thập niên 90, thẩm mỹ Vaporwave, Synthwave, Cyberpunk, Windows 95, City Pop, Pixel Art, và nghệ thuật máy tính cổ điển.
-2. Thỉnh thoảng chêm tiếng kêu "Meow~", biểu tượng cảm xúc hoài cổ (🐱, 💾, 📼, 🌸, ⚡, 🕹️, ✨) một cách tự nhiên.
-3. Luôn trả lời bằng tiếng Việt lịch sự, tự nhiên, câu cú rõ ràng, súc tích, dễ đọc. Sử dụng Markdown khi cần giải thích nhiều ý.
-4. Hướng dẫn người dùng khám phá các chuyên mục: /gallery (triển lãm), /submit (gửi tranh), /artists (nghệ sĩ), /favorites (yêu thích).`,
-
-  art_critic: `Bạn là "Giáo sư V. A. P. O. R" - Nhà Phê bình & Giám định Nghệ thuật Thị giác Cổ điển (Art Critic 1995).
-Phong cách:
-1. Uyên bác, sắc sảo, đánh giá nghệ thuật dưới góc độ lịch sử mỹ thuật thị giác, thiết kế đồ họa retro, bảng màu neon, kỹ thuật đổ bóng dither và bố cục siêu thực hoài niệm.
-2. Đưa ra những lời nhận xét sâu sắc, tinh tế về các trường phái Vaporwave, Synthwave, Mallsoft, Future Funk, Glitch Art.
-3. Luôn trả lời bằng tiếng Việt trau chuốt, học thuật nhưng dễ tiếp cận, kèm các thuật ngữ thiết kế chuẩn xác. 🎨🏛️`,
-
-  hacker: `Bạn là "CYBER_GHOST_95" - Hacker & Kỹ sư Kiến trúc Máy tính Cổ điển Y2K.
-Phong cách:
-1. Tư duy logic, am hiểu tường tận kiến trúc phần cứng x86, DOS, Windows 95, BBS, mạng Dial-up 56k, lập trình Assembly, C, Pascal, HTML 1.0 và an ninh mạng hoài cổ.
-2. Nói chuyện theo phong cách dòng lệnh Terminal, Hacker CLI, chêm các thuật ngữ công nghệ thập niên 90 (💾, ⚡, 📟, 🖥️).
-3. Luôn đưa ra câu trả lời kỹ thuật chính xác, chi tiết, có kèm code snippet minh họa chuẩn mực.`,
-
-  synth_dj: `Bạn là "DJ NEON PULSE" - Nhà Sản xuất Âm nhạc Synthwave & Nhà thơ Lo-Fi Chillwave.
-Phong cách:
-1. Lãng mạn, bay bổng, yêu thích những giai điệu synthesizer analog, tiếng saxophone hoài niệm, ánh đèn neon đêm muộn và những chuyến lái xe ngắm hoàng hôn thập niên 80-90.
-2. Sẵn sàng sáng tác thơ, lời bài hát, gợi ý album âm nhạc (Kavinsky, The Midnight, Macintosh Plus, Tatsuro Yamashita, Mariya Takeuchi...).
-3. Giọng điệu ấm áp, du dương, ngập tràn cảm hứng nghệ thuật thư giãn. 📼🎷🌃`
-};
-
-export const FALLBACK_MODEL_ORDER = [
-  "gemini-3.6-flash",
-  "gemini-3.7-flash",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash-preview",
-  "gemini-3.1-pro-preview",
-] as const;
-
-// Danh sách các Model Gemini hỗ trợ
-export const MODEL_OPTIONS = [
-  { id: "auto", name: "⚡ Tự Động Fallback (Khuyên dùng - Model ổn định mới nhất)" },
-  { id: "gemini-3.6-flash", name: "Gemini 3.6 Flash" },
-  { id: "gemini-3.7-flash", name: "Gemini 3.7 Flash" },
-  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash" },
-  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite" },
-  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite" },
-  { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview" },
-];
-
-// Thư viện đề tài gợi ý chuyên sâu
-export const TOPIC_CATEGORIES = [
-  {
-    category: "🎨 Thẩm Mỹ Vaporwave",
-    topics: [
-      "Vaporwave là gì và cội nguồn triết lý của nó?",
-      "Tại sao tượng cổ Hy Lạp lại xuất hiện trong tranh Vaporwave?",
-      "Phân biệt giữa Vaporwave, Synthwave và Cyberpunk",
-      "Bảng màu Neon Pastel gồm những sắc độ kinh điển nào?"
-    ]
-  },
-  {
-    category: "💾 Kỹ Thuật Số & Hoài Niệm 90s",
-    topics: [
-      "Vẻ đẹp giao diện xám 3D của Windows 95",
-      "Kỷ nguyên Internet Dial-up 56k và tiếng rè kết nối modem",
-      "Màn hình CRT Sony Trinitron và hiện tượng quét scanline",
-      "Nghệ thuật Pixel Art 16-bit thời hoàng kim arcade"
-    ]
-  },
-  {
-    category: "📼 Âm Nhạc & City Pop",
-    topics: [
-      "Gợi ý 5 album Synthwave / Retrowave huyền thoại",
-      "Tại sao âm nhạc City Pop Nhật Bản thập niên 80 lại gây sốt?",
-      "Album Floral Shoppe của Macintosh Plus có gì đặc biệt?",
-      "Viết cho tôi một bài thơ ngắn ngập tràn ánh đèn neon và hoàng hôn tím"
-    ]
-  },
-  {
-    category: "🖼️ Tạp Chí & Triển Lãm",
-    topics: [
-      "Hướng dẫn cách đăng tải tác phẩm lên phòng tranh cộng đồng",
-      "Hệ thống điểm tích lũy XP và huy chương hoạt động như thế nào?",
-      "Làm sao để liên hệ ban biên tập và góp ý nội dung bài viết?"
-    ]
-  }
-];
 
 const STORAGE_KEY = "vapor_ai_chat_sessions_v2"; // legacy, chỉ dùng để migrate 1 lần rồi xóa
 const API_KEY_STORAGE = "user_gemini_api_key";
 const MAX_CONTEXT_MESSAGES = 24;
-const CLIENT_MAX_OUTPUT_TOKENS = 4096;
-const CLIENT_INITIAL_RESPONSE_TIMEOUT_MS = 180_000;
-const CLIENT_STREAM_IDLE_TIMEOUT_MS = 90_000;
-const CLIENT_MAX_MODEL_RETRIES = 2;
-const CLIENT_MAX_CONTINUATIONS = 2;
-const CLIENT_CONTINUATION_PROMPT = "Hãy tiếp tục câu trả lời ngay từ chỗ đang dừng, không lặp lại phần đã viết và hoàn thành ý cuối cùng.";
-
-function mergeModelUsage(previous: ModelUsage | undefined, next: ModelUsage | undefined): ModelUsage | undefined {
-  if (!previous && !next) return undefined;
-  const sum = (a?: number, b?: number) =>
-    typeof a === "number" || typeof b === "number" ? (a || 0) + (b || 0) : undefined;
-  return {
-    promptTokenCount: sum(previous?.promptTokenCount, next?.promptTokenCount),
-    candidatesTokenCount: sum(previous?.candidatesTokenCount, next?.candidatesTokenCount),
-    totalTokenCount: sum(previous?.totalTokenCount, next?.totalTokenCount),
-    thoughtsTokenCount: sum(previous?.thoughtsTokenCount, next?.thoughtsTokenCount),
-    cachedContentTokenCount: sum(previous?.cachedContentTokenCount, next?.cachedContentTokenCount),
-  };
-}
-
-function formatClientGeminiContents(messages: Array<{ role: string; content: string }>) {
-  const context = messages
-    .filter((message) => typeof message?.content === "string" && message.content.trim())
-    .slice(-MAX_CONTEXT_MESSAGES);
-  const firstUserIndex = context.findIndex((message) => message.role === "user");
-  const usableContext = firstUserIndex > 0 ? context.slice(firstUserIndex) : context;
-
-  return usableContext.map((message) => ({
-    role: message.role === "user" ? "user" : "model",
-    parts: [{ text: message.content.trim() }],
-  }));
-}
-
 // Phát âm thanh retro 8-bit đơn giản qua Web Audio API
 function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.08) {
   try {
@@ -264,7 +112,7 @@ async function executeClientDirectChat(
   allowFallback: boolean,
   temperature: number
 ) {
-  const systemPrompt = `${PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat}\n\n${buildSiteKnowledgePrompt(messages)}`;
+  const systemPrompt = personaSystemPrompt(persona, buildSiteKnowledgePrompt(messages));
   let modelsToTry: string[] = [];
 
   if (preferredModel && preferredModel !== "auto") {
@@ -277,7 +125,7 @@ async function executeClientDirectChat(
     modelsToTry = [...FALLBACK_MODEL_ORDER];
   }
 
-  const formattedContents = formatClientGeminiContents(messages);
+  const formattedContents = formatGeminiContents(messages);
 
   const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
   let successfulReply: string | null = null;
@@ -297,7 +145,7 @@ async function executeClientDirectChat(
           contents: formattedContents,
           systemInstruction: { parts: [{ text: systemPrompt }] },
           generationConfig: {
-            temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
+            temperature: clampTemperature(temperature),
             maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
           },
         }),
@@ -363,39 +211,20 @@ async function executeClientDirectChatStream(
   onChunk: (text: string, model: string) => void,
   onModelStart?: (model: string) => void
 ): Promise<{ success: boolean; model: string; durationMs: number; usage?: ModelUsage; finishReason?: string; incomplete?: boolean; incompleteReason?: string; hasQuotaError?: boolean; isLocationBlocked?: boolean; reply?: string; errorDetail?: string }> {
-  const systemPrompt = `${PERSONA_PROMPTS[persona] || PERSONA_PROMPTS.cybercat}\n\n${buildSiteKnowledgePrompt(messages)}`;
+  const systemPrompt = personaSystemPrompt(persona, buildSiteKnowledgePrompt(messages));
   let modelsToTry: string[] = [];
   if (preferredModel && preferredModel !== "auto") {
     modelsToTry = allowFallback ? [preferredModel, ...FALLBACK_MODEL_ORDER.filter(m => m !== preferredModel)] : [preferredModel];
   } else {
     modelsToTry = [...FALLBACK_MODEL_ORDER];
   }
-  const formattedContents = formatClientGeminiContents(messages);
+  const formattedContents = formatGeminiContents(messages);
   const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
   const startTime = Date.now();
-  const generationTemperature = Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7));
+  const generationTemperature = clampTemperature(temperature);
 
-  const isLocationError = (error: string) => /user\s+location\s+is\s+not\s+supported|location\s+not\s+supported|unsupported\s+location/i.test(error);
-  const isPolicyFinishReason = (reason: string) => /SAFETY|BLOCKLIST|PROHIBITED|RECITATION|SPII|LANGUAGE/i.test(reason);
-  const isPolicyError = (error: string) => /safety|blocked|blocklist|prohibited|recitation|spii|policy/i.test(error);
-  const isRecoverableStreamFailure = (error: string) => !isLocationError(error)
-    && !/quota|rate.?limit|api\s*key|unauthenticated|permission|forbidden/i.test(error)
-    && !isPolicyError(error);
-  const buildContinuationContents = (partialText: string) => [
-    ...formattedContents,
-    { role: "model", parts: [{ text: partialText }] },
-    { role: "user", parts: [{ text: CLIENT_CONTINUATION_PROMPT }] },
-  ];
-  const readError = async (response: Response) => {
-    const raw = await response.text().catch(() => "");
-    if (!raw) return `HTTP ${response.status}`;
-    try {
-      const parsed = JSON.parse(raw);
-      return parsed?.error?.message || parsed?.message || raw.slice(0, 1_000);
-    } catch {
-      return raw.slice(0, 1_000);
-    }
-  };
+  // Phase 6: classifiers + SSE helpers qua pure module (unit-tested)
+  const buildContinuation = (partialText: string) => buildContinuationContents(formattedContents, partialText);
 
   for (const model of modelsToTry) {
     const maxAttempts = allowFallback ? CLIENT_MAX_MODEL_RETRIES : 1;
@@ -442,7 +271,7 @@ async function executeClientDirectChatStream(
             }),
           });
           if (!response.ok || !response.body) {
-            failureReason = await readError(response);
+            failureReason = await readErrorBody(response);
             failureStatus = response.status;
             break;
           }
@@ -451,6 +280,7 @@ async function executeClientDirectChatStream(
           armTimeout("idle");
           const reader = (response.body as ReadableStream<Uint8Array>).getReader();
           const decoder = new TextDecoder();
+          // Phase 6: SSE parsing qua pure module (unit-tested) — parseSseLine/splitSseBuffer
           let buffer = "";
           let hasContent = false;
           let streamError = "";
@@ -458,39 +288,16 @@ async function executeClientDirectChatStream(
           let parseErrorCount = 0;
           let sawDoneMarker = false;
           const consumeLine = (rawLine: string) => {
-            const line = rawLine.replace(/\r$/, "");
-            if (!line.startsWith("data:")) return;
-            const jsonStr = line.slice(5).trim();
-            if (!jsonStr) return;
-            if (jsonStr === "[DONE]") {
-              sawDoneMarker = true;
-              return;
-            }
-            try {
-              const data = JSON.parse(jsonStr);
-              if (data?.usageMetadata && typeof data.usageMetadata === "object") {
-                segmentUsage = data.usageMetadata as ModelUsage;
-              }
-              const candidateFinishReason = data?.candidates?.[0]?.finishReason;
-              if (typeof candidateFinishReason === "string" && candidateFinishReason) {
-                finishReason = candidateFinishReason;
-              }
-              const error = data?.error?.message || data?.error || data?.message;
-              if (error) {
-                streamError = String(error);
-                return;
-              }
-              const text = (data?.candidates || [])
-                .flatMap((candidate: any) => candidate?.content?.parts || [])
-                .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
-                .join("");
-              if (text) {
-                hasContent = true;
-                partialText += text;
-                onChunk(text, model);
-              }
-            } catch {
-              parseErrorCount += 1;
+            const parsed = parseSseLine(rawLine);
+            parseErrorCount += parsed.parseErrors;
+            if (parsed.doneMarker) { sawDoneMarker = true; return; }
+            if (parsed.usage) segmentUsage = parsed.usage;
+            if (parsed.finishReason) finishReason = parsed.finishReason;
+            if (parsed.error) { streamError = parsed.error; return; }
+            if (parsed.text) {
+              hasContent = true;
+              partialText += parsed.text;
+              onChunk(parsed.text, model);
             }
           };
 
@@ -498,10 +305,9 @@ async function executeClientDirectChatStream(
             const { done, value } = await reader.read();
             if (done) break;
             armTimeout("idle");
-            buffer += decoder.decode(value as Uint8Array, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-            for (const line of lines) consumeLine(line);
+            const split = splitSseBuffer(buffer, decoder.decode(value as Uint8Array, { stream: true }));
+            buffer = split.rest;
+            for (const line of split.lines) consumeLine(line);
             if (streamError) break;
           }
           buffer += decoder.decode();
@@ -514,7 +320,7 @@ async function executeClientDirectChatStream(
             policyBlocked = isPolicyError(streamError);
             if (partialText && !policyBlocked && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
               continuationCount += 1;
-              requestContents = buildContinuationContents(partialText);
+              requestContents = buildContinuation(partialText);
               continue;
             }
             break;
@@ -527,7 +333,7 @@ async function executeClientDirectChatStream(
             failureReason = `Stream có ${parseErrorCount} chunk SSE không đọc được.`;
             if (partialText && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
               continuationCount += 1;
-              requestContents = buildContinuationContents(partialText);
+              requestContents = buildContinuation(partialText);
               continue;
             }
             break;
@@ -538,7 +344,7 @@ async function executeClientDirectChatStream(
             failureReason = "Stream đóng trước khi Gemini gửi tín hiệu hoàn tất (finishReason/[DONE]).";
             if (partialText && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
               continuationCount += 1;
-              requestContents = buildContinuationContents(partialText);
+              requestContents = buildContinuation(partialText);
               continue;
             }
             break;
@@ -547,7 +353,7 @@ async function executeClientDirectChatStream(
           if (finishReason === "MAX_TOKENS") {
             if (continuationCount < CLIENT_MAX_CONTINUATIONS) {
               continuationCount += 1;
-              requestContents = buildContinuationContents(partialText);
+              requestContents = buildContinuation(partialText);
               continue;
             }
             failureReason = `Đã chạm giới hạn ${CLIENT_MAX_OUTPUT_TOKENS} output tokens sau ${CLIENT_MAX_CONTINUATIONS + 1} đoạn.`;
@@ -573,7 +379,7 @@ async function executeClientDirectChatStream(
             : err?.message || String(err);
           if (partialText && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
             continuationCount += 1;
-            requestContents = buildContinuationContents(partialText);
+            requestContents = buildContinuation(partialText);
             continue;
           }
           break;
@@ -700,7 +506,7 @@ export const AiChatStation: React.FC = () => {
             } catch {}
           }
           // Nếu chưa có message nào (phiên mới), thêm greeting
-          const persona = PERSONAS.find(p => p.id === s.persona) || PERSONAS[0];
+          const persona = findPersona(s.persona);
           if (msgs.length === 0) {
             msgs.push({
               id: `msg-welcome-1`,
@@ -740,7 +546,7 @@ export const AiChatStation: React.FC = () => {
   const createNewSessionEncrypted = async (personaId: string, keyOverride?: CryptoKey) => {
     const k = keyOverride || masterKey;
     if (!k) return null;
-    const persona = PERSONAS.find(p => p.id === personaId) || PERSONAS[0];
+    const persona = findPersona(personaId);
     const titlePlain = `Hội thoại cùng ${persona.name}`;
     try {
       const { iv, ciphertext } = await encryptString(titlePlain, k);
@@ -1173,7 +979,7 @@ export const AiChatStation: React.FC = () => {
             transport: "browser-direct",
             temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
             maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
-            contextMessages: formatClientGeminiContents(updatedMessages).length,
+            contextMessages: formatGeminiContents(updatedMessages).length,
             finishReason: result.finishReason,
             incomplete: Boolean(result.incomplete),
             incompleteReason: result.incompleteReason,
@@ -1304,7 +1110,7 @@ export const AiChatStation: React.FC = () => {
           transport: "browser-direct",
           temperature: Math.max(0.1, Math.min(1.0, Number(temperature) || 0.7)),
           maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
-          contextMessages: formatClientGeminiContents(continuationContext).length,
+          contextMessages: formatGeminiContents(continuationContext).length,
           finishReason: result.finishReason,
           incomplete: Boolean(result.incomplete),
           incompleteReason: result.incompleteReason,
@@ -1470,14 +1276,10 @@ export const AiChatStation: React.FC = () => {
   };
 
   // Định dạng markdown đơn giản
-  const formatMarkdown = (text: string) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`([^`]+)`/g, '<code class="bg-black/10 px-1 py-0.5 font-mono text-[11px]">$1</code>');
-  };
+  // Phase 6: markdown qua module an toàn — escape HTML trước (chống XSS từ model output)
+  const formatMarkdown = formatAiMarkdown;
 
-  const activePersonaObj = PERSONAS.find(p => p.id === (currentSession?.persona || selectedPersonaId)) || PERSONAS[0];
+  const activePersonaObj = findPersona(currentSession?.persona || selectedPersonaId);
 
   return (
     <div className="font-retro text-black select-none max-w-7xl mx-auto my-4 space-y-4">
