@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import { FavoriteButton } from "./FavoriteButton";
 import { GalleryLightbox } from "./GalleryLightbox";
+// Phase 4: pure query pipeline (unit-tested) — filter/sort/debounce guard
+import { processGalleryItems, shouldRefetch, type SortMode } from "./gallery/galleryQuery";
 import { LazyImage } from "./LazyImage";
 
 const supabaseClient = getSupabaseBrowserClient();

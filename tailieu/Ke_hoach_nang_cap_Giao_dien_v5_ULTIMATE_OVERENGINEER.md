@@ -466,6 +466,18 @@ Mỗi phase là PR nhỏ có baseline/screenshot; không đổi API/database cù
 
 **Số liệu:** 151/151 tests (19 files, +33 tests Phase 5) · 5 gates rc=0 · bundle 632KB (+1KB) · policy ratchet 142 giữ nguyên
 
+
+### 🔥 Hotfix production (2026-08-31): GalleryGrid `processGalleryItems is not defined`
+
+**Nguyên nhân:** Trong Phase 4, lệnh patch GalleryGrid bị **chia 2 cell execute** — cell 1 thêm import nhưng `raise SystemExit` trước khi `write_text` (import chỉ tồn tại trong bộ nhớ), cell 2 ghi phần gọi hàm. Kết quả: file có call không có import. Build xanh vì Rolldown không bắt identifier thiếu ở module scope; test module pass vì test trực tiếp module. Lỗi chỉ bùng trên production SSR.
+
+**Sửa:** Thêm `import { processGalleryItems, shouldRefetch, type SortMode } from "./gallery/galleryQuery"` + verify ngay trên disk.
+
+**Phòng chống lặp lại:**
+- [x] SSR smoke test +GalleryGrid (renderToString trong vitest, stub Supabase env)
+- [x] **Negative test chứng minh gate hoạt động**: gỡ import → test fail ĐÚNG lỗi `processGalleryItems is not defined` như Worker logs → khôi phục → pass
+- [x] Bài học ghi vào quy trình: mọi patch qua execute_code PHẢI verify lại file trên disk trong CÙNG cell (assert sau write), không tin biến trong bộ nhớ
+
 ### ⏭ Bước tiếp theo
 - Phase 2: AppShell hợp nhất, preference store, FXBudget, font self-host, hạ client:load 14→≤4
 - Phase 3: WM/95 thật (drag/z-order/taskbar) + command palette Ctrl+K

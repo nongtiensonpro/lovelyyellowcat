@@ -1,3 +1,4 @@
+import React from "react";
 // ssr-smoke.test.tsx — render các island qua renderToString để bắt lỗi
 // "Missing getServerSnapshot" / window-undefined NGAYỤC TRONG CI, không đợi deploy thật.
 import { describe, it, expect } from "vitest";
@@ -21,4 +22,19 @@ describe("SSR smoke — islands phải render được trên server", () => {
   });
 });
 
-import React from "react";
+describe("SSR smoke — gallery islands", () => {
+  it("GalleryGrid render không throw (imports module galleryQuery đầy đủ)", async () => {
+    // GalleryGrid module-scope tạo Supabase client — stub env trước khi import
+    process.env.PUBLIC_SUPABASE_URL ??= "https://stub.supabase.co";
+    process.env.PUBLIC_SUPABASE_ANON_KEY ??= "stub-anon-key";
+    const { GalleryGrid } = await import("../../src/components/GalleryGrid");
+    const html = renderToString(
+      React.createElement(GalleryGrid, {
+        initialSubmissions: [],
+        currentUser: null,
+        isFavoritesOnly: false,
+      })
+    );
+    expect(typeof html).toBe("string");
+  });
+});
