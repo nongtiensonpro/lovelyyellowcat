@@ -20,6 +20,8 @@ interface ReactionBarProps {
 }
 
 export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser }) => {
+  // Phase 8: live region cho screen reader khi reactions đổi (aria-live)
+  const [liveMsg, setLiveMsg] = useState("");
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [particles, setParticles] = useState<Particle[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,6 +38,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
 
     if (!error && data) {
       setReactions(data);
+      setLiveMsg(`${data.length} biểu tượng cảm xúc đã ghi nhận.`);
     }
   };
 
@@ -161,7 +164,9 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
   };
 
   return (
-    <div className="relative font-retro text-black mt-6 mb-4 select-none">
+    <>
+      <div aria-live="polite" aria-atomic="true" className="sr-only">{liveMsg}</div>
+      <div className="relative font-retro text-black mt-6 mb-4 select-none">
       {/* Thông báo lỗi Win95 mini */}
       {errorMessage && (
         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-win-gray border border-win-dark p-1.5 shadow-md text-[10px] font-bold text-red-700 z-50">
@@ -216,5 +221,6 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
         </span>
       ))}
     </div>
+    </>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { ErrorBoundary } from "../ui/kernel/ErrorBoundary";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import {
   toBase64,
@@ -422,7 +423,7 @@ async function executeClientDirectChatStream(
   };
 }
 
-export const AiChatStation: React.FC = () => {
+const AiChatStationInner: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
   const [inputVal, setInputVal] = useState("");
@@ -2256,3 +2257,10 @@ export const AiChatStation: React.FC = () => {
     </div>
   );
 };
+
+// Phase 8: ErrorBoundary — island crash không làm trắng trang (ADR-0002 fallback)
+export const AiChatStation: React.FC = () => (
+  <ErrorBoundary moduleName="CAT_AI.EXE">
+    <AiChatStationInner />
+  </ErrorBoundary>
+);

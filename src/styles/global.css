@@ -1096,3 +1096,17 @@ select:focus-visible {
 @container (min-width: 320px) {
   .cq-card .cq-stack { flex-direction: row; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   v5 PHASE 8 — content-visibility (perf): trình duyệt bỏ qua
+   render offscreen section cho tới khi cuộn tới. Fallback tự nhiên:
+   trình duyệt cũ không hỗ trợ = render bình thường (progressive enhancement).
+   ═══════════════════════════════════════════════════════════ */
+@layer utilities {
+  .cv-auto {
+    content-visibility: auto;
+    /* chứa intrinsic size dự phòng để scrollbar không nhảy khi section render */
+    contain-intrinsic-size: auto 500px;
+  }
+  .cv-auto-tall { content-visibility: auto; contain-intrinsic-size: auto 1000px; }
+}

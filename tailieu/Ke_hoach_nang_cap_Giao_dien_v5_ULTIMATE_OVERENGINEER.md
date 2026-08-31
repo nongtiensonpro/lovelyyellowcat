@@ -534,6 +534,27 @@ Mỗi phase là PR nhỏ có baseline/screenshot; không đổi API/database cù
 
 **Số liệu:** 218/218 tests (23 files, +24) · 5 gates rc=0 · bundle 633KB/176KB
 
+
+### ✅ Phase 8 — HOÀN THÀNH (2026-08-31)
+
+**ErrorBoundary kernel (ADR-0002 fallback principle):**
+- [x] `ui/kernel/ErrorBoundary.tsx` — class boundary: getDerivedStateFromError, componentDidCatch hook onError (silent-fail), fallback Win95 "BSOD-mini" + nút THỬ LẠI, không PII
+- [x] Wrap `AiChatStation` (CAT_AI.EXE) + `GalleryGrid` (GALLERY_GRID.EXE) — 2 island lớn nhất, crash không làm trắng trang
+
+**Web Vitals telemetry (ADR-0004 — no-PII, không thư viện):**
+- [x] `ui/services/telemetry.ts` — LCP/CLS/INP qua PerformanceObserver native (~0KB deps), safePath (bỏ query chống lộ token), compactUA (m/d + effectiveType), session-id hash (không user id), sampling 10% per-session, sendBeacon + fetch keepalive fallback, silent-fail toàn bộ
+- [x] `/api/ui-telemetry` endpoint — validate chặt (metric allowlist, value clamp), rate-limit 30/min/IP, insert-only
+- [x] `supabase_sql/ui_telemetry.sql` — bảng ui_events + RLS (anon insert, admin select) + index
+- [x] `telemetryBootstrap.ts` mount trong AppShell; ErrorBoundary onError → reportIslandError
+
+**Perf + a11y:**
+- [x] `.cv-auto` utilities (content-visibility: auto + contain-intrinsic-size) — trình duyệt cũ fallback tự nhiên
+- [x] ReactionBar: aria-live="polite" region cho screen reader khi reactions thay đổi
+
+**Sự cố trong phase (đã khắc phục):** regex wrap ErrorBoundary vào astro template phá cấu trúc file gallery/index.astro — phát hiện qua build fail, khôi phục thủ công từng ký tự, đổi chiến lược wrap **trong TSX** (an toàn tuyệt đối, không đụng template). Bài học: KHÔNG bao giờ wrap JSX qua regex trên .astro — wrap ở mức component export.
+
+**Số liệu:** 226/226 tests (25 files, +8) · 5 gates rc=0 · bundle 635KB/177KB (+2KB telemetry + boundary) · telemetry endpoint verify trong server bundle
+
 ### ⏭ Bước tiếp theo
 - Phase 2: AppShell hợp nhất, preference store, FXBudget, font self-host, hạ client:load 14→≤4
 - Phase 3: WM/95 thật (drag/z-order/taskbar) + command palette Ctrl+K

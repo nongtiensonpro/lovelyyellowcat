@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { ErrorBoundary } from "../ui/kernel/ErrorBoundary";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import { FavoriteButton } from "./FavoriteButton";
 import { GalleryLightbox } from "./GalleryLightbox";
@@ -30,7 +31,7 @@ interface GalleryGridProps {
   isFavoritesOnly?: boolean;
 }
 
-export const GalleryGrid: React.FC<GalleryGridProps> = ({
+const GalleryGridInner: React.FC<GalleryGridProps> = ({
   initialSubmissions,
   currentUser,
   isFavoritesOnly = false
@@ -552,3 +553,10 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
     </div>
   );
 };
+
+// Phase 8: ErrorBoundary — island crash không làm trắng trang
+export const GalleryGrid: React.FC<GalleryGridProps> = (props) => (
+  <ErrorBoundary moduleName="GALLERY_GRID.EXE">
+    <GalleryGridInner {...props} />
+  </ErrorBoundary>
+);

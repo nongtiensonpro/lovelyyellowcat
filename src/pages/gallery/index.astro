@@ -19,6 +19,7 @@ const { data: dbSubmissions } = await supabase
   .order("created_at", { ascending: false });
 
 const initialSubmissions = dbSubmissions || [];
+import { ErrorBoundary } from "../../ui/kernel/ErrorBoundary";
 ---
 
 <BaseLayout
@@ -43,14 +44,15 @@ const initialSubmissions = dbSubmissions || [];
         <span>SYSTEM_STATUS.LOG</span>
       </div>
       <div class="p-3 bg-white text-[10px] sm:text-xs font-bold text-black font-retro leading-relaxed">
-        <span class="text-vapor-purple">● Triển lãm cộng đồng hoạt động trực tuyến.</span> Tổng cộng <span class="text-vapor-pink">{initialSubmissions.length}</span> tác phẩm đã được giám định nghệ thuật và phân phối qua mạng lưới Cybernet. Hãy dùng phím mũi tên hoặc nhấn chạy Slideshow để tận hưởng không gian ngắm tranh thư thái nhất!
+        <span class="text-vapor-purple">● Triển lãm cộng đồng hoạt động trực tuyến.</span> Tổng cộng <span class="text-vapor-pink">{initialSubmissions.length}</span> tác phẩm đã được giám định nghệ thuật và phân phối qua mạng lưới Cybernet. Hãy dùng phím mũi tên hoặc nhấn chạy Slideshow để tận hưởng không gian nghệ thuật đầy cảm hứng.
       </div>
     </div>
-
-    <GalleryGrid
-      client:visible
-      initialSubmissions={initialSubmissions}
-      currentUser={userProfile}
-    />
   </div>
+
+  {/* Main Grid Component */}
+  <GalleryGrid
+    client:visible
+    initialSubmissions={initialSubmissions}
+    currentUser={userProfile}
+  />
 </BaseLayout>
