@@ -128,4 +128,29 @@ import RetroImage from "../../ui/kernel/RetroImage.astro";
     </section>
 
   </main>
+
+---
+// Phase 9: demo crash/recovery — client script nhỏ, không phải island (0 hydration)
+---
+<section class="mt-10 win95-window" data-demo="error-boundary">
+  <div class="win95-header"><span class="text-xs font-bold">PHASE_8 // ERRORBOUNDARY LIVE</span></div>
+  <div class="p-4 space-y-3">
+    <p class="text-xs text-black">Nhấn nút để ném lỗi trong island đã bọc ErrorBoundary — khung "BSOD-mini" phải xuất hiện, nội dung khác trang KHÔNG bị ảnh hưởng. Nút THỬ LẠI reset.</p>
+    <div class="flex gap-2 flex-wrap">
+      <button type="button" class="win95-btn px-3 py-1.5 text-[11px] font-bold" id="demo-crash-btn">💥 NÉM LỖI (CRASH MODULE)</button>
+      <span class="text-[10px] text-win-dark self-center" id="demo-crash-status">chưa ném</span>
+    </div>
+  </div>
+</section>
+<script>
+  // Demo: ném lỗi unhandled trong render của một island bọc ErrorBoundary
+  const btn = document.getElementById("demo-crash-btn");
+  btn?.addEventListener("click", () => {
+    const status = document.getElementById("demo-crash-status");
+    // dispatch custom event — ErrorBoundary demo island lắng nghe và throw
+    window.dispatchEvent(new CustomEvent("lyc:demo-crash"));
+    if (status) status.textContent = "đã dispatch crash event";
+  });
+</script>
+
 </BaseLayout>

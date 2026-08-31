@@ -21,7 +21,8 @@
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check",
     "prebuild": "node scripts/build-tokens.mjs --check",
-    "policy:ui": "node scripts/check-ui-policy.mjs"
+    "policy:ui": "node scripts/check-ui-policy.mjs",
+    "budget:ui": "node scripts/check-budgets.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.2.1",

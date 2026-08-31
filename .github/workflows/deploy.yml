@@ -38,6 +38,9 @@ jobs:
           PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.PUBLIC_CLOUDINARY_CLOUD_NAME }}
           PUBLIC_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.PUBLIC_CLOUDINARY_UPLOAD_PRESET }}
 
+      - name: UI budget gate
+        run: npm run budget:ui
+
       - name: Đăng tải lên Cloudflare Workers
         run: npx --yes wrangler@4 deploy --config build/server/wrangler.json
         env:

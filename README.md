@@ -50,6 +50,20 @@
 
 ---
 
+## 🕹️ V5 UI KERNEL — "ULTIMATE OVERENGINEER" (2026-08)
+
+Giao diện giờ chạy trên một **retro OS kernel thật** — không chỉ theme:
+
+- **Design Token Pipeline** — `src/ui/tokens/*.json` (DTCG) → gen `@theme` Tailwind 4, contrast WCAG tự verify, prebuild gate `tokens:check`
+- **WM/95 Window Manager** — cửa sổ kéo/thả/snap 8 vùng (Pointer Events), Taskbar, Alt+F4; Command Palette `Ctrl+K` (role-aware public/auth/admin)
+- **Dialog Service** — hết `alert()/confirm()` native (24→0); dialog Win95 focus-trap + `data-confirm` delegation
+- **Preference Store** — UI mode CATALOG/CRT/ACCESS, FX budget off→high, sync BroadcastChannel giữa tab
+- **ErrorBoundary** — island crash chỉ rơi vào khung "BSOD-mini" có nút THỬ LẠI, không trắng trang
+- **Web Vitals telemetry 0-deps** — LCP/CLS/INP PerformanceObserver, no-PII, sampling 10% (`/api/ui-telemetry`, migrate `supabase_sql/ui_telemetry.sql`)
+- **Pure modules + 226 tests** — gallery/article/ai/admin tách logic thuần từ UI, gates: `npm run test && npm run tokens:check && npm run stylelint && npm run build && npm run policy:ui && npm run budget:ui`
+
+Chi tiết kiến trúc: `docs/adr/` (4 ADR) · hướng dẫn migrate component: `src/ui/MIGRATION.md` · rollback: `docs/runbooks/ROLLBACK.md` · QA thủ công: `docs/runbooks/DOGFOOD.md` · lịch sử: `CHANGELOG.md`
+
 ## 1️⃣ ĐÂY LÀ CÁI GÌ?
 
 Hãy tưởng tượng bạn bước vào một **tiệm điện tử bỏ hoang năm 1995** — màn hình CRT còn sáng, băng VHS vẫn quay, và trên tường treo đầy tranh do cộng đồng mạng gửi về từ khắp nơi. Đó chính là LovelyYellowCat: một **tạp chí nghệ thuật số** nơi mọi người đăng tranh Vaporwave, đọc bài viết thẩm mỹ, trò chuyện realtime — và toàn bộ hạ tầng vận hành với **chi phí 0 đồng/tháng**.

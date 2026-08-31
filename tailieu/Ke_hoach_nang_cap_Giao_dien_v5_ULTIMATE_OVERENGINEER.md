@@ -555,6 +555,33 @@ Mỗi phase là PR nhỏ có baseline/screenshot; không đổi API/database cù
 
 **Số liệu:** 226/226 tests (25 files, +8) · 5 gates rc=0 · bundle 635KB/177KB (+2KB telemetry + boundary) · telemetry endpoint verify trong server bundle
 
+
+### ✅ Phase 9 — HOÀN THÀNH (2026-08-31) — 🏁 v5 LAUNCH
+
+**Budget gates (ratchet):**
+- [x] `scripts/check-budgets.mjs` + `artifacts/ui-budgets.json` — JS 650.614/660.000B, largest chunk 208.309/210.000B, CSS 181.372/185.000B, hydration load≤4 idle≤6 visible≤16, test files≥20; script `budget:ui`; chèn gate vào deploy.yml TRƯỚC bước wrangler deploy (budget fail = không deploy)
+
+**Route matrix smoke (production thật):**
+- [x] 19 routes: 16 public 200 + marker; /gallery/[id], /articles/[slug] không-tồn-tai → redirect (behavior thiết kế, waiver W-2); /abc → 404 đúng
+- [x] Tìm được từ smoke: 2 route matrix ban đầu đoán sai cấu trúc (không có /articles index, /auth/signin là API) — đã sửa matrix theo src/pages thật
+
+**Demo + cleanup:**
+- [x] `/dev/kernel` + section PHASE_8 ERRORBOUNDARY LIVE (crash/recovery demo)
+- [x] Xóa file mồ côi: `WindowManagerProvider.tsx`, `focusScope.ts` (verify 0 refs trước xóa)
+
+**Docs launch:**
+- [x] `CHANGELOG.md` (10 phase + hotfix, tiếng Việt)
+- [x] `docs/runbooks/ROLLBACK.md` — 3 cách rollback (git revert / wrangler rollback tức thời / feature-level tắt module)
+- [x] `docs/runbooks/DOGFOOD.md` — checklist guest/auth/AI/admin/technical
+- [x] `docs/runbooks/WAIVERS.md` — 6 waivers (attribution-reporting, redirect-200, bundle 650KB, hex ratchet, Google Fonts, test-file-count)
+- [x] README section "V5 UI KERNEL"
+
+**Kết quả tổng v5:** 6 gates rc=0 · 226 tests / 25 files · JS 635KB · CSS 177KB · alert/confirm 24→0 · client:load 14→4 · hex 873→662 (ratchet) · 0 error boundary → 2 islands bọc · 0 telemetry → web vitals no-PII
+
+### 🏁 KẾT LUẬN V5 — COMPLETE (2026-08-31)
+Toàn bộ 10 phase (0–9) hoàn thành theo kế hoạch, gồm 8 hotfix production phát hiện qua dogfood thật.
+Quy trình bảo trì từ nay: sửa bug → thêm test chặn class lỗi → 6 gates → deploy → dogfood checklist.
+
 ### ⏭ Bước tiếp theo
 - Phase 2: AppShell hợp nhất, preference store, FXBudget, font self-host, hạ client:load 14→≤4
 - Phase 3: WM/95 thật (drag/z-order/taskbar) + command palette Ctrl+K
