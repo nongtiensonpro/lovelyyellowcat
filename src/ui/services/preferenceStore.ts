@@ -73,11 +73,13 @@ export function hydratePreferences(): void {
     const parsed = safeParse(raw);
     if (parsed) {
       state = { ...DEFAULT_PREFERENCES, ...parsed };
+      rebuildSnapshot();
     } else {
       // Thử migrate legacy key của shell cũ
       const legacy = migrateLegacy(window.localStorage.getItem("vapor_crt_mode"));
       if (legacy) {
         state = { ...DEFAULT_PREFERENCES, ...legacy };
+        rebuildSnapshot();
         persist();
       }
     }
@@ -90,6 +92,7 @@ export function hydratePreferences(): void {
       const incoming = ev.data as Preferences | null;
       if (incoming && typeof incoming === "object" && "uiMode" in incoming) {
         state = { ...state, ...incoming };
+        rebuildSnapshot();
         emit();
       }
     };
@@ -113,13 +116,23 @@ function emit(): void {
   for (const l of listeners) l({ ...state });
 }
 
+// Snapshot cache: useSyncExternalStore so sánh bằng Object.is — nếu getSnapshot
+// tạo object mới mỗi lần gọi thì component re-render vô hạn (React error #185).
+// Chỉ tạo snapshot mới khi state THẬT SỰ đổi (trong setPreferences/migrate).
+let snapshotCache: Preferences = { ...DEFAULT_PREFERENCES };
+
+function rebuildSnapshot(): void {
+  snapshotCache = { ...state };
+}
+
 export function getPreferences(): Preferences {
   if (!hydrated) hydratePreferences();
-  return { ...state };
+  return snapshotCache;
 }
 
 export function setPreferences(patch: Partial<Preferences>): Preferences {
   state = { ...state, ...patch };
+  rebuildSnapshot();
   persist();
   emit();
   try {

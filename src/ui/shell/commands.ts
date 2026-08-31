@@ -13,7 +13,10 @@ export interface Command {
 const REGISTRY: Command[] = [];
 const listeners = new Set<(cmds: Command[]) => void>();
 
-function emit() { for (const l of listeners) l([...REGISTRY]); }
+function rebuildCache(): void {
+  commandsCache = [...REGISTRY];
+}
+function emit() { rebuildCache(); for (const l of listeners) l(commandsCache); }
 
 export function registerCommand(cmd: Command): () => void {
   REGISTRY.push(cmd);
@@ -24,7 +27,10 @@ export function registerCommand(cmd: Command): () => void {
   };
 }
 
-export function getCommands(): Command[] { return [...REGISTRY]; }
+// Snapshot cache — cùng lý do Object.is với useSyncExternalStore (React #185)
+let commandsCache: Command[] = [];
+
+export function getCommands(): Command[] { return commandsCache; }
 
 export function subscribeCommands(l: (cmds: Command[]) => void): () => void {
   listeners.add(l);
