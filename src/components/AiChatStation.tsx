@@ -16,6 +16,7 @@ import {
   exportMasterKeyRaw,
 } from "../lib/aiCrypto";
 import { buildSiteKnowledgePrompt } from "../lib/siteKnowledge";
+import { uiAlert, uiConfirm } from "../ui/wm95/dialogService";
 
 export interface ChatMessage {
   id: string;
@@ -69,7 +70,7 @@ export const PERSONAS = [
     name: "Mèo Vàng Cybernetic",
     role: "Linh vật Tạp chí & Hướng dẫn",
     icon: "🐱",
-    avatarBg: "from-[#fffb96] to-[#ff9a3c]",
+    avatarBg: "from-vapor-yellow to-vapor-orange",
     desc: "Thân thiện, hóm hỉnh, am hiểu sâu sắc về văn hóa Vaporwave, Synthwave và hướng dẫn sử dụng website.",
     defaultGreeting: "Meow~! Chào mừng bạn đến với Trạm Trí Tuệ Nhân Tạo **Lovely Yellow Cat** 🐱💾! Tôi là Mèo Vàng Cybernetic (CAT_AI.EXE v1995). Tôi có thể giúp gì cho bạn hôm nay?",
     badgeColor: "bg-vapor-yellow text-black",
@@ -79,7 +80,7 @@ export const PERSONAS = [
     name: "Giáo Sư V.A.P.O.R",
     role: "Nhà Giám Định Mỹ Thuật 1995",
     icon: "🎨",
-    avatarBg: "from-[#b967ff] to-[#ff71ce]",
+    avatarBg: "from-vapor-purple to-vapor-pink",
     desc: "Uyên bác, phân tích chuyên sâu về mỹ thuật thị giác, bảng màu neon pastel, bố cục retro và kỹ thuật đổ bóng dither.",
     defaultGreeting: "Kính chào quý bạn yêu nghệ thuật! Tôi là Giáo sư V.A.P.O.R 🎨🏛️. Rất hân hạnh được đồng hành cùng bạn mổ xẻ các kiệt tác và trào lưu thị giác hoài niệm.",
     badgeColor: "bg-vapor-purple text-white",
@@ -89,7 +90,7 @@ export const PERSONAS = [
     name: "CYBER_GHOST_95",
     role: "Hacker Y2K & Retro Computing",
     icon: "💾",
-    avatarBg: "from-[#05ffa1] to-[#01cdfe]",
+    avatarBg: "from-vapor-green to-vapor-blue",
     desc: "Chuyên gia kiến trúc máy tính x86 cổ điển, MS-DOS, Windows 95, mạng BBS Dial-up và lập trình hoài niệm.",
     defaultGreeting: "CONNECT 19200/ARQ... Tín hiệu kết nối Terminal đã thông suốt 💾⚡. Nhập lệnh truy vấn hoặc câu hỏi kỹ thuật của bạn.",
     badgeColor: "bg-vapor-green text-black",
@@ -99,7 +100,7 @@ export const PERSONAS = [
     name: "DJ NEON PULSE",
     role: "Synthwave DJ & Lo-Fi Poet",
     icon: "📼",
-    avatarBg: "from-[#ff71ce] to-[#01cdfe]",
+    avatarBg: "from-vapor-pink to-vapor-blue",
     desc: "Lãng mạn, du dương, gợi ý những giai điệu analog synth huyền ảo, viết thơ phong cách hoài cổ và văn hóa City Pop.",
     defaultGreeting: "Chào buổi tối từ phòng thu Neon Pulse 📼🎷🌃. Bạn cần một playlist nhạc chill thư giãn hay muốn cùng tôi viết nên những vần thơ dưới ánh đèn đêm?",
     badgeColor: "bg-vapor-pink text-black",
@@ -983,15 +984,15 @@ export const AiChatStation: React.FC = () => {
       setUserCustomApiKey("");
       setInlineKeyInput("");
       setKeyRequiredNotice(!systemApiKey);
-      alert(systemApiKey
+      uiAlert(systemApiKey
         ? "Đã xóa Key cá nhân khỏi thiết bị. Hệ thống sẽ dùng Key miễn phí trực tiếp trong trình duyệt."
-        : "Đã xóa API Key khỏi thiết bị. Hãy nhập key để tiếp tục trò chuyện.");
+        : "Đã xóa API Key khỏi thiết bị. Hãy nhập key để tiếp tục trò chuyện.", "byok-removed");
     } else {
       localStorage.setItem(API_KEY_STORAGE, trimmed);
       setUserCustomApiKey(trimmed);
       setInlineKeyInput(trimmed);
       setKeyRequiredNotice(false);
-      alert("✓ Đã lưu API Key BYOK trên thiết bị và kích hoạt gọi trực tiếp!");
+      uiAlert("✓ Đã lưu API Key BYOK trên thiết bị và kích hoạt gọi trực tiếp!", "byok-saved");
     }
   };
 
@@ -1401,7 +1402,7 @@ export const AiChatStation: React.FC = () => {
       }
     } catch (err) {
       console.error("Delete session failed:", err);
-      alert("Không thể xóa phiên. Vui lòng thử lại.");
+      uiAlert("Không thể xóa phiên. Vui lòng thử lại.", "session-delete-failed");
     }
   };
 
@@ -1416,7 +1417,7 @@ export const AiChatStation: React.FC = () => {
   // Đọc to tin nhắn (Text to Speech)
   const handleSpeakText = (id: string, text: string) => {
     if (!('speechSynthesis' in window)) {
-      alert("Trình duyệt của bạn không hỗ trợ Speech Synthesis API.");
+      uiAlert("Trình duyệt của bạn không hỗ trợ Speech Synthesis API.", "tts-unsupported");
       return;
     }
 
@@ -1489,7 +1490,7 @@ export const AiChatStation: React.FC = () => {
               <span>🔐 VAPOR_ENCRYPT.EXE — {isFirstSetup ? "THIẾT LẬP MẬT KHẨU" : "MỞ KHÓA PHIÊN"}</span>
             </div>
             <div className="p-4 bg-win-gray space-y-3">
-              <div className="bg-[#fffb96]/40 border border-win-dark p-2 text-[11px] leading-relaxed">
+              <div className="bg-vapor-yellow/40 border border-win-dark p-2 text-[11px] leading-relaxed">
                 {isFirstSetup ? (
                   <p><strong>Chào mừng!</strong> Để đảm bảo <strong>E2EE bắt buộc</strong>, bạn cần đặt <strong>mật khẩu mã hóa</strong> (≥8 ký tự). Mật khẩu này dùng để dẫn xuất khóa mã hóa lịch sử. <strong>Quên = mất dữ liệu</strong> — hãy ghi nhớ hoặc lưu khóa khôi phục sẽ hiện sau khi tạo.</p>
                 ) : (
@@ -1535,7 +1536,7 @@ export const AiChatStation: React.FC = () => {
               <p className="font-bold text-red-700 bg-red-100 border border-red-300 p-2">⚠️ Đây là lần DUY NHẤT bạn thấy khóa này. In ra hoặc lưu vào trình quản lý mật khẩu. Mất mật khẩu + mất khóa này = mất vĩnh viễn lịch sử (admin cũng không khôi phục được).</p>
               <div className="bg-black text-vapor-green p-3 font-mono text-xs break-all select-all border-2 border-win-dark">{recoveryKey}</div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => { navigator.clipboard.writeText(recoveryKey); alert("Đã sao chép!"); }} className="win95-btn flex-1 py-2 font-bold">📋 Sao chép</button>
+                <button type="button" onClick={() => { navigator.clipboard.writeText(recoveryKey); uiAlert("Đã sao chép!", "recovery-copied"); }} className="win95-btn flex-1 py-2 font-bold">📋 Sao chép</button>
                 <button type="button" onClick={() => setShowRecoveryModal(false)} className="win95-btn flex-1 py-2 font-bold bg-vapor-green">✅ ĐÃ LƯU AN TOÀN</button>
               </div>
             </div>
@@ -1583,7 +1584,7 @@ export const AiChatStation: React.FC = () => {
         <div className="win95-container bg-win-gray p-4 text-center text-xs">⏳ Đang kiểm tra khóa mã hóa...</div>
       )}
       {!isUnlocked && !loadingKeys && !needsLogin && !isAccountBanned && !showPassphraseModal && (
-        <div className="win95-container bg-[#fffb96] border-2 border-win-dark p-3 text-center">
+        <div className="win95-container bg-vapor-yellow border-2 border-win-dark p-3 text-center">
           <p className="text-xs font-bold">🔐 Phiên đang khóa — <button onClick={() => setShowPassphraseModal(true)} className="underline text-vapor-purple">Mở khóa để trò chuyện</button></p>
         </div>
       )}
@@ -1591,7 +1592,7 @@ export const AiChatStation: React.FC = () => {
       {/* 3D Main Workstation Window */}
       <div className="win95-container bg-win-gray shadow-2xl flex flex-col min-h-[680px]">
         {/* Main Title bar */}
-        <div className="win95-header py-1.5 px-3 bg-gradient-to-r from-win-titlebar via-[#6a26a4] to-[#1084d0] text-white flex justify-between items-center">
+        <div className="win95-header py-1.5 px-3 bg-gradient-to-r from-win-titlebar via-sticker-purple to-vapor-blue-dark text-white flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="text-base">🐱</span>
             <span className="font-bold text-xs sm:text-sm tracking-wider uppercase">
@@ -1683,7 +1684,7 @@ export const AiChatStation: React.FC = () => {
         </div>
 
         {/* Body Workspace Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 flex-1 bg-[#d4d4d4]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 flex-1 bg-web-gray-mid">
           {/* LEFT SIDEBAR PANEL (4 cols on desktop) */}
           <div className="lg:col-span-4 border-r border-win-dark p-3 space-y-4 bg-win-gray flex flex-col justify-between">
             <div className="space-y-4">
@@ -1696,7 +1697,7 @@ export const AiChatStation: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => createNewSession(selectedPersonaId)}
-                    className="win95-btn py-1 px-2 text-[10px] font-bold text-vapor-purple bg-[#fffb96]/30 flex items-center gap-1"
+                    className="win95-btn py-1 px-2 text-[10px] font-bold text-vapor-purple bg-vapor-yellow/30 flex items-center gap-1"
                     style={{ minHeight: "24px" }}
                   >
                     <span>+ Cuộc Trò Chuyện Mới</span>
@@ -1791,7 +1792,7 @@ export const AiChatStation: React.FC = () => {
             </div>
 
             {/* Connection Status Box */}
-            <div className="p-2 bg-[#c0c0c0] border border-win-dark text-[10px] font-mono space-y-1">
+            <div className="p-2 bg-win-gray border border-win-dark text-[10px] font-mono space-y-1">
               <div className="flex justify-between items-center">
                 <span>Nguồn API Key:</span>
                 <span className={`font-bold px-1 py-0.2 ${userCustomApiKey ? 'bg-vapor-yellow text-black' : 'bg-red-600 text-white'}`}>
@@ -1838,7 +1839,7 @@ export const AiChatStation: React.FC = () => {
                   </div>
 
                   {isUnlocked && !userCustomApiKey && !systemApiKey && (
-                    <div className={`p-3 border-2 ${keyRequiredNotice ? "border-red-600 bg-red-100" : "border-vapor-purple bg-[#fffb96]/60"} text-center space-y-2`}>
+                    <div className={`p-3 border-2 ${keyRequiredNotice ? "border-red-600 bg-red-100" : "border-vapor-purple bg-vapor-yellow/60"} text-center space-y-2`}>
                       <p className="font-bold text-xs">🔑 Chế độ BYOK bắt buộc</p>
                       <p className="text-[11px] leading-relaxed">
                         Chưa có key khả dụng. Nhập API Key Gemini trong tab <strong>CÀI ĐẶT</strong> để trình duyệt gọi thẳng Google.
@@ -1879,8 +1880,8 @@ export const AiChatStation: React.FC = () => {
                       <div
                         className={`max-w-[92%] sm:max-w-[82%] p-3 text-xs shadow-md ${
                           msg.role === "user"
-                            ? "bg-gradient-to-br from-[#2a0040] to-[#1a0030] text-white border border-vapor-pink rounded-tl-sm rounded-bl-sm"
-                            : "bg-[#e8e8e8] text-black border-2 border-win-light win95-raised"
+                            ? "bg-gradient-to-br from-vapor-plum to-vapor-dusk text-white border border-vapor-pink rounded-tl-sm rounded-bl-sm"
+                            : "bg-web-gray-edge text-black border-2 border-win-light win95-raised"
                         }`}
                       >
                         {/* Header of message */}
@@ -1985,7 +1986,7 @@ export const AiChatStation: React.FC = () => {
                         {/* BYOK retry when the direct browser request fails */}
                         {msg.isError && (
                           <div className="mt-3 pt-2 border-t border-red-300 font-mono space-y-2">
-                            <div className="bg-[#fffb96]/60 border border-win-dark p-2.5 space-y-2 rounded-xs">
+                            <div className="bg-vapor-yellow/60 border border-win-dark p-2.5 space-y-2 rounded-xs">
                               <div className="flex items-center justify-between">
                                 <span className="font-bold text-xs text-vapor-purple flex items-center gap-1">
                                   <span>🔑</span> NHẬP API KEY GEMINI ĐỂ THỬ LẠI
@@ -2020,10 +2021,10 @@ export const AiChatStation: React.FC = () => {
                                         handleSendMessage(lastUserMsg.content, inlineKeyInput.trim());
                                       }
                                     } else {
-                                      alert("Vui lòng nhập API Key.");
+                                      uiAlert("Vui lòng nhập API Key.", "key-required");
                                     }
                                   }}
-                                  className="win95-btn py-1.5 px-3 text-xs font-bold bg-[#05ffa1] text-black border border-black shrink-0 hover:bg-[#04df8d]"
+                                  className="win95-btn py-1.5 px-3 text-xs font-bold bg-vapor-green text-black border border-black shrink-0 hover:bg-hover-green"
                                 >
                                   💾 Đổi Key & Thử Lại
                                 </button>
@@ -2041,7 +2042,7 @@ export const AiChatStation: React.FC = () => {
                               </button>
 
                               {expandedErrors[msg.id] && (
-                                <div className="mt-2 p-2.5 bg-black text-[#05ffa1] text-[10px] rounded-xs font-mono border-2 border-win-dark space-y-2 overflow-x-auto select-text shadow-md">
+                                <div className="mt-2 p-2.5 bg-black text-vapor-green text-[10px] rounded-xs font-mono border-2 border-win-dark space-y-2 overflow-x-auto select-text shadow-md">
                                   <div className="text-red-400 font-bold flex items-center gap-1.5 border-b border-win-dark/60 pb-1">
                                     <span>⚠️ ERROR DIAGNOSTICS LOG // GOOGLE AI STUDIO</span>
                                   </div>
@@ -2060,7 +2061,7 @@ export const AiChatStation: React.FC = () => {
                                       href={`mailto:nongtiensonpro@gmail.com?subject=${encodeURIComponent("Báo lỗi AI Chat // Lovely Yellow Cat")}&body=${encodeURIComponent(`Chào Dev Nongtiensonpro,\n\nTôi gặp sự cố khi trò chuyện với AI tại website Lovely Yellow Cat:\n\n- Thời gian: ${new Date().toLocaleString("vi-VN")}\n- Phiên chat: ${currentSession?.title || "AI Chat"}\n- Nhân cách: ${currentSession?.persona || "cybercat"}\n\n[Chi tiết lỗi kỹ thuật]:\n${msg.errorDetail || "Không có log chi tiết"}\n\nNhờ dev kiểm tra và khắc phục giúp tôi nhé!`)}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-bold bg-[#fffb96] no-underline hover:bg-yellow-300"
+                                      className="win95-btn py-1 px-2.5 text-[10px] text-black font-bold bg-vapor-yellow no-underline hover:bg-yellow-300"
                                     >
                                       ✉️ Gửi Báo Lỗi Cho Dev (Email)
                                     </a>
@@ -2112,7 +2113,7 @@ export const AiChatStation: React.FC = () => {
                       <div className={`w-8 h-8 rounded-sm bg-gradient-to-br ${activePersonaObj.avatarBg} border border-black flex items-center justify-center text-sm shrink-0 shadow-md animate-pulse`}>
                         {activePersonaObj.icon}
                       </div>
-                      <div className="bg-[#e8e8e8] border border-win-dark p-2.5 win95-sunken flex items-center gap-2 text-xs font-mono text-black">
+                      <div className="bg-web-gray-edge border border-win-dark p-2.5 win95-sunken flex items-center gap-2 text-xs font-mono text-black">
                         <span>{activePersonaObj.name} đang suy nghĩ</span>
                         <span className="inline-flex gap-1">
                           <span className="w-2 h-2 rounded-full bg-vapor-pink animate-bounce"></span>
@@ -2163,7 +2164,7 @@ export const AiChatStation: React.FC = () => {
 
                 {/* E2EE Locked Overlay cho chat */}
                 {!isUnlocked && !loadingKeys && !needsLogin && !isAccountBanned && (
-                  <div className="win95-container bg-[#fffb96] border-2 border-vapor-purple p-3 text-center">
+                  <div className="win95-container bg-vapor-yellow border-2 border-vapor-purple p-3 text-center">
                     <p className="text-xs font-bold">🔐 Phiên đang khóa — Vui lòng mở khóa E2EE để trò chuyện</p>
                     <button type="button" onClick={() => setShowPassphraseModal(true)} className="win95-btn mt-2 px-4 py-2 bg-vapor-purple text-white font-bold">🔓 MỞ KHÓA NGAY</button>
                   </div>
@@ -2203,7 +2204,7 @@ export const AiChatStation: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isTyping || !inputVal.trim()}
-                      className="win95-btn font-extrabold text-xs sm:text-sm px-5 py-2 text-vapor-purple bg-[#fffb96]/40 border-2 border-black disabled:opacity-50 flex items-center gap-1.5 shrink-0 hover:bg-vapor-yellow"
+                      className="win95-btn font-extrabold text-xs sm:text-sm px-5 py-2 text-vapor-purple bg-vapor-yellow/40 border-2 border-black disabled:opacity-50 flex items-center gap-1.5 shrink-0 hover:bg-vapor-yellow"
                       style={{ minHeight: "38px" }}
                     >
                       <span>{isTyping ? "..." : "GỬI"}</span>
@@ -2221,7 +2222,7 @@ export const AiChatStation: React.FC = () => {
             {/* TAB: Kho Đề Tài Gợi Ý */}
             {activeTab === "topics" && (
               <div className="space-y-4 p-2 h-[550px] overflow-y-auto">
-                <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+                <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark">
                   <span>📚 KHO ĐỀ TÀI GỢI Ý ĐÀM ĐẠO CÙNG AI</span>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -2255,13 +2256,13 @@ export const AiChatStation: React.FC = () => {
             {/* TAB: Cấu Hình & Model */}
             {activeTab === "settings" && (
               <div className="space-y-4 p-3 h-[550px] overflow-y-auto">
-                <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+                <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark">
                   <span>⚙️ TÙY CHỈNH THÔNG SỐ AI & MODEL</span>
                 </div>
 
                 <div className="win95-container bg-white p-4 space-y-4 text-xs">
                   {/* E2EE Trạng thái */}
-                  <div className="p-3 border-2 border-vapor-purple bg-[#f3e8ff]/50 space-y-2">
+                  <div className="p-3 border-2 border-vapor-purple bg-lilac-soft/50 space-y-2">
                     <h4 className="font-bold text-vapor-purple uppercase flex items-center gap-1">🔐 Trạng thái Mã hóa E2EE</h4>
                     <div className="text-[11px] leading-relaxed space-y-1">
                       <p><strong>Chế độ:</strong> BẮT BUỘC — mọi phiên và tin nhắn được mã hóa AES-GCM 256 trước khi lưu Supabase.</p>
@@ -2274,21 +2275,21 @@ export const AiChatStation: React.FC = () => {
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       <button type="button" onClick={async () => {
-                        if (confirm("Xóa TOÀN BỘ lịch sử mã hóa trên Supabase? Không thể khôi phục nếu không có khóa khôi phục.")) {
-                          try {
-                            const res = await fetch("/api/ai/sessions");
-                            const data = await res.json();
-                            for (const s of data.sessions || []) {
-                              await fetch(`/api/ai/sessions?id=${s.id}`, { method: "DELETE" });
-                            }
-                            setSessions([]);
-                            createNewSessionEncrypted(selectedPersonaId, masterKey || undefined);
-                            alert("Đã xóa toàn bộ.");
-                          } catch {}
-                        }
+                        const ok = await uiConfirm("Xóa TOÀN BỘ lịch sử mã hóa trên Supabase? Không thể khôi phục nếu không có khóa khôi phục.");
+                        if (!ok) return;
+                        try {
+                          const res = await fetch("/api/ai/sessions");
+                          const data = await res.json();
+                          for (const s of data.sessions || []) {
+                            await fetch(`/api/ai/sessions?id=${s.id}`, { method: "DELETE" });
+                          }
+                          setSessions([]);
+                          createNewSessionEncrypted(selectedPersonaId, masterKey || undefined);
+                          uiAlert("Đã xóa toàn bộ.", "purged-all");
+                        } catch {}
                       }} className="win95-btn text-[10px] py-1 px-2 bg-red-100 text-red-700">🗑️ Xóa vĩnh viễn trên Supabase</button>
                       <button type="button" onClick={async () => {
-                        if (!masterKey) { alert("Cần mở khóa trước."); return; }
+                        if (!masterKey) { uiAlert("Cần mở khóa trước.", "master-locked"); return; }
                         const raw = await exportMasterKeyRaw(masterKey);
                         const b64 = toBase64(raw);
                         prompt("Khóa khôi phục (lưu an toàn, mất = mất dữ liệu):", b64);
@@ -2327,7 +2328,7 @@ export const AiChatStation: React.FC = () => {
                   </div>
 
                   {/* Direct Browser API Key Config */}
-                  <div className="p-3 bg-[#fffb96]/30 border-2 border-win-dark space-y-2">
+                  <div className="p-3 bg-vapor-yellow/30 border-2 border-win-dark space-y-2">
                     <div className="flex justify-between items-center">
                       <label className="font-bold uppercase tracking-wide text-vapor-purple flex items-center gap-1.5">
                         <span>🔑</span> API KEY GEMINI (GỌI TRỰC TIẾP):
@@ -2355,7 +2356,7 @@ export const AiChatStation: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleSaveCustomApiKey(userCustomApiKey)}
-                        className="win95-btn py-1.5 px-4 font-bold text-xs bg-[#05ffa1] text-black border border-black shrink-0"
+                        className="win95-btn py-1.5 px-4 font-bold text-xs bg-vapor-green text-black border border-black shrink-0"
                       >
                         💾 Lưu & Kích hoạt
                       </button>
@@ -2415,11 +2416,13 @@ export const AiChatStation: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?")) {
-                          localStorage.removeItem(STORAGE_KEY);
-                          createNewSession(selectedPersonaId);
-                          setActiveTab("chat");
-                        }
+                        uiConfirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện?").then((ok) => {
+                          if (ok) {
+                            localStorage.removeItem(STORAGE_KEY);
+                            createNewSession(selectedPersonaId);
+                            setActiveTab("chat");
+                          }
+                        });
                       }}
                       className="win95-btn py-1.5 px-4 font-bold text-xs bg-red-100 text-red-700 hover:bg-red-200"
                     >

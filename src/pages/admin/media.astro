@@ -588,9 +588,14 @@ const pageUsed = resources.length - pageOrphans;
         var msg = "🗑 XÓA VĨNH VIỄN " + checked.length + " ảnh khỏi Cloudinary?\n(Thao tác không thể hoàn tác)";
         if (usedCount > 0) {
           msg = "⚠️ CẢNH BÁO NGHIÊM TRỌNG!\n\n" + usedCount + "/" + checked.length + " ảnh đang ĐƯỢC SỬ DỤNG trong tranh/bài viết/hồ sơ.\nXóa sẽ làm GÃY LINK hiển thị công khai!\n\n" + msg;
-          if (!confirm(msg)) { e.preventDefault(); return; }
         }
-        if (!confirm(msg)) e.preventDefault();
+        // v5: dialogService thay confirm() native (ADR-0002) — 1 dialog duy nhất
+        e.preventDefault();
+        import("../../ui/wm95/dialogService").then(function (m) {
+          m.uiConfirm(msg).then(function (ok) {
+            if (ok) form.submit();
+          });
+        });
       });
       refreshCount();
     })();

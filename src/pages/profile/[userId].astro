@@ -103,7 +103,7 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
   <!-- Nút chỉnh sửa hồ sơ (nếu là chủ sở hữu) -->
   {isOwner && (
     <div class="mb-6 font-retro flex justify-end">
-      <a href="/profile/edit" class="win95-btn no-underline inline-block text-black px-4 py-1.5 font-bold bg-[#fffb96]/30 border-[#fffb96]">
+      <a href="/profile/edit" class="win95-btn no-underline inline-block text-black px-4 py-1.5 font-bold bg-vapor-yellow/30 border-vapor-yellow">
         ✏️ CHỈNH SỬA HỒ SƠ
       </a>
     </div>
@@ -114,7 +114,7 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
     {profile.banner_url ? (
       <img src={profile.banner_url} alt="Artist Banner" class="w-full h-full object-cover filter saturate-125 contrast-110 brightness-95" />
     ) : (
-      <div class="w-full h-full bg-gradient-to-r from-vapor-purple via-[#0b001a] to-vapor-pink flex flex-col items-center justify-center p-4">
+      <div class="w-full h-full bg-gradient-to-r from-vapor-purple via-cosmic-black to-vapor-pink flex flex-col items-center justify-center p-4">
         <h2 class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-vapor-pink to-vapor-blue uppercase tracking-widest font-retro text-center animate-[pulse_2s_infinite]">
           {profile.full_name}
         </h2>
@@ -224,7 +224,7 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
           <button class="win95-btn py-0 px-1">?</button>
         </div>
         
-        <div class="p-4 bg-[#d4d4d4] space-y-4 text-xs">
+        <div class="p-4 bg-web-gray-mid space-y-4 text-xs">
           {/* XP & Level progress bar */}
           <div class="space-y-1.5">
             <div class="flex justify-between font-bold text-[10px] tracking-wide uppercase">
@@ -233,7 +233,7 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
             </div>
             
             {/* Win95 classic progress bar */}
-            <div class="w-full bg-[#808080] border-t-2 border-l-2 border-white p-0.5 h-6 flex relative overflow-hidden shadow-inner">
+            <div class="w-full bg-win-dark border-t-2 border-l-2 border-white p-0.5 h-6 flex relative overflow-hidden shadow-inner">
               <div 
                 class="bg-gradient-to-r from-vapor-pink to-vapor-blue h-full flex items-center justify-end pr-1 transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -302,13 +302,13 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
       <div class="flex bg-win-gray border-b border-win-dark/30 select-none">
         <button 
           id="tab-btn-articles" 
-          class="tab-btn active px-6 py-2 font-bold text-xs bg-[#d4d4d4] border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]"
+          class="tab-btn active px-6 py-2 font-bold text-xs bg-web-gray-mid border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]"
         >
           📝 Bài Viết ({articles.length})
         </button>
         <button 
           id="tab-btn-submissions" 
-          class="tab-btn px-6 py-2 font-bold text-xs bg-[#b8b8b8] text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30"
+          class="tab-btn px-6 py-2 font-bold text-xs bg-web-gray-shade text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30"
         >
           🎨 Tác Phẩm Cộng Đồng ({submissions.length})
         </button>
@@ -451,8 +451,8 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
   if (tabBtnArticles && tabBtnSubmissions && tabContentArticles && tabContentSubmissions) {
     tabBtnArticles.addEventListener("click", () => {
       // Toggle button classes
-      tabBtnArticles.className = "tab-btn active px-6 py-2 font-bold text-xs bg-[#d4d4d4] border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]";
-      tabBtnSubmissions.className = "tab-btn px-6 py-2 font-bold text-xs bg-[#b8b8b8] text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30";
+      tabBtnArticles.className = "tab-btn active px-6 py-2 font-bold text-xs bg-web-gray-mid border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]";
+      tabBtnSubmissions.className = "tab-btn px-6 py-2 font-bold text-xs bg-web-gray-shade text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30";
       
       // Toggle display
       tabContentArticles.classList.remove("hidden");
@@ -461,8 +461,8 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
 
     tabBtnSubmissions.addEventListener("click", () => {
       // Toggle button classes
-      tabBtnSubmissions.className = "tab-btn active px-6 py-2 font-bold text-xs bg-[#d4d4d4] border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]";
-      tabBtnArticles.className = "tab-btn px-6 py-2 font-bold text-xs bg-[#b8b8b8] text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30";
+      tabBtnSubmissions.className = "tab-btn active px-6 py-2 font-bold text-xs bg-web-gray-mid border-t-2 border-l-2 border-r-2 border-white shadow-[-1px_-1px_0px_#808080_inset]";
+      tabBtnArticles.className = "tab-btn px-6 py-2 font-bold text-xs bg-web-gray-shade text-black/75 border-t-2 border-l-2 border-r-2 border-win-dark/30";
       
       // Toggle display
       tabContentSubmissions.classList.remove("hidden");

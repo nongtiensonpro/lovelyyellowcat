@@ -36,7 +36,7 @@ const activeArtists = artists || [];
 
   <!-- Network Neighborhood Container -->
   <div class="mt-4 win95-window p-3 sm:p-4">
-    <div class="win95-header py-1 px-2 mb-4 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+    <div class="win95-header py-1 px-2 mb-4 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark">
       <div class="flex items-center gap-1.5">
         <span>👥</span>
         <span class="font-bold text-xs">NETWORK_NEIGHBORHOOD.EXE - [DANH SÁCH THÀNH VIÊN SÁNG TẠO]</span>
@@ -51,7 +51,7 @@ const activeArtists = artists || [];
       <div>
         <span class="font-bold text-vapor-purple">● Mạng lưới kết nối nghệ thuật trực tuyến:</span> Khám phá hồ sơ cá nhân, bộ sưu tập tranh và tương tác cùng các tác giả tài năng.
       </div>
-      <a href="/submit" class="win95-btn py-1 px-3 bg-[#05ffa1]/20 border border-black font-bold text-black no-underline shrink-0" style="min-height: 28px;">
+      <a href="/submit" class="win95-btn py-1 px-3 bg-vapor-green/20 border border-black font-bold text-black no-underline shrink-0" style="min-height: 28px;">
         🎨 Đăng Ký Trở Thành Nghệ Sĩ
       </a>
     </div>
@@ -84,7 +84,7 @@ const activeArtists = artists || [];
               </div>
 
               <!-- Banner & Cyber Avatar Block -->
-              <div class="relative h-24 bg-gradient-to-r from-vapor-purple via-[#0b001a] to-vapor-pink border-b-2 border-black overflow-hidden">
+              <div class="relative h-24 bg-gradient-to-r from-vapor-purple via-cosmic-black to-vapor-pink border-b-2 border-black overflow-hidden">
                 {artist.banner_url && (
                   <img
                     src={artist.banner_url}
@@ -124,15 +124,15 @@ const activeArtists = artists || [];
               <!-- Statistics Matrix -->
               <div class="px-3 pb-3 space-y-3">
                 <div class="grid grid-cols-3 gap-1.5 text-center font-mono font-bold text-[10px]">
-                  <div class="border border-black bg-[#e6e6e6] p-1 shadow-inner">
+                  <div class="border border-black bg-web-gray-light p-1 shadow-inner">
                     <span class="block text-[10px] text-win-darkest">🎨 TRANH</span>
                     <span class="text-xs text-black font-extrabold">{artist.artwork_count}</span>
                   </div>
-                  <div class="border border-black bg-[#e6e6e6] p-1 shadow-inner">
+                  <div class="border border-black bg-web-gray-light p-1 shadow-inner">
                     <span class="block text-[10px] text-win-darkest">💜 TIM</span>
                     <span class="text-xs text-vapor-purple font-extrabold">{artist.total_reactions}</span>
                   </div>
-                  <div class="border border-black bg-[#e6e6e6] p-1 shadow-inner">
+                  <div class="border border-black bg-web-gray-light p-1 shadow-inner">
                     <span class="block text-[10px] text-win-darkest">⚡ ACTIVE</span>
                     <span class="text-[10px] text-vapor-blue font-bold">{formattedLastActive}</span>
                   </div>
@@ -140,7 +140,7 @@ const activeArtists = artists || [];
 
                 <a
                   href={`/profile/${artist.id}`}
-                  class="win95-btn block text-center py-2 text-xs font-bold no-underline text-black uppercase bg-[#05ffa1]/25 border border-black hover:bg-[#05ffa1]/40"
+                  class="win95-btn block text-center py-2 text-xs font-bold no-underline text-black uppercase bg-vapor-green/25 border border-black hover:bg-vapor-green/40"
                   style="min-height: 36px;"
                 >
                   📁 XEM HỒ SƠ & BỘ SƯU TẬP &gt;&gt;

@@ -1,0 +1,103 @@
+{
+  "_meta": {
+    "schema": "lyc.tokens.semantic/1",
+    "note": "Roles mà component được phép dùng. Ref: ADR-0001."
+  },
+  "modes": [
+    "catalog",
+    "crt",
+    "access"
+  ],
+  "roles": {
+    "surface-page": {
+      "catalog": "cosmicBlack",
+      "crt": "cosmicBlack",
+      "access": "cosmicBlack"
+    },
+    "surface-panel": {
+      "catalog": "cosmicDeep",
+      "crt": "cosmicDeep",
+      "access": "cosmicBlack"
+    },
+    "surface-raised": {
+      "catalog": "cosmicSurface",
+      "crt": "cosmicSurface",
+      "access": "cosmicMid"
+    },
+    "surface-win": {
+      "catalog": "winGray",
+      "crt": "winGray",
+      "access": "winLight"
+    },
+    "content-primary": {
+      "catalog": "textPrimary",
+      "crt": "textPrimary",
+      "access": "textPrimary"
+    },
+    "content-secondary": {
+      "catalog": "textSecondary",
+      "crt": "textSecondary",
+      "access": "textSecondary"
+    },
+    "content-muted": {
+      "catalog": "textMuted",
+      "crt": "textMuted",
+      "access": "textSecondary"
+    },
+    "content-on-win": {
+      "catalog": "textOnWin",
+      "crt": "textOnWin",
+      "access": "textOnWin"
+    },
+    "interactive-accent": {
+      "catalog": "vaporPink",
+      "crt": "vaporPink",
+      "access": "vaporPink"
+    },
+    "interactive-info": {
+      "catalog": "vaporBlue",
+      "crt": "vaporBlue",
+      "access": "vaporBlue"
+    },
+    "status-success": {
+      "catalog": "vaporGreen",
+      "crt": "vaporGreen",
+      "access": "vaporGreen"
+    },
+    "status-warning": {
+      "catalog": "vaporYellow",
+      "crt": "vaporYellow",
+      "access": "vaporYellow"
+    },
+    "status-error": {
+      "catalog": "errorRed",
+      "crt": "errorRed",
+      "access": "errorRed"
+    },
+    "chrome-titlebar": {
+      "catalog": "winTitlebar",
+      "crt": "winTitlebar",
+      "access": "winTitlebar"
+    },
+    "chrome-titletext": {
+      "catalog": "winTitletext",
+      "crt": "winTitletext",
+      "access": "winTitletext"
+    },
+    "chrome-bevel-light": {
+      "catalog": "winLight",
+      "crt": "winLight",
+      "access": "winLight"
+    },
+    "chrome-bevel-dark": {
+      "catalog": "winDark",
+      "crt": "winDark",
+      "access": "winDarkest"
+    },
+    "glow-level": {
+      "catalog": "subtle",
+      "crt": "hero",
+      "access": "none"
+    }
+  }
+}

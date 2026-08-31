@@ -1,3 +1,4 @@
+@import "./tokens.gen.css";
 @import "tailwindcss";
 
 @theme {
@@ -1142,4 +1143,53 @@ select:focus-visible {
     box-shadow: none !important;
     border: 1px solid #000000 !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   v5 KERNEL HELPERS — @layer components (ADR-0001/0003)
+   Class dùng lại thay cho arbitrary value/hex lặp lại.
+   Utilities Tailwind vẫn override được vì layer components < utilities.
+   ═══════════════════════════════════════════════════════════ */
+@layer components {
+  /* Glow chuẩn hóa (thay shadow-[0_0_6px_rgba(...)] lặp lại) */
+  .glow-pink { box-shadow: 0 0 6px rgb(255 113 206 / 0.6); }
+  .glow-green { box-shadow: 0 0 6px rgb(5 255 161 / 0.6); }
+
+  /* z-index qua token (thay z-[var(--z-command)] ad-hoc) */
+  .z-command { z-index: var(--z-index-command); }
+  .z-modal { z-index: var(--z-index-modal); }
+  .z-toast { z-index: var(--z-index-toast); }
+
+  /* Nút chrome nhỏ trong titlebar (16px) và chip CRT (20px)
+     — thay style="min-height:16px/20px" lặp lại */
+  .win95-titlebar-btn { min-height: 16px; min-width: 16px; }
+  .win95-mini-btn { min-height: 20px; }
+
+  /* CRT monitor helpers (thay arbitrary shadow/gradient trong CrtMonitorFrame) */
+  .crt-bezel-shadow {
+    box-shadow:
+      inset -3px -3px 0 var(--color-win-darkest),
+      inset 3px 3px 0 var(--color-win-light),
+      6px 6px 0 rgb(0 0 0 / 0.8);
+  }
+  .crt-tube-deep { box-shadow: inset 0 0 20px rgb(0 0 0 / 0.9); }
+  .crt-scanlines-repeating {
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgb(0 0 0 / 0.25) 2px,
+      rgb(0 0 0 / 0.25) 4px
+    );
+  }
+  .crt-vignette-glass {
+    background: radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.65) 100%);
+  }
+
+  /* Container query mẫu: card gallery tự co theo bề rộng container (ADR-0003) */
+  .cq-card { container-type: inline-size; }
+}
+
+@container (min-width: 320px) {
+  .cq-card .cq-stack { flex-direction: row; }
 }

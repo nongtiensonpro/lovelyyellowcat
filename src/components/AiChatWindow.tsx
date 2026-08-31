@@ -155,7 +155,7 @@ export const AiChatWindow: React.FC = () => {
   return (
     <div className="win95-window font-retro text-black shadow-xl" id="cat-ai-chatbox">
       {/* Title bar */}
-      <div className="win95-header py-1 px-2 flex justify-between items-center bg-gradient-to-r from-[#b967ff] via-win-titlebar to-[#01cdfe] text-white">
+      <div className="win95-header py-1 px-2 flex justify-between items-center bg-gradient-to-r from-vapor-purple via-win-titlebar to-vapor-blue text-white">
         <div className="flex items-center gap-1.5">
           <span className="text-sm">🐱</span>
           <span className="font-bold text-xs tracking-wider">CAT_AI.EXE // MÈO VÀNG AI</span>
@@ -199,14 +199,14 @@ export const AiChatWindow: React.FC = () => {
           </div>
 
           {/* Chat Message Scrollable Container */}
-          <div className="p-3 bg-[#e8e8e8] h-64 overflow-y-auto space-y-3 font-retro text-xs border-b border-win-dark shadow-inner">
+          <div className="p-3 bg-web-gray-edge h-64 overflow-y-auto space-y-3 font-retro text-xs border-b border-win-dark shadow-inner">
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.role === "model" && (
-                  <div className="w-7 h-7 rounded-sm bg-gradient-to-br from-[#fffb96] to-[#ff9a3c] border border-black flex items-center justify-center text-sm shrink-0 shadow-sm">
+                  <div className="w-7 h-7 rounded-sm bg-gradient-to-br from-vapor-yellow to-vapor-orange border border-black flex items-center justify-center text-sm shrink-0 shadow-sm">
                     🐱
                   </div>
                 )}
@@ -246,7 +246,7 @@ export const AiChatWindow: React.FC = () => {
 
             {isTyping && (
               <div className="flex gap-2 items-center justify-start">
-                <div className="w-7 h-7 rounded-sm bg-gradient-to-br from-[#fffb96] to-[#ff9a3c] border border-black flex items-center justify-center text-sm shrink-0 shadow-sm animate-pulse">
+                <div className="w-7 h-7 rounded-sm bg-gradient-to-br from-vapor-yellow to-vapor-orange border border-black flex items-center justify-center text-sm shrink-0 shadow-sm animate-pulse">
                   🐱
                 </div>
                 <div className="bg-white border border-win-dark p-2 win95-sunken flex items-center gap-1.5 text-[10px] font-mono text-win-dark">

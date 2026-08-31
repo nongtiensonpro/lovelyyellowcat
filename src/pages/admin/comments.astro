@@ -211,7 +211,7 @@ if (comments && comments.length > 0) {
     <div class="bg-white overflow-x-auto border-2 border-win-dark p-1">
       <table class="w-full text-left border-collapse text-xs">
         <thead>
-          <tr class="bg-[#c0c0c0] border-b border-win-dark">
+          <tr class="bg-win-gray border-b border-win-dark">
             <th class="p-2 border-r border-win-dark font-bold w-48">NGƯỜI GỬI</th>
             <th class="p-2 border-r border-win-dark font-bold w-52">BÀI VIẾT</th>
             <th class="p-2 border-r border-win-dark font-bold">NỘI DUNG BÌNH LUẬN</th>
@@ -229,14 +229,14 @@ if (comments && comments.length > 0) {
             </tr>
           ) : (
             comments.map((comment: any) => (
-              <tr class="border-b border-[#e0e0e0] hover:bg-[#f5f5f5]">
-                <td class="p-2 border-r border-[#e0e0e0] font-bold text-black">
+              <tr class="border-b border-web-gray-panel hover:bg-paper-soft">
+                <td class="p-2 border-r border-web-gray-panel font-bold text-black">
                   <div class="flex items-center gap-2">
                     <img src={comment.profiles?.avatar_url || "/images/default-avatar.png"} class="w-6 h-6 border border-win-dark object-cover" alt="" />
                     <span class="break-all">{comment.profiles?.full_name || "Anonymous"}</span>
                   </div>
                 </td>
-                <td class="p-2 border-r border-[#e0e0e0]">
+                <td class="p-2 border-r border-web-gray-panel">
                   {(() => {
                     const art = articleLookup.get(String(comment.article_id));
                     return art ? (
@@ -250,10 +250,10 @@ if (comments && comments.length > 0) {
                     );
                   })()}
                 </td>
-                <td class="p-2 border-r border-[#e0e0e0] text-black italic max-w-md">
+                <td class="p-2 border-r border-web-gray-panel text-black italic max-w-md">
                   <div class="break-words line-clamp-3">"{comment.content}"</div>
                 </td>
-                <td class="p-2 border-r border-[#e0e0e0] text-win-dark text-[10px]">
+                <td class="p-2 border-r border-web-gray-panel text-win-dark text-[10px]">
                   {new Date(comment.created_at).toLocaleString("vi-VN")}
                 </td>
                 <td class="p-2 text-center">
@@ -261,7 +261,7 @@ if (comments && comments.length > 0) {
                     <summary class="win95-btn font-bold text-red-700 text-[10px] px-3 py-1 hover:bg-red-100 cursor-pointer list-none">
                       ❌ XÓA
                     </summary>
-                    <div class="absolute right-0 top-full z-50 mt-1 w-64 bg-[#c0c0c0] border-2 shadow-lg p-2 font-retro" style="border-color: #fff #808080 #808080 #fff;">
+                    <div class="absolute right-0 top-full z-50 mt-1 w-64 bg-win-gray border-2 shadow-lg p-2 font-retro" style="border-color: #fff #808080 #808080 #fff;">
                       <form method="POST" class="m-0">
                         <input type="hidden" name="action" value="delete" />
                         <input type="hidden" name="commentId" value={comment.id} />
@@ -276,7 +276,7 @@ if (comments && comments.length > 0) {
                           <option value="Nội dung không liên quan đến chủ đề.">Không liên quan</option>
                         </select>
                         <textarea name="deleteReason" placeholder="Hoặc nhập lý do khác..." rows="2" class="w-full text-[10px] p-1 border border-win-dark bg-white mb-2 font-retro" style="resize:vertical;"></textarea>
-                        <button type="submit" class="win95-btn w-full font-bold text-red-700 text-[10px] py-1 hover:bg-red-100" onclick="return confirm('⚠️ Xác nhận xóa bình luận này?');">
+                        <button type="submit" class="win95-btn w-full font-bold text-red-700 text-[10px] py-1 hover:bg-red-100" data-confirm="⚠️ Xác nhận xóa bình luận này?">
                           ❌ Xác nhận xóa
                         </button>
                       </form>

@@ -220,7 +220,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
               </span>
             </div>
             
-            <p className="text-black bg-[#f9f9f9] p-1.5 border border-win-dark/10 leading-relaxed break-words">
+            <p className="text-black bg-paper-bright p-1.5 border border-win-dark/10 leading-relaxed break-words">
               {comment.content}
             </p>
 
@@ -284,7 +284,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
 
       {/* Alert Error Box Win95 */}
       {errorMessage && (
-        <div className="bg-[#ffccd5] border-b border-win-dark p-2 text-red-900 text-[10px] font-bold flex items-center justify-between shadow-sm">
+        <div className="bg-rose-blush border-b border-win-dark p-2 text-red-900 text-[10px] font-bold flex items-center justify-between shadow-sm">
           <span className="flex items-center gap-1.5">
             <span>⚠️</span>
             <span>SYSTEM_ALERT.ERR: {errorMessage}</span>
@@ -300,7 +300,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
       )}
 
       {/* Danh sách bình luận */}
-      <div className="p-3 bg-[#e6e6e6] space-y-3 h-80 overflow-y-auto border-b-2 border-win-dark shadow-inner">
+      <div className="p-3 bg-web-gray-light space-y-3 h-80 overflow-y-auto border-b-2 border-win-dark shadow-inner">
         {rootComments.length === 0 ? (
           <div className="text-center text-win-dark py-12">
             <span className="text-2xl block mb-2">💾</span>
@@ -326,7 +326,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
           </button>
         </form>
       ) : (
-        <div className="p-3 bg-[#d4d4d4] text-center border-t border-white text-win-dark font-bold">
+        <div className="p-3 bg-web-gray-mid text-center border-t border-white text-win-dark font-bold">
           🔒 VUI LÒNG ĐĂNG NHẬP QUA GOOGLE ĐỂ BÌNH LUẬN BÀI VIẾT.
         </div>
       )}

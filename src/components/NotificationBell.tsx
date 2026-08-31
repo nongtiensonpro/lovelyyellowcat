@@ -220,7 +220,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
                   <div
                     key={notif.id}
                     className={`p-2 border border-dotted border-win-dark/30 hover:bg-vapor-pink/5 flex flex-col justify-between text-[10px] ${
-                      !notif.is_read ? "bg-[#ff71ce]/10 font-bold border-l-2 border-l-vapor-pink" : "bg-white"
+                      !notif.is_read ? "bg-vapor-pink/10 font-bold border-l-2 border-l-vapor-pink" : "bg-white"
                     }`}
                   >
                     <div className="flex justify-between items-start gap-1">

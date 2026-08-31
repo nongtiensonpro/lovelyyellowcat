@@ -30,9 +30,9 @@ const { trackTitle = "MACINTOSH PLUS - リサフランク420 // LO-FI VAPOR" } =
   </div>
 
   <!-- Player Main Body -->
-  <div id="cassette-body" class="p-1.5 space-y-1.5 bg-[#c0c0c0]">
+  <div id="cassette-body" class="p-1.5 space-y-1.5 bg-win-gray">
     <!-- Compact Cassette Tape Graphic -->
-    <div class="relative bg-[#181818] p-1.5 rounded-sm border-2 border-win-darkest shadow-inner">
+    <div class="relative bg-ui-gray p-1.5 rounded-sm border-2 border-win-darkest shadow-inner">
       <!-- Tape Label Area with Marquee -->
       <div class="bg-gradient-to-r from-vapor-pink via-vapor-purple to-vapor-blue p-0.5 rounded-sm border border-win-light/40">
         <div class="bg-white/95 px-1 py-0.5 text-center text-[10px] font-bold text-black truncate font-mono shadow-inner">
@@ -41,7 +41,7 @@ const { trackTitle = "MACINTOSH PLUS - リサフランク420 // LO-FI VAPOR" } =
       </div>
 
       <!-- Tape Window with Rotating Spools -->
-      <div class="mt-1 bg-[#050010] border border-win-dark px-2 py-0.5 flex justify-around items-center h-7 relative overflow-hidden rounded-sm">
+      <div class="mt-1 bg-vapor-void border border-win-dark px-2 py-0.5 flex justify-around items-center h-7 relative overflow-hidden rounded-sm">
         <!-- Left Reel -->
         <div class="cassette-spool relative w-5 h-5 rounded-full bg-white/30 border border-dashed border-white/80 flex items-center justify-center">
           <div class="w-1.5 h-1.5 rounded-full bg-vapor-pink shadow-[0_0_4px_#ff71ce]"></div>
@@ -278,9 +278,9 @@ const { trackTitle = "MACINTOSH PLUS - リサフランク420 // LO-FI VAPOR" } =
 
     if (playBtn) {
       if (isNowPlaying) {
-        playBtn.classList.add("win95-sunken", "bg-[#fffb96]/40");
+        playBtn.classList.add("win95-sunken", "bg-vapor-yellow/40");
       } else {
-        playBtn.classList.remove("win95-sunken", "bg-[#fffb96]/40");
+        playBtn.classList.remove("win95-sunken", "bg-vapor-yellow/40");
       }
     }
   }

@@ -24,7 +24,7 @@ const currentPath = Astro.url.pathname;
         <img
           src="/logo.svg"
           alt="Lovely Yellow Cat Logo"
-          class="w-7 h-7 sm:w-8 sm:h-8 object-contain filter drop-shadow-[0_0_6px_rgba(255,113,206,0.6)] group-hover:scale-105 transition-transform"
+          class="w-7 h-7 sm:w-8 sm:h-8 object-contain filter drop-glow-pink group-hover:scale-105 transition-transform"
         />
         <div class="hidden sm:flex flex-col leading-none font-retro">
           <span class="font-black text-xs text-black tracking-wider uppercase group-hover:text-vapor-pink transition-colors">
@@ -109,7 +109,7 @@ const currentPath = Astro.url.pathname;
       {userProfile && (
         <a
           href="/submit"
-          class={`win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#05ffa1]/25 border-2 border-black ${currentPath === '/submit' ? 'win95-sunken bg-[#05ffa1]/50' : ''}`}
+          class={`win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-vapor-green/25 border-2 border-black ${currentPath === '/submit' ? 'win95-sunken bg-vapor-green/50' : ''}`}
           style="min-height: 32px;"
         >
           <span>🎨</span> Gửi Tranh
@@ -120,7 +120,7 @@ const currentPath = Astro.url.pathname;
       {userProfile && (userProfile.role === 'admin' || userProfile.role === 'editor') && (
         <a
           href="/admin"
-          class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#fffb96]/40 border-2 border-black"
+          class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-vapor-yellow/40 border-2 border-black"
           style="min-height: 32px;"
         >
           <span>⚙️</span> Bảng Quản Trị
@@ -131,7 +131,7 @@ const currentPath = Astro.url.pathname;
       {userProfile && userProfile.role === 'admin' && (
         <a
           href="/admin/users"
-          class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-[#ff71ce]/25 border-2 border-black"
+          class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-vapor-pink/25 border-2 border-black"
           style="min-height: 32px;"
         >
           <span>👥</span> Người Dùng
@@ -249,17 +249,17 @@ const currentPath = Astro.url.pathname;
         {userProfile && (
           <>
             <div class="flex gap-2">
-              <a href="/submit" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#05ffa1]/30 border-2 border-black no-underline">
+              <a href="/submit" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-vapor-green/30 border-2 border-black no-underline">
                 🎨 Gửi Tranh
               </a>
               {(userProfile.role === 'admin' || userProfile.role === 'editor') && (
-                <a href="/admin" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-[#fffb96]/40 border-2 border-black no-underline">
+                <a href="/admin" class="win95-btn flex-1 text-center py-2.5 text-black font-bold bg-vapor-yellow/40 border-2 border-black no-underline">
                   ⚙️ Admin
                 </a>
               )}
             </div>
             {userProfile.role === 'admin' && (
-              <a href="/admin/users" class="block win95-btn text-center py-2.5 text-black font-bold bg-[#ff71ce]/30 border-2 border-black no-underline">
+              <a href="/admin/users" class="block win95-btn text-center py-2.5 text-black font-bold bg-vapor-pink/30 border-2 border-black no-underline">
                 👥 Quản Lý Người Dùng
               </a>
             )}

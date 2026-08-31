@@ -220,8 +220,8 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
                 onClick={(e) => handleReact(emoji, e)}
                 className={`win95-btn flex items-center gap-1.5 px-3 py-1 font-bold text-xs ${
                   hasReacted 
-                    ? "bg-[#ff71ce]/20 border-[#ff71ce] shadow-inner text-vapor-pink scale-[0.98]" 
-                    : "bg-win-gray text-black hover:bg-[#e0e0e0]"
+                    ? "bg-vapor-pink/20 border-vapor-pink shadow-inner text-vapor-pink scale-[0.98]" 
+                    : "bg-win-gray text-black hover:bg-web-gray-panel"
                 } transition-all`}
               >
                 <span className={`text-base filter saturate-150 ${hasReacted ? "animate-pulse" : ""}`}>

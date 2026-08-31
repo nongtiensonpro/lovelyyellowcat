@@ -72,11 +72,7 @@ try {
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
-    <!-- Google Fonts: VT323 (pixel · có tiếng Việt ✓) + Press Start 2P (ASCII decor) + JetBrains Mono (thân Việt) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
-    
+
     <!-- Structured Data JSON-LD -->
     {articleJsonLd && (
       <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} is:inline />
@@ -91,14 +87,10 @@ try {
     <!-- Boot BIOS cho khách lần đầu (1 lần · bỏ qua được · reduced-motion tự ẩn) -->
     <BootSplash />
     <!-- Skip-to-content: điều hướng bàn phím/screen reader -->
+    <AppShell crt={true} role={(Astro.props.userProfile && Astro.props.userProfile.role === "admin") ? "admin" : (Astro.props.userProfile ? "auth" : "public")} />
+    <DialogHost client:idle />
     <a class="skip-link" href="#main-content">⏭ Bỏ qua tới nội dung chính</a>
-    <!-- Lớp phủ CRT toàn trang -->
-    <div id="crt-overlay-layer" class="crt-overlay" aria-hidden="true">
-      <div class="crt-scanlines"></div>
-      <div class="crt-vignette"></div>
-    </div>
-    <div id="crt-animated-line" class="crt-scanline-animated" aria-hidden="true"></div>
-    
+
     <!-- Outer Black Page Frame (DESIGN-dell-1996 Enterprise Catalog Style) -->
     <div class="min-h-screen bg-cosmic-black">
       <div class="w-full flex flex-col min-h-screen justify-between bg-gradient-to-b from-cosmic-black via-cosmic-deep to-cosmic-black px-2 sm:px-4 md:px-6 lg:px-8 relative z-10">
@@ -149,17 +141,17 @@ try {
               <button id="toggle-crt-btn" class="win95-btn text-[10px] py-0 px-2 font-bold" style="min-height: 22px;">
                 📺 CRT: BẬT
               </button>
-              <a href="/" class="text-[#0000ee] hover:underline font-bold">Trang Chủ</a>
+              <a href="/" class="text-link-blue hover:underline font-bold">Trang Chủ</a>
               <span class="text-win-dark">|</span>
-              <a href="/gallery" class="text-[#0000ee] hover:underline font-bold">Triển Lãm</a>
+              <a href="/gallery" class="text-link-blue hover:underline font-bold">Triển Lãm</a>
               <span class="text-win-dark">|</span>
-              <a href="/artists" class="text-[#0000ee] hover:underline font-bold">Nghệ Sĩ</a>
+              <a href="/artists" class="text-link-blue hover:underline font-bold">Nghệ Sĩ</a>
               <span class="text-win-dark">|</span>
-              <a href="/ai" class="text-[#0000ee] hover:underline font-bold">Mèo Vàng AI</a>
+              <a href="/ai" class="text-link-blue hover:underline font-bold">Mèo Vàng AI</a>
               <span class="text-win-dark">|</span>
-              <a href="/about" class="text-[#0000ee] hover:underline font-bold">Hệ Thống</a>
+              <a href="/about" class="text-link-blue hover:underline font-bold">Hệ Thống</a>
               <span class="text-win-dark">|</span>
-              <a href="/terms" class="text-[#0000ee] hover:underline font-bold">Điều Khoản (Terms)</a>
+              <a href="/terms" class="text-link-blue hover:underline font-bold">Điều Khoản (Terms)</a>
             </div>
           </div>
 
@@ -173,7 +165,7 @@ try {
                   href="https://github.com/nongtiensonpro/lovelyyellowcat"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-[#0000ee] underline font-bold inline-flex items-center gap-0.5 hover:text-vapor-pink"
+                  class="text-link-blue underline font-bold inline-flex items-center gap-0.5 hover:text-vapor-pink"
                 >
                   nongtiensonpro/lovelyyellowcat ↗
                 </a>

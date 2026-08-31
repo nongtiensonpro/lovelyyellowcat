@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { parseMarkdownToHtml } from "../lib/markdown";
+import { uiAlert } from "../ui/wm95/dialogService";
 
 interface Article {
   id?: string;
@@ -235,7 +236,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
       }
     } catch (err) {
       console.error(err);
-      alert("Lỗi tải ảnh lên Cloudinary.");
+      uiAlert("Lỗi tải ảnh lên Cloudinary.", "cloudinary-upload-failed");
     } finally {
       setIsUploading(false);
     }
@@ -433,7 +434,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
             <div className="flex flex-col gap-2 mb-1">
               <div className="flex justify-between items-center gap-2">
                 <label className="text-xs font-bold uppercase">Nội dung bài viết (*)</label>
-                <div className="flex border border-win-dark bg-[#d4d4d4] p-0.5 shrink-0">
+                <div className="flex border border-win-dark bg-web-gray-mid p-0.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => setActiveTab("write")}
@@ -451,7 +452,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
                 </div>
               </div>
 
-              <div className="border-2 border-win-dark bg-[#d4d4d4]">
+              <div className="border-2 border-win-dark bg-web-gray-mid">
                 <div className="flex flex-wrap items-center gap-1 border-b border-win-dark p-1 bg-win-gray">
                   <select
                     className="border border-win-dark bg-white text-black text-[10px] font-bold h-8 px-2 min-w-32"
@@ -517,7 +518,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
                   </div>
                 )}
 
-                <div className="flex flex-wrap justify-between gap-2 border-t border-win-dark bg-[#c0c0c0] px-2 py-1 text-[10px] text-win-dark font-bold">
+                <div className="flex flex-wrap justify-between gap-2 border-t border-win-dark bg-win-gray px-2 py-1 text-[10px] text-win-dark font-bold">
                   <span>{wordCount} từ</span>
                   <span>{readingMinutes} phút đọc</span>
                   <span>{bodyMd.length} ký tự</span>
@@ -567,7 +568,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
               </h2>
               <div className="flex gap-2 mt-2">
                 {tagsInput.split(",").map(t => t.trim()).filter(t => t.length > 0).map(tag => (
-                  <span key={tag} className="text-[10px] px-2 py-0.5 border border-win-dark bg-[#e0e0e0] font-bold font-retro">
+                  <span key={tag} className="text-[10px] px-2 py-0.5 border border-win-dark bg-web-gray-panel font-bold font-retro">
                     #{tag}
                   </span>
                 ))}

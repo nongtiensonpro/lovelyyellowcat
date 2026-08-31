@@ -37,7 +37,7 @@ const initialSubmissions = dbSubmissions || [];
   </div>
 
   {/* Main Grid Component */}
-  <div class="mt-6 bg-[#0b001a]/40 p-3 sm:p-4 border-2 border-win-dark/50 backdrop-blur-md">
+  <div class="mt-6 bg-cosmic-black/40 p-3 sm:p-4 border-2 border-win-dark/50 backdrop-blur-md">
     <div class="win95-container bg-win-gray mb-6">
       <div class="win95-header py-1">
         <span>SYSTEM_STATUS.LOG</span>
@@ -48,7 +48,7 @@ const initialSubmissions = dbSubmissions || [];
     </div>
 
     <GalleryGrid
-      client:load
+      client:visible
       initialSubmissions={initialSubmissions}
       currentUser={userProfile}
     />

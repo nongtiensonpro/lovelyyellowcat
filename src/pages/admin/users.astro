@@ -143,28 +143,28 @@ function formatAction(action: string) {
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 font-retro">
     <div class="win95-container text-black">
       <div class="win95-header"><span>TOTAL.DLL</span></div>
-      <div class="p-3 bg-[#c0c0c0] text-center">
+      <div class="p-3 bg-win-gray text-center">
         <p class="text-2xl font-black text-vapor-purple">{totalUsers || 0}</p>
         <p class="text-[10px] font-bold uppercase">Tổng người dùng</p>
       </div>
     </div>
     <div class="win95-container text-black">
       <div class="win95-header"><span>ADMIN.DLL</span></div>
-      <div class="p-3 bg-[#c0c0c0] text-center">
+      <div class="p-3 bg-win-gray text-center">
         <p class="text-2xl font-black text-vapor-pink">{adminCount || 0}</p>
         <p class="text-[10px] font-bold uppercase">👑 Admin</p>
       </div>
     </div>
     <div class="win95-container text-black">
       <div class="win95-header"><span>EDITOR.DLL</span></div>
-      <div class="p-3 bg-[#c0c0c0] text-center">
+      <div class="p-3 bg-win-gray text-center">
         <p class="text-2xl font-black text-vapor-blue">{editorCount || 0}</p>
         <p class="text-[10px] font-bold uppercase">✏️ Editor</p>
       </div>
     </div>
     <div class="win95-container text-black">
       <div class="win95-header"><span>BANNED.DLL</span></div>
-      <div class="p-3 bg-[#c0c0c0] text-center">
+      <div class="p-3 bg-win-gray text-center">
         <p class="text-2xl font-black text-red-600">{bannedCount || 0}</p>
         <p class="text-[10px] font-bold uppercase">🚫 Bị cấm</p>
       </div>
@@ -176,7 +176,7 @@ function formatAction(action: string) {
     <div class="win95-header">
       <span>🔍 SEARCH_FILTER.EXE</span>
     </div>
-    <form method="GET" action="/admin/users" class="p-3 bg-[#c0c0c0] flex flex-wrap gap-3 items-end">
+    <form method="GET" action="/admin/users" class="p-3 bg-win-gray flex flex-wrap gap-3 items-end">
       <!-- Tìm kiếm -->
       <div class="flex-1 min-w-[200px]">
         <label class="block text-[10px] font-bold uppercase mb-1">Tìm kiếm (tên / email)</label>
@@ -244,7 +244,7 @@ function formatAction(action: string) {
     <div class="bg-white overflow-x-auto border-2 border-win-dark p-1 hidden md:block">
       <table class="w-full text-left border-collapse text-xs">
         <thead>
-          <tr class="bg-[#c0c0c0] border-b border-win-dark">
+          <tr class="bg-win-gray border-b border-win-dark">
             <th class="p-2 border-r border-win-dark font-bold">NGƯỜI DÙNG</th>
             <th class="p-2 border-r border-win-dark font-bold w-24">VAI TRÒ</th>
             <th class="p-2 border-r border-win-dark font-bold w-24">TRẠNG THÁI</th>
@@ -263,9 +263,9 @@ function formatAction(action: string) {
             </tr>
           ) : (
             users.map((u: any) => (
-              <tr class={`border-b border-[#e0e0e0] hover:bg-[#f0f0f0] ${u.is_banned ? "bg-red-50" : ""}`}>
+              <tr class={`border-b border-web-gray-panel hover:bg-web-gray-input ${u.is_banned ? "bg-red-50" : ""}`}>
                 {/* Người dùng */}
-                <td class="p-2 border-r border-[#e0e0e0]">
+                <td class="p-2 border-r border-web-gray-panel">
                   <div class="flex items-center gap-2">
                     <img
                       src={u.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
@@ -284,7 +284,7 @@ function formatAction(action: string) {
                 </td>
 
                 {/* Vai trò */}
-                <td class="p-2 border-r border-[#e0e0e0]">
+                <td class="p-2 border-r border-web-gray-panel">
                   <span class={`px-2 py-0.5 border text-[10px] font-bold uppercase inline-block ${
                     u.role === "admin"
                       ? "bg-pink-100 text-pink-800 border-pink-300"
@@ -297,7 +297,7 @@ function formatAction(action: string) {
                 </td>
 
                 {/* Trạng thái */}
-                <td class="p-2 border-r border-[#e0e0e0]">
+                <td class="p-2 border-r border-web-gray-panel">
                   {u.is_banned ? (
                     <span class="px-2 py-0.5 border text-[10px] font-bold uppercase bg-red-100 text-red-800 border-red-300" title={`Lý do: ${u.ban_reason || "Không rõ"}`}>
                       🚫 BỊ CẤM
@@ -310,14 +310,14 @@ function formatAction(action: string) {
                 </td>
 
                 {/* Ngày đăng ký */}
-                <td class="p-2 border-r border-[#e0e0e0] text-[10px] text-win-dark">
+                <td class="p-2 border-r border-web-gray-panel text-[10px] text-win-dark">
                   {formatDate(u.created_at)}
                 </td>
 
                 {/* Hành động */}
                 <td class="p-2 text-center">
                   <UserManagementActions
-                    client:load
+                    client:visible
                     userId={u.id}
                     currentRole={u.role}
                     isBanned={!!u.is_banned}
@@ -333,7 +333,7 @@ function formatAction(action: string) {
     </div>
 
     <!-- Mobile Card View -->
-    <div class="md:hidden bg-[#c0c0c0] p-2 space-y-2">
+    <div class="md:hidden bg-win-gray p-2 space-y-2">
       {!users || users.length === 0 ? (
         <div class="p-6 text-center text-win-dark font-bold bg-white border border-win-dark">
           {search || roleFilter || statusFilter
@@ -377,7 +377,7 @@ function formatAction(action: string) {
             <div class="flex items-center justify-between border-t border-win-dark/30 pt-2">
               <span class="text-[10px] text-win-dark">📅 {formatDate(u.created_at)}</span>
               <UserManagementActions
-                client:load
+                client:visible
                 userId={u.id}
                 currentRole={u.role}
                 isBanned={!!u.is_banned}
@@ -435,7 +435,7 @@ function formatAction(action: string) {
       ) : (
         <table class="w-full text-left border-collapse text-xs">
           <thead>
-            <tr class="bg-[#c0c0c0] border-b border-win-dark">
+            <tr class="bg-win-gray border-b border-win-dark">
               <th class="p-2 border-r border-win-dark font-bold">THỜI GIAN</th>
               <th class="p-2 border-r border-win-dark font-bold">ADMIN</th>
               <th class="p-2 border-r border-win-dark font-bold">HÀNH ĐỘNG</th>
@@ -445,17 +445,17 @@ function formatAction(action: string) {
           </thead>
           <tbody>
             {recentLogs.map((log: any) => (
-              <tr class="border-b border-[#e0e0e0] hover:bg-[#f0f0f0]">
-                <td class="p-2 border-r border-[#e0e0e0] text-[10px] text-win-dark whitespace-nowrap">
+              <tr class="border-b border-web-gray-panel hover:bg-web-gray-input">
+                <td class="p-2 border-r border-web-gray-panel text-[10px] text-win-dark whitespace-nowrap">
                   {new Date(log.created_at).toLocaleString("vi-VN")}
                 </td>
-                <td class="p-2 border-r border-[#e0e0e0] font-bold text-[10px]">
+                <td class="p-2 border-r border-web-gray-panel font-bold text-[10px]">
                   {log.admin?.full_name || "N/A"}
                 </td>
-                <td class="p-2 border-r border-[#e0e0e0] text-[10px]">
+                <td class="p-2 border-r border-web-gray-panel text-[10px]">
                   {formatAction(log.action)}
                 </td>
-                <td class="p-2 border-r border-[#e0e0e0] font-bold text-[10px]">
+                <td class="p-2 border-r border-web-gray-panel font-bold text-[10px]">
                   {log.target?.full_name || "N/A"}
                 </td>
                 <td class="p-2 text-[10px] text-win-dark">

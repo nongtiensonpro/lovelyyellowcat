@@ -17,7 +17,7 @@
 
 <div class="win95-window shadow-md" id="server-status-widget">
   <!-- Title bar -->
-  <div class="win95-header py-1 px-2 flex justify-between items-center select-none bg-gradient-to-r from-win-titlebar via-[#1084d0] to-[#6a26a4] text-white">
+  <div class="win95-header py-1 px-2 flex justify-between items-center select-none bg-gradient-to-r from-win-titlebar via-vapor-blue-dark to-sticker-purple text-white">
     <div class="flex items-center gap-1.5 min-w-0">
       <span class="text-sm">📡</span>
       <span class="font-bold text-xs tracking-wider truncate">SERVER_MONITOR.EXE</span>
@@ -71,7 +71,7 @@
 
   <!-- TAB 1: SERVICE STATUS LIST -->
   <div id="tab-content-status" class="server-tab-content p-2.5 bg-white text-black font-retro text-xs space-y-1">
-    <div class="bg-[#fffb96]/40 p-1.5 border border-win-dark text-[10px] text-win-darkest flex items-center justify-between mb-1.5">
+    <div class="bg-vapor-yellow/40 p-1.5 border border-win-dark text-[10px] text-win-darkest flex items-center justify-between mb-1.5">
       <span class="flex items-center gap-1">
         <span>💡</span> <span>Nhấn vào từng dịch vụ để xem vai trò và trang trạng thái gốc.</span>
       </span>
@@ -94,7 +94,7 @@
           <span class="expand-icon text-[10px] text-win-dark font-mono">▼</span>
         </div>
       </div>
-      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-web-gray-soft border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
         <p class="text-win-darkest leading-snug">
           <strong>Nhiệm vụ:</strong> Lưu trữ bài viết, bình luận realtime, hồ sơ người dùng, điểm XP và danh sách tranh yêu thích.
         </p>
@@ -124,7 +124,7 @@
           <span class="expand-icon text-[10px] text-win-dark font-mono">▼</span>
         </div>
       </div>
-      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-web-gray-soft border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
         <p class="text-win-darkest leading-snug">
           <strong>Nhiệm vụ:</strong> Xác thực danh tính người dùng, cấp Token bảo mật và quản lý phiên đăng nhập qua Cookie HttpOnly.
         </p>
@@ -154,7 +154,7 @@
           <span class="expand-icon text-[10px] text-win-dark font-mono">▼</span>
         </div>
       </div>
-      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-web-gray-soft border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
         <p class="text-win-darkest leading-snug">
           <strong>Nhiệm vụ:</strong> Máy chủ biên Serverless chạy toàn bộ mã nguồn Astro SSR, phân phối trang web tại hơn 300+ Edge Datacenter toàn cầu.
         </p>
@@ -184,7 +184,7 @@
           <span class="expand-icon text-[10px] text-win-dark font-mono">▼</span>
         </div>
       </div>
-      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-web-gray-soft border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
         <p class="text-win-darkest leading-snug">
           <strong>Nhiệm vụ:</strong> Lưu trữ đám mây, nén ảnh thông minh sang WebP/AVIF và phân phối tranh nghệ thuật tốc độ cao.
         </p>
@@ -209,12 +209,12 @@
           <span class="font-bold text-[11px] truncate text-black">Google OAuth</span>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
-          <span class="status-dot w-2 h-2 rounded-full bg-[#4285f4]"></span>
-          <span class="status-label text-[10px] font-mono font-bold text-[#4285f4] tracking-wide">EXT ↗</span>
+          <span class="status-dot w-2 h-2 rounded-full bg-google-blue"></span>
+          <span class="status-label text-[10px] font-mono font-bold text-google-blue tracking-wide">EXT ↗</span>
           <span class="expand-icon text-[10px] text-win-dark font-mono">▼</span>
         </div>
       </div>
-      <div class="service-detail-panel hidden px-2 py-1.5 bg-[#f4f4f4] border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
+      <div class="service-detail-panel hidden px-2 py-1.5 bg-web-gray-soft border border-win-dark/30 text-[10px] space-y-1 mt-0.5">
         <p class="text-win-darkest leading-snug">
           <strong>Nhiệm vụ:</strong> Cổng đăng nhập 1-chạm an toàn bằng tài khoản Google dành cho bạn đọc và nghệ sĩ.
         </p>
@@ -248,7 +248,7 @@
 
   <!-- TAB 2: NETWORK ARCHITECTURE OVERVIEW -->
   <div id="tab-content-network" class="server-tab-content hidden p-3 bg-white text-black font-retro text-xs space-y-2.5 max-h-[360px] overflow-y-auto">
-    <div class="win95-header py-0.5 px-1.5 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-white">
+    <div class="win95-header py-0.5 px-1.5 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark text-white">
       <span class="text-[10px] font-bold">🌐 SƠ ĐỒ HẠ TẦNG LOVELY YELLOW CAT</span>
     </div>
 
@@ -263,24 +263,24 @@
       </div>
 
       <div class="p-1.5 bg-win-gray border border-win-dark">
-        <span class="font-bold text-[#006241]">2. Supabase DB & Storage:</span>
+        <span class="font-bold text-coffee-green">2. Supabase DB & Storage:</span>
         <p class="text-[10px] font-sans text-black mt-0.5">Lưu trữ dữ liệu relational Postgres, bảng xếp hạng nghệ sĩ, quản lý bình luận phân cấp và điểm thưởng XP.</p>
       </div>
 
       <div class="p-1.5 bg-win-gray border border-win-dark">
-        <span class="font-bold text-[#0072ce]">3. Cloudinary Global CDN:</span>
+        <span class="font-bold text-brand-blue">3. Cloudinary Global CDN:</span>
         <p class="text-[10px] font-sans text-black mt-0.5">Xử lý đồ họa nặng, tự động nén dung lượng mà không làm giảm chất lượng tác phẩm mỹ thuật số.</p>
       </div>
 
       <div class="p-1.5 bg-win-gray border border-win-dark">
-        <span class="font-bold text-[#d93025]">4. Google AI Studio & OAuth:</span>
+        <span class="font-bold text-google-red">4. Google AI Studio & OAuth:</span>
         <p class="text-[10px] font-sans text-black mt-0.5">Cung cấp mạng nơ-ron Gemini AI cho trạm trò chuyện (/ai) và xác thực đăng nhập bảo mật.</p>
       </div>
     </div>
 
     <button
       type="button"
-      class="win95-btn w-full py-1 text-center font-bold text-xs text-vapor-purple bg-[#fffb96]/40 border border-black hover:bg-vapor-yellow"
+      class="win95-btn w-full py-1 text-center font-bold text-xs text-vapor-purple bg-vapor-yellow/40 border border-black hover:bg-vapor-yellow"
       id="switch-to-status-from-net"
     >
       &lt;&lt; Quay Lại Danh Sách Giám Sát Live
@@ -289,7 +289,7 @@
 
   <!-- TAB 3: HELP & USER GUIDE -->
   <div id="tab-content-help" class="server-tab-content hidden p-3 bg-white text-black font-retro text-xs space-y-2.5 max-h-[360px] overflow-y-auto">
-    <div class="win95-header py-0.5 px-1.5 bg-gradient-to-r from-[#b967ff] to-vapor-pink text-white">
+    <div class="win95-header py-0.5 px-1.5 bg-gradient-to-r from-vapor-purple to-vapor-pink text-white">
       <span class="text-[10px] font-bold">📖 HƯỚNG DẪN & Ý NGHĨA BẢNG GIÁM SÁT</span>
     </div>
 
@@ -304,13 +304,13 @@
       <div>
         <h5 class="font-bold text-vapor-purple uppercase">🚦 Ý nghĩa các mã trạng thái:</h5>
         <div class="grid grid-cols-2 gap-1.5 mt-1 text-[10px] font-mono">
-          <div class="p-1 bg-[#05ffa1]/20 border border-green-600">
+          <div class="p-1 bg-vapor-green/20 border border-green-600">
             <span class="font-bold text-green-800">● ONLINE:</span> Hoạt động hoàn hảo 100%.
           </div>
-          <div class="p-1 bg-[#fffb96]/40 border border-yellow-600">
+          <div class="p-1 bg-vapor-yellow/40 border border-yellow-600">
             <span class="font-bold text-yellow-900">● DEGRADED:</span> Phản hồi hơi chậm.
           </div>
-          <div class="p-1 bg-[#ff9a3c]/30 border border-orange-600">
+          <div class="p-1 bg-vapor-orange/30 border border-orange-600">
             <span class="font-bold text-orange-900">● PARTIAL:</span> Gián đoạn 1 vài tính năng.
           </div>
           <div class="p-1 bg-red-100 border border-red-600">
@@ -329,7 +329,7 @@
 
     <button
       type="button"
-      class="win95-btn w-full py-1 text-center font-bold text-xs text-black bg-win-gray border border-black hover:bg-[#e0e0e0]"
+      class="win95-btn w-full py-1 text-center font-bold text-xs text-black bg-win-gray border border-black hover:bg-web-gray-panel"
       id="switch-to-status-from-help"
     >
       &lt;&lt; Đóng Hướng Dẫn & Xem Trạng Thái
@@ -349,7 +349,7 @@
 <div id="server-help-modal" class="fixed inset-0 bg-black/60 z-[99999] flex items-center justify-center p-3 hidden backdrop-blur-[2px] font-retro text-black select-none">
   <div class="win95-container max-w-md w-full bg-win-gray shadow-2xl animate-[fadeIn_0.15s_ease-out]">
     <!-- Modal Titlebar -->
-    <div class="win95-header py-1 px-2 flex justify-between items-center bg-gradient-to-r from-win-titlebar via-[#1084d0] to-[#6a26a4] text-white">
+    <div class="win95-header py-1 px-2 flex justify-between items-center bg-gradient-to-r from-win-titlebar via-vapor-blue-dark to-sticker-purple text-white">
       <div class="flex items-center gap-1.5">
         <span>📖</span>
         <span class="font-bold text-xs">WINHELP32.EXE - [SERVER_MONITOR.HLP]</span>
@@ -399,7 +399,7 @@
           <li><strong>Google OAuth:</strong> Cổng xác thực tài khoản Google an toàn 1-chạm.</li>
         </ul>
 
-        <div class="p-2 bg-[#fffb96]/40 border border-win-dark text-[10px]">
+        <div class="p-2 bg-vapor-yellow/40 border border-win-dark text-[10px]">
           <strong>💡 Mẹo:</strong> Bạn có thể nhấn trực tiếp vào từng dòng dịch vụ trên bảng để xem chi tiết hoặc bấm nút <strong>Quét Lại</strong> để cập nhật dữ liệu mới nhất bất kỳ lúc nào.
         </div>
       </div>
@@ -600,19 +600,19 @@
     });
 
     if (anyOffline) {
-      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#ff4444] animate-pulse mr-1"></span>OUTAGE';
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-state-error-soft animate-pulse mr-1"></span>OUTAGE';
       badge.style.color = '#ff4444';
       summary.textContent = '■ 5 dịch vụ │ ⚠️ Có sự cố!';
     } else if (anyError) {
-      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#b967ff] animate-pulse mr-1"></span>WARN';
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-vapor-purple animate-pulse mr-1"></span>WARN';
       badge.style.color = '#b967ff';
       summary.textContent = '■ 5 dịch vụ │ Kiểm tra mạng';
     } else if (allOnline) {
-      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#05ffa1] mr-1"></span>ALL OK';
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-vapor-green mr-1"></span>ALL OK';
       badge.style.color = '#008f58';
       summary.textContent = '■ 5 dịch vụ │ Hoạt động tốt';
     } else {
-      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#fffb96] animate-pulse mr-1"></span>DEGRADED';
+      badge.innerHTML = '<span class="inline-block w-1.5 h-1.5 rounded-full bg-vapor-yellow animate-pulse mr-1"></span>DEGRADED';
       badge.style.color = '#8a7c00';
       summary.textContent = '■ 5 dịch vụ │ Phản hồi chậm';
     }

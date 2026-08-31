@@ -10,7 +10,7 @@ const {
 } = Astro.props;
 ---
 
-<div class={`bg-win-gray p-2.5 sm:p-3.5 rounded-lg border-4 border-win-light shadow-[inset_-3px_-3px_0_#404040,inset_3px_3px_0_#dfdfdf,6px_6px_0_rgba(0,0,0,0.8)] font-retro text-black w-full max-w-full overflow-hidden flex flex-col justify-between ${className}`}>
+<div class={`bg-win-gray p-2.5 sm:p-3.5 rounded-lg border-4 border-win-light crt-bezel-shadow font-retro text-black w-full max-w-full overflow-hidden flex flex-col justify-between ${className}`}>
   <!-- Brand Badge & Speaker Grills -->
   <div class="flex justify-between items-center mb-2 px-0.5 gap-2 min-w-0">
     <div class="flex items-center gap-1.5 min-w-0 flex-1">
@@ -28,22 +28,22 @@ const {
   </div>
 
   <!-- Screen Bezel & Tube -->
-  <div class="bg-black p-1.5 sm:p-2.5 rounded-md border-4 border-win-darkest shadow-[inset_0_0_20px_rgba(0,0,0,0.9)] relative overflow-hidden flex-1">
+  <div class="bg-black p-1.5 sm:p-2.5 rounded-md border-4 border-win-darkest crt-tube-deep relative overflow-hidden flex-1">
     <!-- Curved Glass Vignette & Scanlines -->
     <div class="relative rounded-sm overflow-hidden z-10 w-full h-full">
       <slot />
     </div>
 
     <!-- Scanline effect across screen -->
-    <div class="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(to_bottom,transparent_0px,transparent_2px,rgba(0,0,0,0.25)_2px,rgba(0,0,0,0.25)_4px)] z-20"></div>
-    <div class="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(0,0,0,0.65)_100%)] z-20"></div>
+    <div class="absolute inset-0 pointer-events-none crt-scanlines-repeating z-20"></div>
+    <div class="absolute inset-0 pointer-events-none crt-vignette-glass z-20"></div>
   </div>
 
   <!-- Monitor Control Panel & Power LED -->
   <div class="flex flex-wrap justify-between items-center mt-2.5 pt-2 border-t border-win-dark/40 px-0.5 gap-y-1.5 gap-x-2">
     <!-- Left: Power LED -->
     <div class="flex items-center gap-1.5 shrink-0">
-      <span class="w-2 h-2 rounded-full bg-vapor-green shadow-[0_0_6px_#05ffa1] animate-pulse shrink-0"></span>
+      <span class="w-2 h-2 rounded-full bg-vapor-green glow-green animate-pulse shrink-0"></span>
       <span class="text-[10px] font-mono text-win-darkest font-bold">POWER</span>
       <span class="text-[10px] font-mono text-win-darkest hidden 2xl:inline opacity-70">● 75Hz</span>
     </div>
@@ -52,24 +52,21 @@ const {
     <div class="flex items-center gap-1 shrink-0 ml-auto">
       <button
         type="button"
-        class="win95-btn text-[10px] sm:text-[10px] font-mono py-0 px-1.5 leading-none shrink-0 active:translate-y-0.5"
-        style="min-height: 20px;"
+        class="win95-btn win95-mini-btn text-[10px] sm:text-[10px] font-mono py-0 px-1.5 leading-none shrink-0 active:translate-y-0.5"
         title="Degauss CRT Tube"
       >
         DEGAUSS
       </button>
       <button
         type="button"
-        class="win95-btn text-[10px] sm:text-[10px] font-mono py-0 px-1.5 leading-none shrink-0 active:translate-y-0.5"
-        style="min-height: 20px;"
+        class="win95-btn win95-mini-btn text-[10px] sm:text-[10px] font-mono py-0 px-1.5 leading-none shrink-0 active:translate-y-0.5"
         title="Adjust Contrast / Brightness"
       >
         ADJ
       </button>
       <button
         type="button"
-        class="win95-btn text-[10px] sm:text-[10px] font-mono font-bold text-vapor-pink py-0 px-1.5 leading-none shrink-0 active:translate-y-0.5"
-        style="min-height: 20px;"
+        class="win95-btn win95-mini-btn text-[10px] sm:text-[10px] font-mono font-bold text-vapor-pink py-0 px-1.5 leading-none shrink-0 active:translate-y-0.5"
         title="Monitor OSD Menu"
       >
         MENU

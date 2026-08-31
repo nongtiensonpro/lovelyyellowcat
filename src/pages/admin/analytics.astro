@@ -181,12 +181,12 @@ const hasDailyData = dailyStats.length > 0;
     <!-- Nghệ sĩ tích cực -->
     <div class="win95-container font-retro text-black mb-6">
       <div class="win95-header"><span>🎨 ARTIST_LEADERBOARD.EXE</span></div>
-      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] p-1">
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-web-gray-panel p-1">
         {!artistBoard || artistBoard.length === 0 ? (
           <p class="text-center p-6 text-win-dark font-bold text-xs">CHƯA CÓ NGHỆ SĨ NÀO ĐÓNG GÓP.</p>
         ) : (
           artistBoard.map((a: any, i: number) => (
-            <div class="flex items-center gap-2.5 px-2 py-2 hover:bg-[#f0f0f0]">
+            <div class="flex items-center gap-2.5 px-2 py-2 hover:bg-web-gray-input">
               <span class="font-mono w-7 text-center shrink-0">{["🥇", "🥈", "🥉"][i] || i + 1}</span>
               <img src={a.avatar_url || "/images/default-avatar.png"} alt="" loading="lazy"
                 class="w-8 h-8 object-cover border border-win-dark shrink-0" style="filter:saturate(1.4);" />

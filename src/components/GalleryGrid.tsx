@@ -387,7 +387,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                 return (
                   <tr
                     key={sub.id}
-                    className={`border-b border-win-light hover:bg-vapor-pink/10 cursor-pointer transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-[#f7f7f7]'}`}
+                    className={`border-b border-win-light hover:bg-vapor-pink/10 cursor-pointer transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-paper-white'}`}
                     onClick={() => handleOpenLightbox(sub.id)}
                   >
                     <td className="p-2 flex items-center gap-2">
@@ -469,17 +469,17 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
             return (
               <div
                 key={sub.id}
-                className="break-inside-avoid win95-container bg-[#c0c0c0] p-1 flex flex-col group hover:border-vapor-pink hover:shadow-[0_0_15px_rgba(255,113,206,0.6)] transition-all duration-200 relative cursor-pointer"
+                className="break-inside-avoid win95-container bg-win-gray p-1 flex flex-col group hover:border-vapor-pink hover:shadow-[0_0_15px_rgba(255,113,206,0.6)] transition-all duration-200 relative cursor-pointer"
                 onClick={() => handleOpenLightbox(sub.id)}
               >
                 {/* Header Window mini */}
-                <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-[10px] flex justify-between items-center">
+                <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark text-[10px] flex justify-between items-center">
                   <span className="truncate max-w-[70%] font-bold uppercase">{sub.title}</span>
                   <span className="text-[10px] opacity-80 font-mono">ART_VIEW.DLL</span>
                 </div>
 
                 {/* Khung chứa ảnh */}
-                <div className="relative bg-[#1a003a]/10 overflow-hidden aspect-auto min-h-[160px] max-h-[420px] border border-win-dark flex items-center justify-center">
+                <div className="relative bg-cosmic-mid/10 overflow-hidden aspect-auto min-h-[160px] max-h-[420px] border border-win-dark flex items-center justify-center">
                   <LazyImage
                     src={sub.image_url}
                     alt={sub.title}
@@ -509,7 +509,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({
                 </div>
 
                 {/* Footer của tranh */}
-                <div className="p-2 bg-[#d8d8d8] flex justify-between items-center text-[10px]">
+                <div className="p-2 bg-web-gray-dark flex justify-between items-center text-[10px]">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <img
                       src={sub.profiles?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50&auto=format&fit=crop"}

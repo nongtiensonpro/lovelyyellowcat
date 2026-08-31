@@ -173,7 +173,7 @@ function formatAnnouncementDate(d: string | null) {
     <!-- Danh sách -->
     <div class="lg:col-span-3 win95-container font-retro text-black">
       <div class="win95-header"><span>📋 BROADCAST_HISTORY.LOG</span></div>
-      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] min-h-40">
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-web-gray-panel min-h-40">
         {!announcements || announcements.length === 0 ? (
           <p class="p-8 text-center text-win-dark font-bold text-xs">CHƯA CÓ THÔNG BÁO NÀO. SOẠN TIN ĐẦU TIÊN NGAY!</p>
         ) : (
@@ -198,7 +198,7 @@ function formatAnnouncementDate(d: string | null) {
                     <input type="hidden" name="action" value="delete" />
                     <input type="hidden" name="announcementId" value={a.id} />
                     <button type="submit" class="win95-btn btn-danger text-[10px] px-2 py-1 font-bold"
-                      onclick="return confirm('Xóa vĩnh viễn thông báo này?');">❌</button>
+                      data-confirm="Xóa vĩnh viễn thông báo này?">❌</button>
                   </form>
                 </div>
               </div>

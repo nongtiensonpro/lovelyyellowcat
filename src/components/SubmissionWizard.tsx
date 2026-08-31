@@ -203,7 +203,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
   return (
     <div className="win95-window max-w-2xl mx-auto my-6 font-retro text-black flex flex-col shadow-2xl">
       {/* Wizard Header */}
-      <div className="win95-header py-1.5 px-3 bg-gradient-to-r from-win-titlebar to-[#1084d0]">
+      <div className="win95-header py-1.5 px-3 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark">
         <div className="flex items-center gap-2">
           <span>🎨</span>
           <span className="font-bold text-xs tracking-wide">INSTALLSHIELD_SETUP_WIZARD.EXE - [ĐĂNG TÁC PHẨM MỚI]</span>
@@ -214,7 +214,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
       </div>
 
       {/* Setup Wizard Progress Steps */}
-      <div className="flex bg-[#808080] text-white text-[10px] font-bold p-1 gap-1 border-b border-win-dark">
+      <div className="flex bg-win-dark text-white text-[10px] font-bold p-1 gap-1 border-b border-win-dark">
         <div className={`flex-1 text-center py-1.5 border border-white ${step === 1 ? 'win95-sunken bg-vapor-pink text-black font-extrabold' : 'bg-transparent text-gray-300'}`}>
           1. CHỌN TỆP TRANH
         </div>
@@ -401,7 +401,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !title.trim()}
-              className="win95-btn font-bold px-6 py-1.5 text-black bg-[#05ffa1]/30 border-2 border-black"
+              className="win95-btn font-bold px-6 py-1.5 text-black bg-vapor-green/30 border-2 border-black"
               style={{ minHeight: "36px" }}
             >
               {isSubmitting ? "⏳ Đang Gửi..." : "💾 Hoàn Tất & Gửi Duyệt"}

@@ -124,14 +124,14 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   };
 
   const win95Style = isFavorited
-    ? "bg-[#ff71ce]/20 border-[#ff71ce] text-vapor-pink font-bold shadow-inner"
-    : "bg-win-gray text-black font-bold hover:bg-[#e0e0e0]";
+    ? "bg-vapor-pink/20 border-vapor-pink text-vapor-pink font-bold shadow-inner"
+    : "bg-win-gray text-black font-bold hover:bg-web-gray-panel";
 
   if (variant === "win95") {
     return (
       <div className="relative inline-block font-retro">
         {errorMsg && (
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 bg-[#0b001a] border border-[#ff71ce] p-1 text-[10px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse shadow-md">
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1.5 bg-cosmic-black border border-vapor-pink p-1 text-[10px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse shadow-md">
             ⚠️ {errorMsg}
           </div>
         )}
@@ -153,7 +153,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   return (
     <div className="relative inline-block font-retro">
       {errorMsg && (
-        <div className="absolute -top-7 right-0 bg-[#0b001a] border border-[#ff71ce] p-1 text-[10px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse">
+        <div className="absolute -top-7 right-0 bg-cosmic-black border border-vapor-pink p-1 text-[10px] font-bold text-vapor-pink whitespace-nowrap z-50 animate-pulse">
           {errorMsg}
         </div>
       )}

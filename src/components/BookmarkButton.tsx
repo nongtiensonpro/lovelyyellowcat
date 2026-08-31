@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { RetroButton } from "../ui/kernel/RetroButton";
+import { uiAlert } from "../ui/wm95/dialogService";
 
 interface Props {
   articleId: string;
@@ -25,7 +27,8 @@ export const BookmarkButton: React.FC<Props> = ({ articleId, isLoggedIn = false 
 
   const handleToggle = async () => {
     if (!isLoggedIn) {
-      alert("Bạn cần đăng nhập bằng Google để lưu bài viết nhé! 🐱🔑");
+      // v5: thay alert() native bằng dialogService Win95 (ADR-0002)
+      uiAlert("Bạn cần đăng nhập bằng Google để lưu bài viết nhé! \u{1F431}\u{1F511}", "bookmark-login");
       return;
     }
     setIsBusy(true);
@@ -47,17 +50,14 @@ export const BookmarkButton: React.FC<Props> = ({ articleId, isLoggedIn = false 
   };
 
   return (
-    <button
-      type="button"
+    <RetroButton
       onClick={handleToggle}
-      disabled={isBusy}
+      busy={isBusy}
       aria-pressed={isBookmarked}
       aria-label={isBookmarked ? "Bỏ lưu bài viết" : "Lưu bài viết để đọc sau"}
       title={isBookmarked ? "Bấm để bỏ lưu" : "Lưu bài viết để đọc sau (/bookmarks)"}
-      className="win95-btn text-black px-3 py-1.5 font-bold"
-      style={{ minHeight: 32 }}
     >
-      {isBookmarked ? "📑 ĐÃ LƯU" : "🔖 LƯU BÀI"}
-    </button>
+      {isBookmarked ? "\u{1F4D1} ĐÃ LƯU" : "\u{1F516} LƯU BÀI"}
+    </RetroButton>
   );
 };

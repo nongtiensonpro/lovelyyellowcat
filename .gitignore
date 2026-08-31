@@ -57,3 +57,5 @@ astro.config.verify.mjs
 # supabase local
 .branches
 .temp
+build/
+artifacts/

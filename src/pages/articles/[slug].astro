@@ -172,7 +172,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
     </a>
 
     <div class="flex items-center gap-2 flex-wrap justify-end">
-      <BookmarkButton client:load articleId={article.id} isLoggedIn={!!currentUser} />
+      <BookmarkButton client:visible articleId={article.id} isLoggedIn={!!currentUser} />
       <button id="native-share-btn" hidden class="win95-btn text-black px-3 py-1.5 font-bold" style="min-height: 32px;" aria-label="Chia sẻ qua ứng dụng thiết bị">
         📤 CHIA SẺ
       </button>
@@ -430,7 +430,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
             )}
             <span>
               Tác giả: {article.authorId ? (
-                <a href={`/profile/${article.authorId}`} class="text-[#0000ee] hover:underline font-bold">
+                <a href={`/profile/${article.authorId}`} class="text-link-blue hover:underline font-bold">
                   {article.author}
                 </a>
               ) : (
@@ -542,7 +542,9 @@ if (dbArticle && relatedData && relatedData.length > 0) {
           shareBtn.textContent = originalText;
         }, 2000);
       } catch (err) {
-        alert("Đường dẫn: " + window.location.href);
+        import("../../ui/wm95/dialogService").then(function (m) {
+          m.uiAlert("Đường dẫn: " + window.location.href, "share-url");
+        });
       }
     });
   }

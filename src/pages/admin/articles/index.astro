@@ -398,7 +398,7 @@ const { data: allStatuses } = await supabase
       <span class="text-[10px] text-vapor-yellow font-bold">Trang {page}/{totalPages} · {totalArticles ?? 0} kết quả</span>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2 p-2 bg-[#d4d0c8] border-b border-win-dark text-[11px]">
+    <div class="flex flex-wrap items-center gap-2 p-2 bg-win-face border-b border-win-dark text-[11px]">
       <span class="font-bold">Đã chọn: <strong id="bulk-count">0</strong></span>
       <button type="submit" name="action" value="bulk_publish" disabled class="win95-btn bulk-action font-bold text-[10px] py-1 px-2">🟢 ĐĂNG NHIỀU BÀI</button>
       <button type="submit" name="action" value="bulk_unpublish" disabled class="win95-btn bulk-action font-bold text-[10px] py-1 px-2">🟡 CHUYỂN NHÁP</button>
@@ -520,7 +520,13 @@ const { data: allStatuses } = await supabase
           }
           if (value === "bulk_delete") {
             btn.addEventListener("click", function (e) {
-              if (!confirm("🗑 Bỏ các bài đã chọn vào THÙNG RÁC? (Có thể khôi phục sau)")) e.preventDefault();
+              // v5: dialogService thay confirm() native (ADR-0002)
+              e.preventDefault();
+              import("../../../ui/wm95/dialogService").then(({ uiConfirm }) =>
+                uiConfirm("\u{1F5D1} Bỏ các bài đã chọn vào THÙNG RÁC? (Có thể khôi phục sau)").then((ok) => {
+                  if (ok) (btn.closest("form") as HTMLFormElement | null)?.submit();
+                })
+              );
             });
           }
         });

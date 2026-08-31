@@ -1,1 +1,1 @@
-{"configPath":"..\\..\\.verify-dist\\server\\wrangler.json","auxiliaryWorkers":[],"prerenderWorkerConfigPath":"..\\..\\.verify-dist\\server\\.prerender\\wrangler.json"}
+{"configPath":"..\\..\\build\\server\\wrangler.json","auxiliaryWorkers":[],"prerenderWorkerConfigPath":"..\\..\\build\\server\\.prerender\\wrangler.json"}

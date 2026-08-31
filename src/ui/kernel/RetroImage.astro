@@ -1,0 +1,31 @@
+---
+// RetroImage.astro — phiên bản Astro (server-rendered) của kernel image policy.
+// Không cần JS: srcset/sizes/decoding/loading render tĩnh; onError fallback chỉ có ở bản React.
+interface Props {
+  src: string;
+  alt: string;
+  widths?: number[];
+  aspect?: string;
+  sizes?: string;
+  class?: string;
+}
+const { src, alt, widths = [400, 800, 1200, 1600], aspect, sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px", class: className = "" } = Astro.props;
+
+const isCloudinary = /res\.cloudinary\.com|\/upload\//.test(src);
+const srcSet = isCloudinary
+  ? widths.map((w) => {
+      const [base, tail] = src.split("/upload/");
+      return tail ? `${base}/upload/f_auto,q_auto,w_${w}/${tail} ${w}w` : null;
+    }).filter(Boolean).join(", ")
+  : "";
+---
+<img
+  src={src}
+  alt={alt}
+  srcSet={srcSet || undefined}
+  sizes={srcSet ? sizes : undefined}
+  loading="lazy"
+  decoding="async"
+  style={aspect ? `aspect-ratio: ${aspect};` : undefined}
+  class:list={["w-full h-full object-cover", className]}
+/>

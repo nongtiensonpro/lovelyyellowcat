@@ -40,7 +40,7 @@ const userProfile = await getCurrentUserProfile(supabase);
             >
         </div>
 
-        <div class="p-4 sm:p-6 bg-[#c0c0c0] space-y-6">
+        <div class="p-4 sm:p-6 bg-win-gray space-y-6">
             <!-- Welcome Alert -->
             <div
                 class="bg-white border-2 border-win-dark p-4 flex gap-4 items-start shadow-inner"
@@ -269,13 +269,13 @@ const userProfile = await getCurrentUserProfile(supabase);
                             >✦ Công khai minh bạch mã nguồn:</strong
                         > Toàn bộ mã nguồn, cấu trúc dữ liệu, các thành phần giao diện (UI Components) và tài liệu thiết kế của dự án <strong>Lovely Yellow Cat (Vaporwave Art Journal)</strong> được công khai 100% tại kho lưu trữ GitHub chính thức:
                     </p>
-                    <div class="bg-black text-[#05ffa1] p-3 border-2 border-win-dark font-mono text-xs flex flex-col sm:flex-row items-center justify-between gap-2 shadow-inner">
+                    <div class="bg-black text-vapor-green p-3 border-2 border-win-dark font-mono text-xs flex flex-col sm:flex-row items-center justify-between gap-2 shadow-inner">
                         <span class="truncate">https://github.com/nongtiensonpro/lovelyyellowcat</span>
                         <a
                             href="https://github.com/nongtiensonpro/lovelyyellowcat"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="win95-btn text-black font-bold px-3 py-1 bg-white no-underline text-[10px] shrink-0 hover:bg-[#fffb96]"
+                            class="win95-btn text-black font-bold px-3 py-1 bg-white no-underline text-[10px] shrink-0 hover:bg-vapor-yellow"
                         >
                             🐙 Xem GitHub Repo ↗
                         </a>
@@ -290,7 +290,7 @@ const userProfile = await getCurrentUserProfile(supabase);
                         <li>Sửa đổi, phân nhánh (Fork), tối ưu hóa hoặc tích hợp vào các dự án học tập, nghiên cứu và sáng tạo nghệ thuật cá nhân.</li>
                         <li>Sử dụng và phân phối lại mã nguồn miễn là giữ nguyên thông báo bản quyền và nội dung tuyên bố miễn trừ trách nhiệm của giấy phép MIT gốc.</li>
                     </ul>
-                    <p class="text-[11px] bg-[#fffb96]/20 p-2.5 border border-win-dark italic">
+                    <p class="text-[11px] bg-vapor-yellow/20 p-2.5 border border-win-dark italic">
                         <strong>Lưu ý:</strong> Phần mềm được cung cấp "nguyên trạng" (as-is) mà không có bất kỳ sự bảo đảm nào, dù được thể hiện rõ ràng hay ngụ ý. Tác giả hoặc người nắm giữ bản quyền sẽ không chịu trách nhiệm đối với bất kỳ khiếu nại hay thiệt hại nào phát sinh từ việc sử dụng phần mềm.
                     </p>
                 </div>
@@ -313,7 +313,7 @@ const userProfile = await getCurrentUserProfile(supabase);
                     >
                 </div>
                 <div class="text-xs space-y-4 leading-relaxed text-black/85">
-                    <div class="bg-[#0b001a] text-vapor-green p-3 border-2 border-win-dark font-mono text-xs flex items-center gap-2">
+                    <div class="bg-cosmic-black text-vapor-green p-3 border-2 border-win-dark font-mono text-xs flex items-center gap-2">
                         <span class="w-2 h-2 bg-vapor-green rounded-full animate-pulse"></span>
                         🔐 E2EE BẮT BUỘC — MỌI HỘI THOẠI ĐỀU ĐƯỢC MÃ HÓA AES-GCM 256 TRƯỚC KHI RỜI THIẾT BỊ CỦA BẠN
                     </div>
@@ -338,7 +338,7 @@ const userProfile = await getCurrentUserProfile(supabase);
                     <div>
                         <strong class="text-vapor-purple">✦ Lưu trữ vĩnh viễn theo tài khoản:</strong>
                         <ul class="list-disc pl-5 space-y-1.5 mt-2 text-win-dark">
-                            <li>Dữ liệu được lưu <strong class="text-black">vĩnh viễn</strong> trong các bảng <code class="bg-black text-vapor-green px-1">ai_sessions</code> / <code class="bg-black text-vapor-green px-1">ai_messages</code> gắn với <code class="bg-black text-[#05ffa1] px-1">user_id</code> của bạn, chỉ xóa khi bạn chủ động xóa phiên hoặc xóa tài khoản (cascade).</li>
+                            <li>Dữ liệu được lưu <strong class="text-black">vĩnh viễn</strong> trong các bảng <code class="bg-black text-vapor-green px-1">ai_sessions</code> / <code class="bg-black text-vapor-green px-1">ai_messages</code> gắn với <code class="bg-black text-vapor-green px-1">user_id</code> của bạn, chỉ xóa khi bạn chủ động xóa phiên hoặc xóa tài khoản (cascade).</li>
                             <li>Bạn có toàn quyền: <strong class="text-black">xem, xuất file (.txt/.json), xóa từng phiên hoặc xóa toàn bộ vĩnh viễn</strong> ngay trong Trạm AI (tab Cấu hình).</li>
                             <li>Không có tự động xóa sau 30/90 ngày — trừ khi bạn yêu cầu.</li>
                         </ul>
@@ -364,7 +364,7 @@ const userProfile = await getCurrentUserProfile(supabase);
                         </ul>
                     </div>
 
-                    <p class="text-[11px] bg-[#fffb96]/30 p-2.5 border border-win-dark">
+                    <p class="text-[11px] bg-vapor-yellow/30 p-2.5 border border-win-dark">
                         <strong>Cam kết pháp lý:</strong> Nội dung AI của bạn là <strong>tài sản riêng</strong> — chúng tôi không dùng để train mô hình, không chia sẻ, không cho phép admin đọc. Bạn có quyền xuất và xóa vĩnh viễn bất kỳ lúc nào, phù hợp tinh thần <strong>/terms</strong> và quy định bảo vệ dữ liệu cá nhân.
                     </p>
                 </div>
@@ -372,7 +372,7 @@ const userProfile = await getCurrentUserProfile(supabase);
 
             <!-- Prominent Contact / Helpdesk Alert Box -->
             <div
-                class="win95-container bg-[#fffb96]/10 border-2 border-win-dark p-6 shadow-sm text-center space-y-3"
+                class="win95-container bg-vapor-yellow/10 border-2 border-win-dark p-6 shadow-sm text-center space-y-3"
             >
                 <div class="text-4xl">✉️</div>
                 <h3
@@ -389,7 +389,7 @@ const userProfile = await getCurrentUserProfile(supabase);
                     chính thức của Ban Quản Trị:
                 </p>
                 <div
-                    class="inline-block bg-black text-[#05ffa1] font-mono text-sm sm:text-base px-4 py-2 border-2 border-win-dark shadow-inner select-all hover:scale-105 transition-transform duration-200"
+                    class="inline-block bg-black text-vapor-green font-mono text-sm sm:text-base px-4 py-2 border-2 border-win-dark shadow-inner select-all hover:scale-105 transition-transform duration-200"
                 >
                     nongtiensonpro@gmail.com
                 </div>
@@ -403,7 +403,7 @@ const userProfile = await getCurrentUserProfile(supabase);
             <div class="flex justify-center pt-2">
                 <a
                     href="/"
-                    class="win95-btn font-bold px-8 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-[#dfdfdf]"
+                    class="win95-btn font-bold px-8 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
                 >
                     ⬅️ QUAY LẠI TRANG CHỦ
                 </a>

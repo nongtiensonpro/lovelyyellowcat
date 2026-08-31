@@ -125,7 +125,7 @@ const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN"
             submissionId={submission.id}
             currentUser={userProfile}
             variant="win95"
-            client:load
+            client:visible
           />
 
           <div class="text-[10px] text-win-dark font-bold font-retro">
@@ -146,11 +146,11 @@ const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN"
           <span>📂 METADATA.LOG</span>
         </div>
         <div class="p-4 bg-white text-black font-retro space-y-3.5 shadow-inner">
-          <h2 class="text-xl font-extrabold leading-tight text-vapor-purple border-b border-[#e6e6e6] pb-1.5 uppercase">
+          <h2 class="text-xl font-extrabold leading-tight text-vapor-purple border-b border-web-gray-light pb-1.5 uppercase">
             {submission.title}
           </h2>
           
-          <div class="flex items-center gap-2.5 bg-[#f0f0f0] border border-win-dark/30 p-2">
+          <div class="flex items-center gap-2.5 bg-web-gray-input border border-win-dark/30 p-2">
             <a href={`/profile/${submission.profiles?.id}`} class="block select-none cursor-pointer">
               <img
                 src={submission.profiles?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
@@ -179,7 +179,7 @@ const formattedDate = new Date(submission.created_at).toLocaleDateString("vi-VN"
                 <a
                   key={tag}
                   href={`/gallery?tag=${encodeURIComponent(tag)}`}
-                  class="text-[10px] font-bold text-[#ff71ce] bg-[#ff71ce]/5 border border-[#ff71ce]/30 px-2 py-0.5 uppercase tracking-wider no-underline hover:bg-[#ff71ce]/10"
+                  class="text-[10px] font-bold text-vapor-pink bg-vapor-pink/5 border border-vapor-pink/30 px-2 py-0.5 uppercase tracking-wider no-underline hover:bg-vapor-pink/10"
                 >
                   #{tag}
                 </a>

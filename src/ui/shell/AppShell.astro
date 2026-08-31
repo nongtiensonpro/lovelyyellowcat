@@ -1,0 +1,48 @@
+---
+// AppShell.astro — shell policy chung cho public + admin (kế hoạch §3.2, ADR-0003).
+// Mount bằng cách đặt <AppShell /> trong <head> + sau <body> của layout.
+// Tự gắn: preconnect font, font link, FXBootstrap (early), CRT overlay, DialogHost, SkipLink.
+import DialogHost from "../wm95/DialogHost";
+import { CommandPalette } from "./CommandPalette";
+import { WMHost } from "../wm95/WMHost";
+import { registerDefaultCommands } from "./defaultCommands";
+import { fmFontHref } from "./fonts";
+import { CRT_ENABLED_DEFAULT } from "./crt";
+// Side-effect: đăng ký FXBootstrap. Vite sẽ bundle nó vào trong client.js,
+// nhưng inline <script> sẽ chạy nó synchronously ở đầu trang — chống FOUC.
+import "./fxBootstrap";
+
+interface Props {
+  /** Có dùng CRT overlay không (admin/desktop có thể tắt). Mặc định bật để giữ bản sắc. */
+  crt?: boolean;
+  /** Có mount DialogHost island không (mặc định: 2 layout cần). */
+  dialogHost?: boolean;
+  /** Tiêu đề trang (chỉ dùng cho skip link / a11y debug). */
+  title?: string;
+  /** Vai trò người dùng hiện tại — lọc command palette theo quyền. */
+  role?: "public" | "auth" | "admin";
+}
+
+const { crt = CRT_ENABLED_DEFAULT, dialogHost = true, title = "", role = "public" } = Astro.props;
+---
+<!-- =================== <head> injections =================== -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href={fmFontHref} rel="stylesheet" />
+<!-- v5: chạy sớm để chống FOUC cho ui-mode + FX level -->
+<script>import "../shell/fxBootstrap";</script>
+
+<!-- =================== CRT overlay (bật/tắt qua data-attr) =================== -->
+{crt && (
+  <div id="crt-overlay-layer" class="crt-overlay" data-ui-mode-active="" aria-hidden="true">
+    <div class="crt-scanlines"></div>
+    <div class="crt-vignette"></div>
+  </div>
+  <div id="crt-animated-line" class="crt-scanline-animated" data-ui-mode-active="" aria-hidden="true"></div>
+)}
+
+<!-- =================== Skip link + Dialog host =================== -->
+{title && <a class="skip-link" href="#main-content">⏭ Bỏ qua tới nội dung chính</a>}
+{dialogHost && <DialogHost client:idle />}
+<CommandPalette client:idle role={role} />
+<WMHost client:idle />
+<script>import "./defaultCommands";</script>

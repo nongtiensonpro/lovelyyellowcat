@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { uiAlert } from "../ui/wm95/dialogService";
 
 interface CloudinaryUploadProps {
   onUploadSuccess?: (secureUrl: string) => void;
@@ -47,7 +48,7 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({ onUploadSucc
       }
     } catch (err) {
       console.error("Lỗi xảy ra trong quá trình upload ảnh:", err);
-      alert("Đã xảy ra sự cố trong quá trình truyền tải tệp tin.");
+      uiAlert("Đã xảy ra sự cố trong quá trình truyền tải tệp tin.", "upload-error");
     } finally {
       setIsUploading(false);
     }
@@ -110,7 +111,7 @@ export const CloudinaryUpload: React.FC<CloudinaryUploadProps> = ({ onUploadSucc
         </button>
 
         {uploadedUrl && (
-          <div className="w-full mt-3 p-2 bg-[#d4d4d4] border border-win-dark text-black text-left">
+          <div className="w-full mt-3 p-2 bg-web-gray-mid border border-win-dark text-black text-left">
             <div className="text-[10px] font-bold mb-1 uppercase tracking-wider text-vapor-purple flex items-center gap-1">
               ✦ TẢI ẢNH THÀNH CÔNG! ✦
             </div>

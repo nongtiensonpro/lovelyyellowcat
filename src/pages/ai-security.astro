@@ -21,8 +21,8 @@ const userProfile = await getCurrentUserProfile(supabase);
     </p>
   </div>
 
-  <div class="win95-container bg-[#0b001a] border-2 border-vapor-purple max-w-5xl mx-auto mb-6 overflow-hidden">
-    <div class="win95-header bg-gradient-to-r from-vapor-purple to-[#ff71ce]">
+  <div class="win95-container bg-cosmic-black border-2 border-vapor-purple max-w-5xl mx-auto mb-6 overflow-hidden">
+    <div class="win95-header bg-gradient-to-r from-vapor-purple to-vapor-pink">
       <span>🔐 VAPOR_ENCRYPT.SYS — CHI TIẾT ĐẦY ĐỦ</span>
       <span class="text-[9px] bg-black text-vapor-green px-2 py-0.5 font-mono">E2EE · AES-GCM 256</span>
     </div>
@@ -54,7 +54,7 @@ const userProfile = await getCurrentUserProfile(supabase);
           <li><strong class="text-black">BYOK:</strong> Nếu bạn dùng API Key cá nhân, nó cũng được bọc bằng cùng masterKey trước khi lưu — không nằm plaintext.</li>
         </ul>
 
-        <div class="bg-[#0b001a] text-vapor-green p-3 font-mono text-[11px] leading-relaxed border border-win-dark">
+        <div class="bg-cosmic-black text-vapor-green p-3 font-mono text-[11px] leading-relaxed border border-win-dark">
           <p class="font-bold text-vapor-yellow">🔬 Luồng kỹ thuật tóm tắt:</p>
           <p>passphrase → PBKDF2(salt, 250k, SHA-256) → KEK → AES-GCM(wrap) → encryptedMasterKey (lưu Supabase)</p>
           <p>masterKey (random 256-bit) → AES-GCM(iv 12B random) → ciphertext (lưu Supabase) → chỉ bạn giải mã được</p>
@@ -68,7 +68,7 @@ const userProfile = await getCurrentUserProfile(supabase);
         </div>
       </div>
 
-      <div class="bg-[#fffb96]/30 border border-win-dark p-3 text-[11px]">
+      <div class="bg-vapor-yellow/30 border border-win-dark p-3 text-[11px]">
         <p class="font-bold">💡 Mẹo sử dụng an toàn:</p>
         <ul class="list-disc pl-5 space-y-1 mt-1 text-win-darkest">
           <li>Đặt mật khẩu mạnh, khác mật khẩu đăng nhập Google.</li>

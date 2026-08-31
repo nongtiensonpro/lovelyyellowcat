@@ -71,7 +71,7 @@ if (userProfile) {
             <a href="/" class="win95-btn px-4 py-1.5 font-bold no-underline text-black text-xs" style="min-height: 32px;">
               Quay Lại
             </a>
-            <a href="/api/auth/signin" class="win95-btn px-4 py-1.5 font-bold bg-[#fffb96]/40 border-2 border-black no-underline text-black text-xs" style="min-height: 32px;">
+            <a href="/api/auth/signin" class="win95-btn px-4 py-1.5 font-bold bg-vapor-yellow/40 border-2 border-black no-underline text-black text-xs" style="min-height: 32px;">
               🔑 Đăng Nhập Google
             </a>
           </div>
@@ -122,7 +122,7 @@ if (userProfile) {
           </div>
         ) : (
           <GalleryGrid
-            client:load
+            client:visible
             initialSubmissions={initialSubmissions}
             currentUser={userProfile}
             isFavoritesOnly={true}

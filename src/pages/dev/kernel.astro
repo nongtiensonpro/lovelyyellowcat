@@ -1,0 +1,131 @@
+---
+// /dev/kernel — gallery trực quan cho Retro UI Kernel (kế hoạch v5 §3.3).
+// Trang này vừa là demo vừa là acceptance checklist: mỗi primitive render thật.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { RetroButton } from "../../ui/kernel/RetroButton";
+import { RetroInput, RetroSelect, RetroTextarea } from "../../ui/kernel/RetroInput";
+import { RetroTable, RetroTh, RetroTd } from "../../ui/kernel/RetroTable";
+import { RetroEmptyState } from "../../ui/kernel/RetroEmptyState";
+import { RetroWindow } from "../../ui/kernel/RetroWindow";
+import RetroImage from "../../ui/kernel/RetroImage.astro";
+---
+
+<BaseLayout title="RETRO KERNEL.EXE // DEMO GALLERY" userProfile={null} showMarquee={false}>
+  <main id="main-content" class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+    <div class="win95-container p-4">
+      <h1 class="font-display text-lg tracking-widest">🧩 RETRO KERNEL — COMPONENT GALLERY</h1>
+      <p class="text-xs text-text-secondary mt-1 font-mono">
+        Mọi primitive dưới đây dùng token semantic + touch-target. Hex literal = 0.
+      </p>
+    </div>
+
+    <!-- RetroWindow variants -->
+    <section class="grid md:grid-cols-2 gap-4">
+      <RetroWindow title="KHÓA_ĐIỀU_KHIỂN.EXE" icon="🪟" menuItems={["File", "Edit", "Help"]} statusBarText="Sẵn sàng" statusPanelText="v5.0">
+        <p class="text-xs">Cửa sổ classic — bevel 4 lớp chuẩn Win95, control buttons có aria-label.</p>
+      </RetroWindow>
+      <RetroWindow title="NEON_OVERDRIVE.EXE" icon="🌆" variant="neon" statusBarText="Neon mode" statusPanelText="FX: SUBTLE">
+        <p class="text-xs">Cửa sổ neon — gradient vapor-purple → vapor-pink, nội dung trên nền cosmic-deep.</p>
+      </RetroWindow>
+    </section>
+
+    <!-- RetroButton matrix -->
+    <section class="win95-container p-4 space-y-3">
+      <h2 class="font-display text-sm tracking-widest">RETRO_BUTTON — variant × size</h2>
+      {(["solid", "neon", "ghost"] as const).map((variant) => (
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[10px] font-mono w-14 text-text-secondary">{variant}</span>
+          {(["sm", "md", "lg"] as const).map((size) => (
+            <RetroButton variant={variant} size={size} icon="▶">Nút {size}</RetroButton>
+          ))}
+          <RetroButton variant={variant} size="md" busy>Nghiệp vụ</RetroButton>
+          <RetroButton variant={variant} size="md" disabled>Vô hiệu</RetroButton>
+        </div>
+      ))}
+    </section>
+
+    <!-- Form primitives -->
+    <section class="win95-container p-4">
+      <h2 class="font-display text-sm tracking-widest mb-3">FORM_PRIMITIVES</h2>
+      <div class="grid sm:grid-cols-2 gap-3 font-retro">
+        <label class="block space-y-1">
+          <span class="text-[10px] font-bold text-black">Tên nghệ sĩ</span>
+          <RetroInput placeholder="MEOW.EXE" />
+        </label>
+        <label class="block space-y-1">
+          <span class="text-[10px] font-bold text-black">Email (lỗi)</span>
+          <RetroInput type="email" invalid value="không-hợp-lệ" />
+        </label>
+        <label class="block space-y-1">
+          <span class="text-[10px] font-bold text-black">Chế độ hiển thị</span>
+          <RetroSelect>
+            <option>CATALOG MODE</option>
+            <option>CRT MODE</option>
+            <option>ACCESS MODE</option>
+          </RetroSelect>
+        </label>
+        <label class="block space-y-1 sm:col-span-2">
+          <span class="text-[10px] font-bold text-black">Mô tả tác phẩm</span>
+          <RetroTextarea rows={3} placeholder="Vaporwave là..." />
+        </label>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="win95-container p-4 space-y-2">
+      <h2 class="font-display text-sm tracking-widest">RETRO_TABLE — sort/filna data</h2>
+      <RetroTable>
+        <thead>
+          <tr><RetroTh>Tác phẩm</RetroTh><RetroTh>Tác giả</RetroTh><RetroTh>XP</RetroTh><RetroTh>Trạng thái</RetroTh></tr>
+        </thead>
+        <tbody>
+          <tr><RetroTd>Neon Dreamscape</RetroTd><RetroTd>@artist</RetroTd><RetroTd>120</RetroTd><RetroTd><span class="badge badge-success">APPROVED</span></RetroTd></tr>
+          <tr><RetroTd>VHS Sunset</RetroTd><RetroTd>@neon</RetroTd><RetroTd>80</RetroTd><RetroTd><span class="badge badge-warning">PENDING</span></RetroTd></tr>
+          <tr><RetroTd>Marble Bust</RetroTd><RetroTd>@retro</RetroTd><RetroTd>0</RetroTd><RetroTd><span class="badge badge-error">REJECTED</span></RetroTd></tr>
+        </tbody>
+      </RetroTable>
+    </section>
+
+    <!-- RetroImage policy -->
+    <section class="win95-container p-4 space-y-2">
+      <h2 class="font-display text-sm tracking-widest">RETRO_IMAGE — responsive policy</h2>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <div class="cq-card">
+          <RetroImage
+            src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop"
+            alt="Ảnh demo responsive"
+            widths={[400, 800]}
+            aspect="16 / 9"
+          />
+          <p class="text-[10px] font-mono text-text-secondary mt-1">Ảnh thường — decoding async, lazy, aspect-ratio chống CLS</p>
+        </div>
+        <div>
+          <RetroImage src="/anh-khong-ton-tai.jpg" alt="Ảnh lỗi demo" aspect="16 / 9" />
+          <p class="text-[10px] font-mono text-text-secondary mt-1">Fallback khi lỗi — không vỡ layout</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty states -->
+    <section class="win95-container p-4 grid md:grid-cols-2 gap-4">
+      <div class="win95-window p-2"><RetroEmptyState icon="🖼️" title="Chưa có tác phẩm" description="Gallery trống khi chưa ai gửi tranh." /></div>
+      <div class="win95-window p-2">
+        <RetroEmptyState icon="🔌" title="Mất kết nối" description="Không thể truy cập Supabase." actionLabel="Thử lại" onAction={() => {}} />
+      </div>
+    </section>
+
+    <!-- Phase 3: Window Manager demo (Cmd+K hoặc nút Mở cửa sổ) -->
+    <section class="win95-container p-4 space-y-3">
+      <h2 class="font-display text-sm tracking-widest">PHASE_3 // WINDOW MANAGER LIVE</h2>
+      <p class="text-xs text-text-secondary font-mono">
+        Ctrl+K mở palette → gõ "Mở cửa sổ" để mở MEOW_INFO.EXE; kéo titlebar để di chuyển, góc phải dưới để resize,
+        kéo sát mép để snap (¼/½/toàn màn). Taskbar liệt kê mọi cửa sổ đang mở.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <a href="/dev/kernel" class="win95-btn text-xs">Mở lại trang này để xem taskbar</a>
+        <span class="text-[10px] font-mono text-text-muted self-center">WMHost + CommandPalette đã mount ở AppShell</span>
+      </div>
+    </section>
+
+  </main>
+</BaseLayout>

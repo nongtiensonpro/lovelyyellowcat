@@ -185,10 +185,10 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
 
         {/* Tab Strip Simulation */}
         <div className="px-2 pt-2 bg-win-gray flex border-b border-win-dark/30 gap-0.5">
-          <div className="px-4 py-1.5 bg-[#d4d4d4] border-t-2 border-l-2 border-r-2 border-white rounded-t-sm font-bold text-xs shadow-[-1px_-1px_0px_#808080_inset]">
+          <div className="px-4 py-1.5 bg-web-gray-mid border-t-2 border-l-2 border-r-2 border-white rounded-t-sm font-bold text-xs shadow-[-1px_-1px_0px_#808080_inset]">
             📁 Hồ Sơ Cá Nhân
           </div>
-          <div className="px-4 py-1.5 bg-[#b8b8b8] text-black/60 border-t-2 border-l-2 border-r-2 border-win-dark/30 rounded-t-sm text-xs cursor-not-allowed">
+          <div className="px-4 py-1.5 bg-web-gray-shade text-black/60 border-t-2 border-l-2 border-r-2 border-win-dark/30 rounded-t-sm text-xs cursor-not-allowed">
             🔒 Bảo Mật
           </div>
         </div>
@@ -197,7 +197,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
         <form onSubmit={handleSave} className="p-4 bg-win-gray flex-1 space-y-5">
           
           {/* Avatar and Name display info */}
-          <div className="flex items-center gap-4 p-3 border border-win-dark/45 bg-[#d4d4d4] shadow-sm">
+          <div className="flex items-center gap-4 p-3 border border-win-dark/45 bg-web-gray-mid shadow-sm">
             <img 
               src={profile.avatar_url} 
               alt={profile.full_name} 
@@ -292,7 +292,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
           </div>
 
           {/* Section: Social Links */}
-          <div className="border border-win-dark p-3 bg-[#d4d4d4] space-y-3">
+          <div className="border border-win-dark p-3 bg-web-gray-mid space-y-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-vapor-purple border-b border-win-dark pb-1.5">
               🔗 Liên Kết Mạng Xã Hội
             </div>

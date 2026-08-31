@@ -1,0 +1,7 @@
+/* snapGrid.css — @layer utilities cho window drag/resize.
+   Dùng CSS variables cho viewport-aware sizing. */
+@layer utilities {
+  .snap-guide-h { grid-column: 1 / -1; height: 4px; background: var(--role-interactive-accent, #ff71ce); opacity: 0.7; pointer-events: none; }
+  .snap-guide-v { grid-row: 1 / -1; width: 4px; background: var(--role-interactive-accent, #ff71ce); opacity: 0.7; pointer-events: none; }
+  .snap-target { outline: 2px dashed var(--role-interactive-accent, #ff71ce); outline-offset: 2px; border-radius: 2px; }
+}

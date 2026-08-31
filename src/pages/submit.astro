@@ -25,6 +25,6 @@ const recaptchaSitekey = (env as any)?.PUBLIC_RECAPTCHA_SITEKEY || import.meta.e
 
   <!-- Main Wizard Component -->
   <div class="py-4">
-    <SubmissionWizard client:load currentUser={currentUser} />
+    <SubmissionWizard client:visible currentUser={currentUser} />
   </div>
 </BaseLayout>

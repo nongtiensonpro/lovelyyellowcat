@@ -123,13 +123,13 @@ export const SearchModal: React.FC = () => {
         title="Nhấn Ctrl+K để tìm kiếm nhanh"
       >
         <span>🔍 Tìm Kiếm</span>
-        <kbd className="bg-[#a0a0a0] px-1 text-[10px] border border-win-dark font-mono text-black">Ctrl+K</kbd>
+        <kbd className="bg-win-dark/60 px-1 text-[10px] border border-win-dark font-mono text-black">Ctrl+K</kbd>
       </button>
 
       {/* Modal Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center p-4 z-[var(--z-command)] backdrop-blur-[2px] overflow-y-auto"
+          className="fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center p-4 z-command backdrop-blur-[2px] overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsOpen(false);
           }}
@@ -140,7 +140,7 @@ export const SearchModal: React.FC = () => {
             aria-modal="true"
             aria-label="Tìm kiếm toàn hệ thống"
             tabIndex={-1}
-            className="win95-container max-w-2xl w-full font-retro text-black bg-[#c0c0c0] shadow-2xl my-4"
+            className="win95-container max-w-2xl w-full font-retro text-black bg-win-gray shadow-2xl my-4"
           >
             {/* Titlebar */}
             <div className="win95-header">
@@ -180,7 +180,7 @@ export const SearchModal: React.FC = () => {
 
               {/* Danh sách kết quả phân nhóm */}
               <div
-                className="w-full max-h-96 overflow-y-auto border-2 border-win-dark bg-[#e6e6e6] p-2 space-y-1 min-h-32"
+                className="w-full max-h-96 overflow-y-auto border-2 border-win-dark bg-web-gray-light p-2 space-y-1 min-h-32"
                 role="listbox"
                 aria-label="Kết quả tìm kiếm"
               >
@@ -203,7 +203,7 @@ export const SearchModal: React.FC = () => {
                           <a
                             key={`a-${item.id}`}
                             href={`/articles/${item.slug}`}
-                            className="p-2.5 border border-win-dark bg-white block hover:bg-[#ff71ce]/5 hover:border-vapor-pink transition-all no-underline text-black group"
+                            className="p-2.5 border border-win-dark bg-white block hover:bg-vapor-pink/5 hover:border-vapor-pink transition-all no-underline text-black group"
                           >
                             <div className="flex gap-3 items-start">
                               {item.cover_url && (
@@ -235,7 +235,7 @@ export const SearchModal: React.FC = () => {
                           <a
                             key={`w-${item.id}`}
                             href={`/gallery/${item.id}`}
-                            className="p-2.5 border border-win-dark bg-white flex gap-3 items-start hover:bg-[#01cdfe]/5 hover:border-vapor-blue transition-all no-underline text-black group"
+                            className="p-2.5 border border-win-dark bg-white flex gap-3 items-start hover:bg-vapor-blue/5 hover:border-vapor-blue transition-all no-underline text-black group"
                           >
                             <img
                               src={item.image_url}
@@ -263,7 +263,7 @@ export const SearchModal: React.FC = () => {
                           <a
                             key={`u-${item.id}`}
                             href={`/profile/${item.id}`}
-                            className="p-2.5 border border-win-dark bg-white flex gap-3 items-center hover:bg-[#b967ff]/5 hover:border-vapor-purple transition-all no-underline text-black group"
+                            className="p-2.5 border border-win-dark bg-white flex gap-3 items-center hover:bg-vapor-purple/5 hover:border-vapor-purple transition-all no-underline text-black group"
                           >
                             <img
                               src={item.avatar_url || "/images/default-avatar.png"}

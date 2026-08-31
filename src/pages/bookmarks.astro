@@ -94,9 +94,9 @@ if (articleIds.length > 0) {
         <span class="text-[10px] text-vapor-yellow">{savedArticles.length} TÀI LIỆU</span>
       </div>
 
-      <ul class="divide-y divide-[#e0e0e0] bg-white m-1 border-2 border-win-dark">
+      <ul class="divide-y divide-web-gray-panel bg-white m-1 border-2 border-win-dark">
         {savedArticles.map((art: any) => (
-          <li class="flex flex-wrap sm:flex-nowrap items-center gap-3 px-3 py-3 hover:bg-[#f0f0f0]">
+          <li class="flex flex-wrap sm:flex-nowrap items-center gap-3 px-3 py-3 hover:bg-web-gray-input">
             {art.cover_url && (
               <img src={art.cover_url} alt="" class="w-16 h-12 object-cover border border-win-dark shrink-0" loading="lazy" />
             )}

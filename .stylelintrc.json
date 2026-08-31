@@ -1,0 +1,55 @@
+{
+  "extends": [
+    "stylelint-config-standard"
+  ],
+  "ignoreFiles": [
+    "build/**",
+    "dist/**",
+    ".verify-dist/**",
+    "node_modules/**",
+    "src/ui/tokens/tokens.gen.css"
+  ],
+  "rules": {
+    "color-no-hex": null,
+    "color-hex-length": null,
+    "rule-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "custom-property-pattern": null,
+    "shorthand-property-no-redundant-values": null,
+    "declaration-property-value-disallowed-list": {},
+    "no-descending-specificity": null,
+    "custom-property-empty-line-before": null,
+    "comment-empty-line-before": null,
+    "alpha-value-notation": null,
+    "hue-degree-notation": null,
+    "selector-class-pattern": null,
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "theme",
+          "utility",
+          "custom-variant",
+          "source",
+          "plugin",
+          "apply",
+          "reference",
+          "variant",
+          "layer",
+          "container",
+          "tailwind"
+        ]
+      }
+    ],
+    "color-function-notation": null,
+    "color-function-alias-notation": null,
+    "declaration-block-single-line-max-declarations": null,
+    "selector-pseudo-class-no-unknown": null,
+    "value-keyword-case": null,
+    "no-duplicate-selectors": null,
+    "property-no-vendor-prefix": null,
+    "length-zero-no-unit": null,
+    "function-no-unknown": null,
+    "import-notation": null
+  }
+}

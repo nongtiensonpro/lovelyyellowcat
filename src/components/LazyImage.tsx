@@ -41,13 +41,13 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-[#0d001f] flex items-center justify-center min-h-[inherit] max-h-[inherit]">
+    <div className="relative w-full h-full overflow-hidden bg-vapor-deep-alt flex items-center justify-center min-h-[inherit] max-h-[inherit]">
       {/* 1. Vaporwave CRT-Style Scanning Placeholder */}
       {!isLoaded && !hasError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d001f] select-none z-10 pointer-events-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-vapor-deep-alt select-none z-10 pointer-events-none">
           {/* Animated Neon cassette icon */}
           <span className="text-3xl animate-bounce mb-1">📼</span>
-          <span className="text-[10px] text-[#ff71ce] font-retro tracking-[0.2em] animate-pulse">AESTHETIC_LOAD.EXE</span>
+          <span className="text-[10px] text-vapor-pink font-retro tracking-[0.2em] animate-pulse">AESTHETIC_LOAD.EXE</span>
           
           {/* Windows 95 Progress Bar inside image placeholder */}
           <div className="w-24 h-2 bg-win-dark border border-white p-0.5 mt-2.5">

@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "schema": "lyc.tokens.allowlist/1",
+    "note": "Ngoại lệ được phép tồn tại tạm thời. Hết hạn => check-ui-policy FAIL.",
+    "entries": []
+  },
+  "entries": [
+    {
+      "file": "src/styles/global.css",
+      "reason": "Legacy theme definitions - đang di trú dần sang tokens.gen.css",
+      "owner": "v5-migration",
+      "expires": "2026-12-31"
+    }
+  ]
+}

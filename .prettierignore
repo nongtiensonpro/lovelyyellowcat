@@ -1,0 +1,7 @@
+build/
+dist/
+.verify-dist/
+.astro/
+node_modules/
+artifacts/
+package-lock.json

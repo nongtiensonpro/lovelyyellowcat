@@ -590,12 +590,12 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
       aria-modal="true"
       aria-label={`Xem tác phẩm: ${activeSubmission.title || "không tên"}`}
       tabIndex={-1}
-      className="fixed inset-0 bg-[#080014]/98 -webkit-backdrop-filter:blur(12px) backdrop-blur-md z-[var(--z-lightbox)] flex flex-col justify-between p-1 sm:p-3 overflow-hidden font-retro text-black select-none"
+      className="fixed inset-0 bg-vapor-night/98 -webkit-backdrop-filter:blur(12px) backdrop-blur-md z-[var(--z-lightbox)] flex flex-col justify-between p-1 sm:p-3 overflow-hidden font-retro text-black select-none"
       style={{ height: "100dvh" }}
     >
       {/* Toast HUD Notification */}
       {toastMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] bg-[#05ffa1] text-black font-mono font-bold text-xs px-4 py-2 border-2 border-black shadow-[4px_4px_0_#000] animate-[fadeIn_0.15s_ease-out] pointer-events-none flex items-center gap-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] bg-vapor-green text-black font-mono font-bold text-xs px-4 py-2 border-2 border-black shadow-[4px_4px_0_#000] animate-[fadeIn_0.15s_ease-out] pointer-events-none flex items-center gap-2">
           <span>⚡</span>
           <span>{toastMsg}</span>
         </div>
@@ -621,14 +621,14 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
       <div className={`win95-container w-full ${isZenMode ? "max-w-full flex-1" : "max-w-6xl mx-auto"} bg-win-gray flex flex-col relative z-10 shadow-2xl overflow-hidden transition-all duration-300 ${isZenMode ? "h-full" : "max-h-[96dvh]"}`}>
         
         {/* THANH TIÊU ĐỀ WINDOWS 95 */}
-        <div className="win95-header shrink-0 min-h-[30px] select-none flex justify-between items-center bg-gradient-to-r from-win-titlebar via-[#6a26a4] to-[#1084d0] text-white px-2">
+        <div className="win95-header shrink-0 min-h-[30px] select-none flex justify-between items-center bg-gradient-to-r from-win-titlebar via-sticker-purple to-vapor-blue-dark text-white px-2">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-sm">🖼️</span>
             <span className="font-bold text-[11px] sm:text-xs tracking-wide truncate">
               CYBER_GALLERY_PRO.EXE - [{activeSubmission.title}]
             </span>
             {zoomScale > 1 && (
-              <span className="bg-[#05ffa1] text-black font-mono text-[10px] px-1.5 py-0.2 font-bold hidden sm:inline">
+              <span className="bg-vapor-green text-black font-mono text-[10px] px-1.5 py-0.2 font-bold hidden sm:inline">
                 {Math.round(zoomScale * 100)}%
               </span>
             )}
@@ -664,7 +664,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
             {/* Nút Toàn Màn Hình */}
             <button
               onClick={toggleNativeFullscreen}
-              className="win95-btn py-0 px-2 font-bold hover:bg-[#e0e0e0] hidden sm:block"
+              className="win95-btn py-0 px-2 font-bold hover:bg-web-gray-panel hidden sm:block"
               style={{ minHeight: "22px" }}
               title="Toàn màn hình (Phím F)"
             >
@@ -711,7 +711,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               {zoomScale !== 1 && (
                 <button
                   onClick={resetTransform}
-                  className="win95-btn px-1.5 py-0 text-[10px] font-bold bg-[#fffb96] ml-1"
+                  className="win95-btn px-1.5 py-0 text-[10px] font-bold bg-vapor-yellow ml-1"
                   title="Khôi phục vừa màn hình (Phím 0)"
                 >
                   FIT
@@ -756,7 +756,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               {/* Dropdown Bộ lọc */}
               {showFilterMenu && (
                 <div className="absolute left-0 top-full mt-1 bg-win-gray border-2 border-win-dark shadow-2xl p-1.5 z-50 min-w-[220px] space-y-1 animate-[fadeIn_0.1s_ease-out]">
-                  <div className="win95-header py-0.5 px-1 bg-gradient-to-r from-win-titlebar to-[#1084d0] text-white text-[10px] font-bold">
+                  <div className="win95-header py-0.5 px-1 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark text-white text-[10px] font-bold">
                     CHỌN HIỆU ỨNG THỊ GIÁC RETRO (PHÍM M)
                   </div>
                   {VISUAL_FILTERS.map((f) => (
@@ -790,7 +790,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="win95-btn py-0.5 px-2 text-[10px] font-bold flex items-center gap-1 bg-[#05ffa1]/25 hover:bg-[#05ffa1]/50 border border-black"
+              className="win95-btn py-0.5 px-2 text-[10px] font-bold flex items-center gap-1 bg-vapor-green/25 hover:bg-vapor-green/50 border border-black"
               title="Tải ảnh gốc HD về máy (Phím D)"
             >
               <span>💾</span>
@@ -808,7 +808,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
         </div>
 
         {/* THÂN CỬA SỔ (MAIN CONTENT GRID) */}
-        <div className={`grid ${isZenMode ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-12"} bg-[#c0c0c0] p-1.5 sm:p-2.5 gap-2.5 overflow-hidden flex-1 min-h-0`}>
+        <div className={`grid ${isZenMode ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-12"} bg-win-gray p-1.5 sm:p-2.5 gap-2.5 overflow-hidden flex-1 min-h-0`}>
           
           {/* CỘT TRÁI: VÙNG XEM ẢNH VÀ ĐIỀU KHIỂN (12 cols khi Zen mode, 8 cols khi thường) */}
           <div className={`${isZenMode ? "col-span-1" : "lg:col-span-8"} flex flex-col gap-2 min-h-0 flex-1`}>
@@ -824,7 +824,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
               onDoubleClick={handleDoubleClick}
-              className="relative bg-[#060010] flex-1 min-h-[320px] sm:min-h-[420px] flex items-center justify-center border-2 border-win-dark overflow-hidden group select-none shadow-inner"
+              className="relative bg-vapor-dark-edge flex-1 min-h-[320px] sm:min-h-[420px] flex items-center justify-center border-2 border-win-dark overflow-hidden group select-none shadow-inner"
               style={{ touchAction: zoomScale > 1 ? "none" : "pan-y" }}
             >
               {/* Lưới tọa độ thẩm mỹ Cyberpunk Matrix */}
@@ -838,7 +838,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
               {/* Khung HUD Cyberpunk Overlay khi kích hoạt Filter Cyber */}
               {activeFilter === "cyber" && (
-                <div className="absolute inset-0 pointer-events-none border border-[#01cdfe]/40 p-2 flex flex-col justify-between text-[10px] font-mono text-[#01cdfe] z-20">
+                <div className="absolute inset-0 pointer-events-none border border-vapor-blue/40 p-2 flex flex-col justify-between text-[10px] font-mono text-vapor-blue z-20">
                   <div className="flex justify-between">
                     <span>TARGET_ACQUIRED // RES_1080P</span>
                     <span>COORDS: X={Math.round(panOffset.x)} Y={Math.round(panOffset.y)}</span>
@@ -881,7 +881,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               <div className="absolute bottom-2 left-2 bg-black/80 border border-win-dark text-[10px] sm:text-[10px] text-vapor-blue font-bold px-2 py-0.5 z-20 flex items-center gap-1.5">
                 <span>SUBMISSION {currentIndex + 1} / {submissions.length}</span>
                 {zoomScale > 1 && (
-                  <span className="text-[#05ffa1] font-mono">• Kéo chuột để di chuyển</span>
+                  <span className="text-vapor-green font-mono">• Kéo chuột để di chuyển</span>
                 )}
               </div>
 
@@ -892,7 +892,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
             </div>
 
             {/* THANH ĐIỀU KHIỂN AUTOPLAY VÀ SLIDESHOW */}
-            <div className="win95-container p-2 bg-[#d8d8d8] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
+            <div className="win95-container p-2 bg-web-gray-dark flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
               <div className="flex items-center gap-2 justify-between sm:justify-start flex-wrap">
                 <button
                   onClick={() => setIsAutoplay(!isAutoplay)}
@@ -933,7 +933,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               {/* Thanh tiến trình Autoplay (Progress Neon Bar) */}
               <div className="w-full sm:flex-1 h-3 bg-black border border-win-dark p-0.5 relative mx-1">
                 <div
-                  className="h-full bg-gradient-to-r from-vapor-purple via-vapor-pink to-[#05ffa1] shadow-[0_0_8px_#ff71ce] transition-all duration-100 ease-linear"
+                  className="h-full bg-gradient-to-r from-vapor-purple via-vapor-pink to-vapor-green shadow-[0_0_8px_#ff71ce] transition-all duration-100 ease-linear"
                   style={{ width: `${isAutoplay ? progress : 0}%` }}
                 />
               </div>
@@ -960,7 +960,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                       }}
                       className={`h-full aspect-video shrink-0 cursor-pointer overflow-hidden border-2 relative transition-all ${
                         isActive
-                          ? "border-[#05ffa1] scale-105 shadow-[0_0_8px_#05ffa1] z-10 opacity-100"
+                          ? "border-vapor-green scale-105 shadow-[0_0_8px_#05ffa1] z-10 opacity-100"
                           : "border-win-dark opacity-60 hover:opacity-100 hover:border-vapor-pink"
                       }`}
                     >
@@ -985,7 +985,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               {/* Block thông tin tác giả và tác phẩm */}
               <div className="space-y-2">
                 {/* Tác giả */}
-                <div className="win95-container p-2 bg-[#d8d8d8] flex items-center gap-2.5">
+                <div className="win95-container p-2 bg-web-gray-dark flex items-center gap-2.5">
                   <img
                     src={activeSubmission.profiles?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"}
                     alt={activeSubmission.profiles?.full_name}
@@ -1002,7 +1002,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                   className="win95-container p-2.5 bg-white space-y-2 border-inner overflow-y-auto"
                   style={{ maxHeight: "28vh", minHeight: "110px" }}
                 >
-                  <h3 className="text-xs sm:text-sm font-extrabold text-black leading-tight border-b-2 border-dashed border-[#e6e6e6] pb-1 uppercase">
+                  <h3 className="text-xs sm:text-sm font-extrabold text-black leading-tight border-b-2 border-dashed border-web-gray-light pb-1 uppercase">
                     {activeSubmission.title}
                   </h3>
                   <p className="text-[10px] text-win-dark font-mono" suppressHydrationWarning>{formattedDate}</p>
@@ -1015,7 +1015,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                       {activeSubmission.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="text-[10px] font-bold text-[#b967ff] bg-[#b967ff]/10 border border-[#b967ff]/30 px-1.5 py-0.5 uppercase tracking-wider"
+                          className="text-[10px] font-bold text-vapor-purple bg-vapor-purple/10 border border-vapor-purple/30 px-1.5 py-0.5 uppercase tracking-wider"
                         >
                           #{tag}
                         </span>
@@ -1059,7 +1059,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                     <button
                       onClick={handleCopyLink}
                       className={`win95-btn font-bold px-2 py-1 text-[10px] uppercase select-none transition-all ${
-                        copiedLink ? "bg-[#05ffa1]/20 border-[#05ffa1] text-green-800" : ""
+                        copiedLink ? "bg-vapor-green/20 border-vapor-green text-green-800" : ""
                       }`}
                       style={{ minHeight: "32px", minWidth: "40px" }}
                       title="Sao chép liên kết"
@@ -1072,7 +1072,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                 {/* Nút xem bình luận lớn */}
                 <a
                   href={`/gallery/${activeSubmission.id}`}
-                  className="win95-btn block text-center py-2 text-[10px] font-bold no-underline text-black uppercase bg-[#fffb96]/20 border-[#fffb96] hover:bg-[#fffb96]/40 active:scale-95"
+                  className="win95-btn block text-center py-2 text-[10px] font-bold no-underline text-black uppercase bg-vapor-yellow/20 border-vapor-yellow hover:bg-vapor-yellow/40 active:scale-95"
                   style={{ minHeight: "34px" }}
                 >
                   💬 Xem Diễn Đàn Bình Luận Chi Tiết &gt;&gt;

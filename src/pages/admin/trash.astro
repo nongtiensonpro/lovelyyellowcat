@@ -142,7 +142,7 @@ function daysLeft(deletedAt: string): number {
   <form method="POST" action="/admin/trash" class="max-w-4xl mx-auto mb-4 flex justify-end">
     <input type="hidden" name="action" value="purge_old" />
     <button type="submit" class="win95-btn btn-danger font-bold text-xs px-4 py-2"
-      onclick="return confirm('🧹 Dọn VĨNH VIỄN mọi mục đã nằm trong thùng quá 30 ngày (kèm ảnh Cloudinary)?');">
+      data-confirm="🧹 Dọn VĨNH VIỄN mọi mục đã nằm trong thùng quá 30 ngày (kèm ảnh Cloudinary)?">
       🧹 DỌN MỤC CŨ HƠN 30 NGÀY
     </button>
   </form>
@@ -156,12 +156,12 @@ function daysLeft(deletedAt: string): number {
     <!-- Bài viết đã bỏ -->
     <div class="win95-container font-retro text-black">
       <div class="win95-header"><span>📄 TRASH_ARTICLES ({trashedArticles?.length || 0})</span></div>
-      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] min-h-32 p-1">
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-web-gray-panel min-h-32 p-1">
         {!trashedArticles || trashedArticles.length === 0 ? (
           <p class="p-8 text-center text-win-dark font-bold text-xs">Thùng rác bài viết đang trống. ✨</p>
         ) : (
           trashedArticles.map((a: any) => (
-            <div class="flex items-center gap-3 px-2 py-2 hover:bg-[#f0f0f0]">
+            <div class="flex items-center gap-3 px-2 py-2 hover:bg-web-gray-input">
               <span aria-hidden="true">📄</span>
               <div class="min-w-0 flex-1">
                 <p class="font-bold text-xs truncate">{a.title}</p>
@@ -173,7 +173,8 @@ function daysLeft(deletedAt: string): number {
                 onclick={`this.form.articleId.value='${a.id}'`}
                 class="win95-btn text-[10px] px-2 py-1 font-bold shrink-0">♻️ KHÔI PHỤC</button>
               <button type="submit" name="action" value="purge_article" formnovalidate
-                onclick={`if(!confirm('Xóa VĨNH VIỄN "${a.title}" cùng bình luận + ảnh?')) return false; this.form.articleId.value='${a.id}';`}
+                data-confirm={`Xóa VĨNH VIỄN "${a.title}" cùng bình luận + ảnh?`}
+                data-confirm-set={`{"articleId":"${a.id}"}`}
                 class="win95-btn btn-danger text-[10px] px-2 py-1 font-bold shrink-0">❌</button>
             </div>
           ))
@@ -184,12 +185,12 @@ function daysLeft(deletedAt: string): number {
     <!-- Tranh đã bỏ -->
     <div class="win95-container font-retro text-black">
       <div class="win95-header"><span>🖼️ TRASH_SUBMISSIONS ({trashedSubmissions?.length || 0})</span></div>
-      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-[#e0e0e0] min-h-32 p-1">
+      <div class="m-1 border-2 border-win-dark bg-white divide-y divide-web-gray-panel min-h-32 p-1">
         {!trashedSubmissions || trashedSubmissions.length === 0 ? (
           <p class="p-8 text-center text-win-dark font-bold text-xs">Thùng rác tranh đang trống. ✨</p>
         ) : (
           trashedSubmissions.map((s: any) => (
-            <div class="flex items-center gap-3 px-2 py-2 hover:bg-[#f0f0f0]">
+            <div class="flex items-center gap-3 px-2 py-2 hover:bg-web-gray-input">
               <img src={s.image_url} alt="" loading="lazy" class="w-10 h-8 object-cover border border-win-dark shrink-0" />
               <div class="min-w-0 flex-1">
                 <p class="font-bold text-xs truncate">{s.title || "Tác phẩm không tên"}</p>
@@ -201,7 +202,8 @@ function daysLeft(deletedAt: string): number {
                 onclick={`this.form.submissionId.value='${s.id}'`}
                 class="win95-btn text-[10px] px-2 py-1 font-bold shrink-0">♻️ KHÔI PHỤC</button>
               <button type="submit" name="action" value="purge_submission" formnovalidate
-                onclick={`if(!confirm('Xóa VĨNH VIỄN tranh này kèm ảnh Cloudinary?')) return false; this.form.submissionId.value='${s.id}';`}
+                data-confirm="Xóa VĨNH VIỄN tranh này kèm ảnh Cloudinary?"
+                data-confirm-set={`{"submissionId":"${s.id}"}`}
                 class="win95-btn btn-danger text-[10px] px-2 py-1 font-bold shrink-0">❌</button>
             </div>
           ))

@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { createSupabaseServerClient } from "../lib/supabase";
+import AppShell from "../ui/shell/AppShell.astro";
 
 interface NavItem {
   href: string;
@@ -64,18 +65,9 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="robots" content="noindex, nofollow" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
   </head>
   <body class="min-h-screen text-white font-body antialiased bg-cosmic-black">
-    <!-- Lớp phủ CRT toàn trang -->
-    <div id="crt-overlay-layer" class="crt-overlay" aria-hidden="true">
-      <div class="crt-scanlines"></div>
-      <div class="crt-vignette"></div>
-    </div>
-    <div id="crt-animated-line" class="crt-scanline-animated" aria-hidden="true"></div>
-
+<AppShell crt={true} dialogHost={true} role={isAdmin ? "admin" : "auth"} />
     <a class="skip-link" href="#admin-main">⏭ Bỏ qua tới nội dung chính</a>
 
     <div class="min-h-screen flex flex-col bg-cosmic-black">
@@ -164,9 +156,7 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
               {isAdmin ? "👑 ADMIN" : "✏️ EDITOR"}
             </span>
             <span class="win95-statusbar-panel" id="admin-net" role="status">▲ ONLINE</span>
-            <button id="toggle-crt-btn" class="win95-btn text-[10px] py-0 px-1.5 font-bold" style="min-height:20px;" aria-pressed="true">
-              📺 CRT
-            </button>
+
             <span class="win95-statusbar-panel ml-auto" id="admin-clock">--:--:--</span>
           </div>
           <p class="text-center text-[10px] font-mono text-black/40 pb-1 pt-0.5 bg-win-gray">
@@ -196,6 +186,11 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
         </main>
       </div>
     </div>
+
+    <!-- v5: confirm delegation — data-confirm thay onclick confirm() (ADR-0002) -->
+    <script>
+      import "../ui/wm95/confirmDelegate";
+    </script>
 
     <!-- Script đồng hồ (tự tạm dừng khi tab ẩn để tiết kiệm CPU) -->
     <script>
@@ -245,29 +240,6 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
     </script>
 
     <!-- Script điều khiển CRT Overlay Toggle -->
-    <script>
-      const crtBtn = document.getElementById("toggle-crt-btn");
-      const crtLayer = document.getElementById("crt-overlay-layer");
-      const crtLine = document.getElementById("crt-animated-line");
-
-      let crtEnabled = localStorage.getItem("vapor_crt_mode") !== "disabled";
-
-      function updateAdminCrt() {
-        if (crtLayer && crtLine && crtBtn) {
-          crtLayer.classList.toggle("crt-disabled", !crtEnabled);
-          crtLine.classList.toggle("hidden", !crtEnabled);
-          crtBtn.textContent = crtEnabled ? "📺 CRT: BẬT" : "📺 CRT: TẮT";
-          crtBtn.setAttribute("aria-pressed", String(crtEnabled));
-        }
-      }
-
-      crtBtn?.addEventListener("click", () => {
-        crtEnabled = !crtEnabled;
-        localStorage.setItem("vapor_crt_mode", crtEnabled ? "enabled" : "disabled");
-        updateAdminCrt();
-      });
-
-      updateAdminCrt();
-    </script>
+    
   </body>
 </html>
