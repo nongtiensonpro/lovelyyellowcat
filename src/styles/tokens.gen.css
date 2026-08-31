@@ -4,7 +4,7 @@
  * Fingerprint: fb10cf8b5412ac8b
  * ═══════════════════════════════════════════════════════════ */
 
-:root {
+@theme {
   /* ── primitives.color ── */
   --color-vapor-pink: #ff71ce;
   --color-vapor-blue: #01cdfe;
@@ -131,6 +131,9 @@
   --font-body: 'JetBrains Mono', monospace;
   --font-system: 'MS Sans Serif', Tahoma, sans-serif;
 
+}
+
+:root {
   /* ── semantic roles (mode mặc định: catalog) ── */
   --role-surface-page: var(--color-cosmic-black);
   --role-surface-panel: var(--color-cosmic-deep);

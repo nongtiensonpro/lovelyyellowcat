@@ -1682,7 +1682,7 @@ export const AiChatStation: React.FC = () => {
                       <div
                         className={`max-w-[92%] sm:max-w-[82%] p-3 text-xs shadow-md ${
                           msg.role === "user"
-                            ? "bg-gradient-to-br from-vapor-plum to-vapor-dusk text-white border border-vapor-pink rounded-tl-sm rounded-bl-sm"
+                            ? "bg-gradient-to-br from-vapor-purple to-vapor-pink text-white border border-vapor-blue/60 rounded-tl-sm rounded-bl-sm shadow-[0_0_10px_rgb(185_103_255/0.35)]"
                             : "bg-web-gray-edge text-black border-2 border-win-light win95-raised"
                         }`}
                       >

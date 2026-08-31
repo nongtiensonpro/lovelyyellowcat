@@ -501,6 +501,24 @@ Mỗi phase là PR nhỏ có baseline/screenshot; không đổi API/database cù
 
 **Số liệu:** 194/194 tests (22 files, +43) · 5 gates rc=0 · bundle 633KB (+1KB)
 
+
+### 🔥 Hotfix production (2026-08-31): tin nhắn user AI chat vô hình
+
+**Triệu chứng:** tin nhắn người dùng gửi AI không hiển thị trong bubble.
+
+**Root cause (2 tầng):**
+1. **Token không có utility:** Tailwind 4 chỉ sinh utility class (bg-/from-/to-/text-) từ token nằm trong `@theme`. `tokens.gen.css` trước giờ chỉ gen `:root` variables, trong khi `global.css` khai báo `@theme` thủ công 48 token — **14 token thêm ở Phase 1 (vapor-plum, vapor-dusk, hover-green, link-blue...) không bao giờ có utility**. User bubble dùng `from-vapor-plum to-vapor-dusk` → nền trong suốt + `text-white` → chữ trắng vô hình trên nền tối trang.
+2. **Contrast thấp:** `#2a0040→#1a0030` trên nền cosmic-black gần như tan vào nền kể cả khi utility sinh đúng.
+
+**Fix:**
+- [x] `build-tokens.mjs` gen `@theme` block (không chỉ `:root`) — **nguồn chân lý duy nhất**, mọi token JSON tự động có utility
+- [x] `global.css` xóa khối `@theme` thủ công 48 dòng (trùng lặp, dễ lệch gen)
+- [x] Regression check: quét 57 token màu tự define được dùng trong src — 100% có trong gen
+- [x] User bubble: gradient `vapor-purple→vapor-pink` (sáng, rõ), viền `vapor-blue/60`, glow nhẹ — contrast rõ với nền trang và với bubble AI (win-gray)
+- [x] Verify bundle: `.from-vapor-purple/.to-vapor-pink/.border-vapor-blue\/60` đều có trong CSS output
+
+**Bài học:** token pipeline phải gen `@theme` (utility-facing), không chỉ `:root` (raw vars). Utility Tailwind không sinh từ CSS variable — sinh từ `@theme` declaration.
+
 ### ⏭ Bước tiếp theo
 - Phase 2: AppShell hợp nhất, preference store, FXBudget, font self-host, hạ client:load 14→≤4
 - Phase 3: WM/95 thật (drag/z-order/taskbar) + command palette Ctrl+K

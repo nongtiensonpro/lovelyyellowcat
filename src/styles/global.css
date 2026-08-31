@@ -1,108 +1,11 @@
 @import "./tokens.gen.css";
 @import "tailwindcss";
 
-@theme {
-  /* ══════════════════════════════════════════
-     NHÓM MÀU CHÍNH — Neon Signature (Vaporwave)
-     ══════════════════════════════════════════ */
-  --color-vapor-pink:      #ff71ce;   /* Hồng neon — màu chủ đạo */
-  --color-vapor-blue:      #01cdfe;   /* Xanh cyan — màu phụ chủ đạo */
-  --color-vapor-purple:    #b967ff;   /* Tím neon — accent */
-  --color-vapor-green:     #05ffa1;   /* Xanh lá neon — trạng thái tích cực */
-  --color-vapor-yellow:    #fffb96;   /* Vàng nhạt — highlight, cảnh báo nhẹ */
-  --color-vapor-orange:    #ff9a3c;   /* Cam hoàng hôn — accent thứ cấp */
-
-  /* ══════════════════════════════════════════
-     NHÓM MÀU NỀN — Dark Space Palette
-     ══════════════════════════════════════════ */
-  --color-cosmic-black:    #0b001a;   /* Nền sâu nhất — trang, body */
-  --color-cosmic-deep:     #120024;   /* Nền card, panel */
-  --color-cosmic-mid:      #1a003a;   /* Nền hover, sidebar */
-  --color-cosmic-surface:  #240050;   /* Nền input, elevated element */
-
-  /* ══════════════════════════════════════════
-     NHÓM MÀU WIN95 — Retro OS Palette
-     ══════════════════════════════════════════ */
-  --color-win-gray:        #c0c0c0;   /* Màu xám Win95 cổ điển */
-  --color-win-light:       #dfdfdf;   /* Cạnh sáng (highlight) */
-  --color-win-dark:        #808080;   /* Cạnh tối (shadow) */
-  --color-win-darkest:     #404040;   /* Cạnh tối nhất */
-  --color-win-titlebar:    #000080;   /* Thanh tiêu đề xanh navy */
-  --color-win-titletext:   #ffffff;   /* Chữ trên thanh tiêu đề */
-
-  /* ══════════════════════════════════════════
-     NHÓM MÀU RIBBON TINT — Catalog Enterprise (DESIGN-dell-1996)
-     ══════════════════════════════════════════ */
-  --color-tint-sage:       #b3bd95;   /* Xanh xám lá mạ */
-  --color-tint-salmon:     #d77a7a;   /* Hồng cá hồi retro */
-  --color-tint-peach:      #e6915d;   /* Cam đào dịu */
-  --color-tint-lime:       #c0d4a7;   /* Xanh chanh pastel */
-  --color-tint-sky:        #9ab6c8;   /* Xanh da trời mờ */
-  --color-tint-steel:      #a5b8c0;   /* Lam xám thép */
-  --color-tint-periwinkle: #8c9ae0;   /* Xanh hoa dừa cạn */
-  --color-tint-olive:      #8e8a25;   /* Vàng ô-liu trầm */
-  
-  /* Nhãn dán Sticker 90s */
-  --color-sticker-yellow:  #fcc20f;   /* Vàng sticker NEW/BUY */
-  --color-sticker-purple:  #6a26a4;   /* Tím viền nhãn */
-  --color-sticker-red:     #e91d2a;   /* Đỏ con dấu chứng nhận */
-
-  /* ══════════════════════════════════════════
-     NHÓM MÀU VĂN BẢN
-     ══════════════════════════════════════════ */
-  --color-text-primary:    #e8d5ff;   /* Chữ chính — tím nhạt trên nền tối */
-  --color-text-secondary:  #a08cc0;   /* Chữ phụ, placeholder */
-  --color-text-muted:      #604880;   /* Chữ mờ, metadata */
-  --color-text-on-win:     #000000;   /* Chữ trên nền Win95 xám */
-
-  /* ══════════════════════════════════════════
-     NHÓM MÀU TRẠNG THÁI
-     ══════════════════════════════════════════ */
-  --color-state-success:   #05ffa1;   /* = vapor-green */
-  --color-state-error:     #ff4444;   /* Đỏ lỗi */
-  --color-state-warning:   #fffb96;   /* = vapor-yellow */
-  --color-state-info:      #01cdfe;   /* = vapor-blue */
-
-  /* ══════════════════════════════════════════
-      THANG Z-INDEX — Layer Scale chuẩn (thay z ad-hoc 9999/99999)
-      ══════════════════════════════════════════ */
-  --z-nav:        100;   /* Header, taskbar sticky */
-  --z-dropdown:   500;   /* Menu thả, autocomplete */
-  --z-sticky:     800;   /* Thanh công cụ dính */
-  --z-backdrop:  9000;   /* Nền mờ modal */
-  --z-modal:     9100;   /* Cửa sổ dialog */
-  --z-toast:     9500;   /* Thông báo nổi */
-  --z-command:   9600;   /* Command palette / Ctrl+K */
-  --z-lightbox:  9800;   /* Trình xem ảnh toàn màn hình */
-  --z-crt:       9990;   /* Lớp phủ CRT (dưới cùng của overlay hệ thống) */
-
-  /* ══════════════════════════════════════════
-      HỆ THỐNG TYPOGRAPHY — Fluid Scaling
-      Ưu tiên font hỗ trợ ĐẦY ĐỦ dấu tiếng Việt:
-      · VT323 (pixel terminal) — có subset vietnamese ✓
-      · JetBrains Mono (mono thân Việt) — thay Share Tech Mono
-      · Press Start 2P: CHỈ dùng cho nhãn ASCII trang trí (không có tiếng Việt)
-      ══════════════════════════════════════════ */
-  --font-display: 'VT323', 'Press Start 2P', monospace;
-  --font-retro: 'MS Sans Serif', 'Pixelated MS Sans Serif', Tahoma, 'Segoe UI', Arial, sans-serif;
-  --font-body: 'JetBrains Mono', 'Courier New', 'Lucida Console', monospace;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
-
-  --text-hero:    clamp(2.4rem, 6vw, 4.2rem);
-  --text-section: clamp(1.6rem, 4vw, 2.6rem);
-  --text-card:    clamp(1.15rem, 2.5vw, 1.55rem);
-  --text-body:    clamp(0.95rem, 1.5vw, 1.15rem);
-  --text-small:   clamp(0.8rem, 1.2vw, 0.925rem);
-  --text-xs:      clamp(0.72rem, 1vw, 0.8rem);
-
-  /* Breakpoints cho di động */
-  --breakpoint-xs:  480px;
-  --breakpoint-sm:  640px;
-  --breakpoint-md:  768px;
-  --breakpoint-lg:  1024px;
-  --breakpoint-xl:  1280px;
-  --breakpoint-2xl: 1536px;
-}
+/* ═══════════════════════════════════════════════════════════
+   @theme đã chuyển hoàn toàn vào src/styles/tokens.gen.css (generator).
+   KHÔNG khai báo token thủ công ở đây — sửa src/ui/tokens/primitives.json
+   rồi chạy "npm run tokens". Ref ADR-0001.
+   ═══════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════
    THIẾT LẬP NỀN TẢNG & SCROLLBAR

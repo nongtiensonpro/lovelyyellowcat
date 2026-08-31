@@ -89,7 +89,10 @@ css.push(" * Source: src/ui/tokens/{primitives,semantic}.json · ADR-0001");
 css.push(" * Fingerprint: " + createHash("sha256").update(JSON.stringify({ primitives, semantic })).digest("hex").slice(0, 16));
 css.push(" * ═══════════════════════════════════════════════════════════ */");
 css.push("");
-css.push(":root {");
+// Tailwind 4 sinh utility (bg-*, from-*, text-*...) CHỈ từ @theme block.
+// Trước đây gen chỉ ra :root → 14 token Phase 1 không có utility class
+// (bug thật: user bubble AI chat dùng from-vapor-plum → nền trong suốt → chữ trắng vô hình).
+css.push("@theme {");
 css.push("  /* ── primitives.color ── */");
 for (const [name, def] of Object.entries(primitives.color)) {
   if (name.startsWith("_")) continue;
@@ -110,6 +113,9 @@ for (const [name, def] of Object.entries(primitives.font)) {
   css.push("  --font-" + kebab(name) + ": " + def.value + ";");
 }
 css.push("");
+css.push("}");
+css.push("");
+css.push(":root {");
 css.push("  /* ── semantic roles (mode mặc định: catalog) ── */");
 for (const [role, perMode] of Object.entries(semantic.roles)) {
   if (role.startsWith("_")) continue;
