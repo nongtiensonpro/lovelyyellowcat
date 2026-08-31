@@ -245,10 +245,11 @@ export function UserManagementActions({
                 Vai trò hiện tại: <span style={{ fontWeight: "bold", textTransform: "uppercase" }}>{currentRole}</span>
               </p>
 
-              <label style={{ fontSize: "11px", fontWeight: "bold", display: "block", marginBottom: "4px", color: "#000" }}>
+              <label htmlFor="uma-role" style={{ fontSize: "11px", fontWeight: "bold", display: "block", marginBottom: "4px", color: "#000" }}>
                 Chọn vai trò mới:
               </label>
               <select
+                id="uma-role"
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as any)}
                 style={{
@@ -388,10 +389,11 @@ export function UserManagementActions({
                     Họ sẽ được thông báo liên hệ <strong>nongtiensonpro@gmail.com</strong> để khiếu nại.
                   </p>
 
-                  <label style={{ fontSize: "11px", fontWeight: "bold", display: "block", marginBottom: "4px", color: "#000" }}>
+                  <label htmlFor="uma-ban-reason" style={{ fontSize: "11px", fontWeight: "bold", display: "block", marginBottom: "4px", color: "#000" }}>
                     Lý do cấm (tùy chọn):
                   </label>
                   <textarea
+                    id="uma-ban-reason"
                     value={banReason}
                     onChange={(e) => setBanReason(e.target.value)}
                     placeholder="VD: Vi phạm quy tắc cộng đồng, spam, nội dung không phù hợp..."

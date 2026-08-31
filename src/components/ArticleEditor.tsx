@@ -321,8 +321,9 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
 
           {/* Tiêu đề */}
           <div className="flex flex-col">
-            <label className="text-xs font-bold mb-1 uppercase">Tiêu đề bài viết (*)</label>
+            <label htmlFor="art-title" className="text-xs font-bold mb-1 uppercase">Tiêu đề bài viết (*)</label>
             <input
+              id="art-title"
               type="text"
               required
               className="p-2 border border-win-dark bg-white outline-none text-xs shadow-inner"
@@ -335,9 +336,10 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
           {/* Slug & Cover Upload */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex flex-col">
-              <label className="text-xs font-bold mb-1 uppercase">Slug bài viết (*)</label>
+              <label htmlFor="art-slug" className="text-xs font-bold mb-1 uppercase">Slug bài viết (*)</label>
               <div className="flex gap-1">
                 <input
+              id="art-slug"
                   type="text"
                   required
                   className="flex-1 p-2 border border-win-dark bg-white outline-none text-xs font-mono shadow-inner"
@@ -356,9 +358,10 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
             </div>
 
             <div className="flex flex-col">
-              <label className="text-xs font-bold mb-1 uppercase">Ảnh bìa (Cover URL)</label>
+              <label htmlFor="art-cover" className="text-xs font-bold mb-1 uppercase">Ảnh bìa (Cover URL)</label>
               <div className="flex gap-1">
                 <input
+              id="art-cover"
                   type="text"
                   className="flex-1 p-2 border border-win-dark bg-white outline-none text-xs font-mono shadow-inner"
                   placeholder="https://images.cloudinary.com/..."
@@ -392,8 +395,9 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
 
           {/* Excerpt */}
           <div className="flex flex-col">
-            <label className="text-xs font-bold mb-1 uppercase">Mô tả ngắn (Excerpt)</label>
+            <label htmlFor="art-excerpt" className="text-xs font-bold mb-1 uppercase">Mô tả ngắn (Excerpt)</label>
             <textarea
+              id="art-excerpt"
               rows={2}
               className="p-2 border border-win-dark bg-white outline-none text-xs shadow-inner"
               placeholder="Nhập tóm tắt sơ lược bài viết nghệ thuật..."
@@ -405,8 +409,9 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
           {/* Tags & Status */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="flex flex-col">
-              <label className="text-xs font-bold mb-1 uppercase">Từ khóa (Tags - ngăn cách bằng dấu phẩy)</label>
+              <label htmlFor="art-tags" className="text-xs font-bold mb-1 uppercase">Từ khóa (Tags - ngăn cách bằng dấu phẩy)</label>
               <input
+              id="art-tags"
                 type="text"
                 className="p-2 border border-win-dark bg-white outline-none text-xs shadow-inner"
                 placeholder="VD: vaporwave, retro, classic, 90s"
@@ -416,8 +421,9 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
             </div>
 
             <div className="flex flex-col">
-              <label className="text-xs font-bold mb-1 uppercase">Trạng thái xuất bản</label>
+              <label htmlFor="art-status" className="text-xs font-bold mb-1 uppercase">Trạng thái xuất bản</label>
               <select
+                id="art-status"
                 className="p-2 border border-win-dark bg-white outline-none text-xs font-retro shadow-inner h-[34px]"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as "draft" | "published")}
@@ -432,7 +438,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
           <div className="flex flex-col">
             <div className="flex flex-col gap-2 mb-1">
               <div className="flex justify-between items-center gap-2">
-                <label className="text-xs font-bold uppercase">Nội dung bài viết (*)</label>
+                <label htmlFor="art-body" className="text-xs font-bold uppercase">Nội dung bài viết (*)</label>
                 <div className="flex border border-win-dark bg-web-gray-mid p-0.5 shrink-0">
                   <button
                     type="button"
@@ -499,6 +505,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
 
                 {activeTab === "write" ? (
                   <textarea
+                    id="art-body"
                     ref={textareaRef}
                     rows={16}
                     required

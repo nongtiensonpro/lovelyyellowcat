@@ -1996,10 +1996,11 @@ const AiChatStationInner: React.FC = () => {
 
                   {/* Model Choice */}
                   <div className="space-y-1.5">
-                    <label className="font-bold uppercase tracking-wide block">
+                    <label htmlFor="ai-model-select" className="font-bold uppercase tracking-wide block">
                       ⚡ Lựa chọn Model Google AI Studio:
                     </label>
                     <select
+                      id="ai-model-select"
                       value={selectedModel}
                       onChange={(e) => setSelectedModel(e.target.value)}
                       className="w-full p-2 border border-win-dark bg-win-light font-mono text-xs"
@@ -2027,7 +2028,7 @@ const AiChatStationInner: React.FC = () => {
                   {/* Direct Browser API Key Config */}
                   <div className="p-3 bg-vapor-yellow/30 border-2 border-win-dark space-y-2">
                     <div className="flex justify-between items-center">
-                      <label className="font-bold uppercase tracking-wide text-vapor-purple flex items-center gap-1.5">
+                      <label htmlFor="ai-custom-key" className="font-bold uppercase tracking-wide text-vapor-purple flex items-center gap-1.5">
                         <span>🔑</span> API KEY GEMINI (GỌI TRỰC TIẾP):
                       </label>
                       <a
@@ -2044,6 +2045,7 @@ const AiChatStationInner: React.FC = () => {
                     </p>
                     <div className="flex gap-2">
                       <input
+                        id="ai-custom-key"
                         type="password"
                         placeholder="Nhập khóa API Key cá nhân của bạn (AIzaSy...)"
                         value={userCustomApiKey}

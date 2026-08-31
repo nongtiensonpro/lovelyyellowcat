@@ -306,8 +306,9 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
 
               <div className="flex-1 space-y-3 w-full">
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold mb-1 uppercase text-black">Tiêu đề tác phẩm (*):</label>
+                  <label htmlFor="sw-title" className="text-xs font-bold mb-1 uppercase text-black">Tiêu đề tác phẩm (*):</label>
                   <input
+                    id="sw-title"
                     type="text"
                     required
                     className="p-2 border-2 border-win-darkest bg-white outline-none text-xs font-mono shadow-inner text-black"
@@ -318,8 +319,9 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold mb-1 uppercase text-black">Cảm hứng nghệ thuật (Mô tả):</label>
+                  <label htmlFor="sw-desc" className="text-xs font-bold mb-1 uppercase text-black">Cảm hứng nghệ thuật (Mô tả):</label>
                   <textarea
+                    id="sw-desc"
                     rows={3}
                     className="p-2 border-2 border-win-darkest bg-white outline-none text-xs font-mono shadow-inner text-black"
                     placeholder="Chia sẻ một vài câu về cảm hứng hoặc kỹ thuật tạo tác phẩm..."
@@ -332,7 +334,7 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
 
             {/* Tags Selection */}
             <div className="border-t border-win-dark pt-3">
-              <label className="text-xs font-bold mb-1.5 block uppercase text-black">🏷️ Gắn thẻ thể loại:</label>
+              <span className="text-xs font-bold mb-1.5 block uppercase text-black">🏷️ Gắn thẻ thể loại:</span>
               <div className="flex flex-wrap gap-1.5">
                 {AVAILABLE_TAGS.map((tag) => (
                   <button

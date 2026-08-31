@@ -211,7 +211,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
 
           {/* Section: Banner Image */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wide">
+            <label htmlFor="pe-banner" className="block text-xs font-bold uppercase tracking-wide">
               🖼️ Ảnh Bìa Trang Cá Nhân (Banner)
             </label>
             
@@ -249,6 +249,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
             <div className="flex gap-2">
               <input 
                 type="text" 
+                id="pe-banner"
                 className="flex-1 p-1.5 border border-win-dark bg-white outline-none text-xs shadow-inner font-mono text-black"
                 placeholder="https://res.cloudinary.com/... hoặc chọn tải lên"
                 value={bannerUrl}
@@ -275,12 +276,13 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
 
           {/* Section: Biography */}
           <div className="flex flex-col">
-            <label className="text-xs font-bold mb-1 uppercase tracking-wide">
+            <label htmlFor="pe-bio" className="text-xs font-bold mb-1 uppercase tracking-wide">
               📝 Tiểu Sử Nghệ Sĩ (Bio)
             </label>
             <textarea
               rows={4}
               maxLength={400}
+              id="pe-bio"
               className="p-2 border border-win-dark bg-white outline-none text-xs text-black shadow-inner leading-relaxed"
               placeholder="Chia sẻ phong cách, nguồn cảm hứng nghệ thuật hoài cổ Vaporwave hoặc giới thiệu bản thân bạn..."
               value={bio}
@@ -299,9 +301,10 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
             
             <div className="grid sm:grid-cols-3 gap-3">
               <div className="flex flex-col">
-                <label className="text-[10px] font-bold mb-1 uppercase">📸 Instagram</label>
+                <label htmlFor="pe-instagram" className="text-[10px] font-bold mb-1 uppercase">📸 Instagram</label>
                 <input
                   type="text"
+                  id="pe-instagram"
                   className="p-1.5 border border-win-dark bg-white outline-none text-xs text-black shadow-inner font-mono"
                   placeholder="Username"
                   value={instagram}
@@ -310,9 +313,10 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-[10px] font-bold mb-1 uppercase">🐦 Twitter (X)</label>
+                <label htmlFor="pe-twitter" className="text-[10px] font-bold mb-1 uppercase">🐦 Twitter (X)</label>
                 <input
                   type="text"
+                  id="pe-twitter"
                   className="p-1.5 border border-win-dark bg-white outline-none text-xs text-black shadow-inner font-mono"
                   placeholder="Username"
                   value={twitter}
@@ -321,9 +325,10 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-[10px] font-bold mb-1 uppercase">🎨 Artstation</label>
+                <label htmlFor="pe-artstation" className="text-[10px] font-bold mb-1 uppercase">🎨 Artstation</label>
                 <input
                   type="text"
+                  id="pe-artstation"
                   className="p-1.5 border border-win-dark bg-white outline-none text-xs text-black shadow-inner font-mono"
                   placeholder="Username"
                   value={artstation}
