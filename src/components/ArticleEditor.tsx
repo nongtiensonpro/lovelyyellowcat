@@ -49,7 +49,6 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ initialArticle }) 
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Tự động tạo slug khi viết Title (chỉ khi đang tạo mới)

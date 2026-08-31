@@ -53,10 +53,11 @@ export function videoPosterFromSrc(src: string, opts?: { width?: number; format?
   // Cloudinary video: /video/upload/{transforms}/{publicId}.{ext}
   // Poster: lấy frame đầu tiên bằng cách đổi extension sang image
   if (src.includes("/upload/")) {
+    // chèn transform w_<width> trước extension — Cloudinary sinh poster frame đầu ở đúng kích thước
     return src
       .replace(/\.(mp4|webm|mov)(\?.*)?$/, "")
       .replace("/video/", "/image/")
-      + `.${fmt}`;
+      + `,w_${w}.${fmt}`;
   }
   return src;
 }

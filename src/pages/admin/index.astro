@@ -4,7 +4,6 @@ import { createSupabaseServerClient } from "../../lib/supabase";
 
 let hasServerError = false;
 let userProfile: any = null;
-let currentUserId: string | null = null;
 let recentArticles: any[] | null = null;
 let commentsCount: number | null = 0;
 let pendingSubmissionsCount: number | null = 0;
@@ -24,7 +23,6 @@ try {
   // Bước 1: Lấy thông tin người dùng và profile
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user;
-  currentUserId = user?.id || null;
 
   if (user) {
     const { data: profileData } = await supabase

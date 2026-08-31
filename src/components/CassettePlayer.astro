@@ -145,7 +145,7 @@ const { trackTitle = "MACINTOSH PLUS - リサフランク420 // LO-FI VAPOR" } =
       this.chordIndex++;
 
       // 1. Warm Synth Pad Chords (Dual-Oscillator: Sine + Warm Triangle)
-      chord.forEach((freq, idx) => {
+      chord.forEach((freq) => {
         if (!this.ctx || !this.masterGain) return;
 
         // Osc 1: Warm Sine Base

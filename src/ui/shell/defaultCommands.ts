@@ -1,6 +1,6 @@
 // defaultCommands.ts — lệnh mặc định đăng ký cho mọi trang (ADR-0002 §3.5).
 import { registerCommand } from "./commands";
-import { openWindow, dispatchWindow } from "../wm95/windowRuntime";
+import { openWindow } from "../wm95/windowRuntime";
 import { setUiMode } from "../services/preferenceStore";
 
 let registered = false;

@@ -461,7 +461,7 @@ const { data: featuredArtworks } = await supabase
           // computeFxLevel (duplicated inline để tránh import build)
           const STORAGE_KEY = "lyc_prefs_v1";
           let parsed = null;
-          try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) parsed = JSON.parse(raw); } catch(e) {}
+          try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) parsed = JSON.parse(raw); } catch {}
           const uiMode = (parsed && parsed.uiMode) || "catalog";
           const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           let saveData = false;
@@ -477,7 +477,7 @@ const { data: featuredArtworks } = await supabase
             const play = videoEl.play ? videoEl.play() : Promise.resolve();
             play && play.catch(function() {});
           }
-        } catch(e) {
+        } catch {
           // graceful degradation: video hiện với preload mặc định
         }
       })();

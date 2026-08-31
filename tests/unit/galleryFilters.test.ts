@@ -1,5 +1,6 @@
+import { VISUAL_FILTERS, filterCss } from "../../src/components/gallery/galleryFilters";
+
 import { describe, it, expect } from "vitest";
-import { VISUAL_FILTERS, FILTER_CSS, filterCss } from "../../src/components/gallery/galleryFilters";
 
 describe("VISUAL_FILTERS", () => {
   it("đủ 7 filter", () => {

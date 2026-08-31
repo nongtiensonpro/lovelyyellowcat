@@ -20,19 +20,17 @@ const userProfile = (await supabase
   .single()).data;
 
 // Xử lý gỡ bookmark từ form POST
-let removedTitle: string | null = null;
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const action = formData.get("action");
   const articleId = formData.get("articleId") as string;
 
   if (action === "remove" && articleId) {
-    const { error } = await supabase
+    await supabase
       .from("bookmarks")
       .delete()
       .eq("profile_id", user.id)
       .eq("article_id", articleId);
-    if (!error) removedTitle = " ";
     return Astro.redirect("/bookmarks", 303);
   }
 }

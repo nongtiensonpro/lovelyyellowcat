@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 
 // Pipeline contract: primitives+semantic -> tokens.gen.{css,ts} với validation contrast.
 // Chạy script thật (subprocess) trên token JSON thật nhưng ghi ra temp dir để không đụng repo.

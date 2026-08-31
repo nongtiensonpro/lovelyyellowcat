@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
 
   // Lấy danh sách ID đã yêu thích
   if (idsOnly === "true") {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("favorites")
       .select("submission_id")
       .eq("profile_id", user.id);

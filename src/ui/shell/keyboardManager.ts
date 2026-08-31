@@ -52,7 +52,7 @@ export function registerTabCycle(): () => void {
   return registerShortcut("alt-tab-cycle", {
     key: "Tab", alt: true,
     skipInInput: false,
-    action(e) {
+    action() {
       const wins = getWindows().filter((w) => w.state !== "closed");
       if (wins.length < 2) return;
       const top = wins.sort((a, b) => b.z - a.z)[0];

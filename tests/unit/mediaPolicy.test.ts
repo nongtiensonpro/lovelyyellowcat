@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { decideHeroVideo } from "../../src/ui/services/mediaPolicy";
 
 const base = { saveData: false, reducedMotionMedia: false, viewportWidth: 1280 };

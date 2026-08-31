@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ErrorBoundary } from "../ui/kernel/ErrorBoundary";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import { FavoriteButton } from "./FavoriteButton";
@@ -66,7 +66,8 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
   };
 
   // 2. Fetch danh sách submissions từ database
-  const fetchSubmissions = async () => {
+  // useCallback — deps thật: cho phép effect realtime phụ thuộc an toàn (exhaustive-deps)
+  const fetchSubmissions = useCallback(async () => {
     setLoading(true);
     try {
       if (isFavoritesOnly) {
@@ -98,7 +99,7 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [isFavoritesOnly, currentUser?.id]);
 
   useEffect(() => {
     fetchSubmissions();
@@ -151,7 +152,7 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
     return () => {
       supabaseClient.removeChannel(channel);
     };
-  }, [isFavoritesOnly, currentUser?.id]);
+  }, [isFavoritesOnly, currentUser?.id, fetchSubmissions]);
 
   // 3. Đọc tham số URL ?view=id và ?tag=<tên tag>
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 // Phase 5: pure comment tree helpers (unit-tested) — depth rule + thụt đầu dòng
 import { rootComments, repliesFor, nextReplyDepth, depthClassFor } from "./article/commentTree";
@@ -42,7 +42,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
   const [isSending, setIsSending] = useState(false);
 
   // Tải lại toàn bộ cây bình luận thông qua hàm đệ quy PostgreSQL RPC (đọc công khai, không cần xác thực)
-  const fetchCommentTree = async () => {
+  const fetchCommentTree = useCallback(async () => {
     const { data, error } = await supabaseClient.rpc("get_comment_tree", {
       p_article_id: articleId
     });
@@ -65,7 +65,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
     } else if (error) {
       console.error("Lỗi khi fetch comments từ RPC:", error.message);
     }
-  };
+  }, [articleId]);
 
   useEffect(() => {
     fetchCommentTree();
@@ -91,7 +91,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
     return () => {
       supabaseClient.removeChannel(channel);
     };
-  }, [articleId]);
+  }, [articleId, fetchCommentTree]);
 
   // Gửi bình luận qua API route phía server (xác thực bằng cookie httpOnly)
   const postComment = async (content: string, parentId: string | null, depth: number) => {

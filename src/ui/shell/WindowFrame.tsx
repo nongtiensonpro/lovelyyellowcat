@@ -1,14 +1,10 @@
 // WindowFrame.tsx — live window UI cho Window Manager (kế hoạch §3.4, ADR-0002).
 // Drag bằng Pointer Events; resize qua 8 cạnh; snap zone cạnh màn hình.
-import React, { useRef, useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import React, { useRef, useCallback, useEffect, useState } from "react";
 import { useFocusTrap } from "../../lib/a11y";
-import { subscribeWindows, dispatchWindow, openWindow, getWindows } from "../wm95/windowRuntime";
-import type { WindowEntry } from "../wm95/windowStore";
-import type { WindowAction } from "../wm95/windowStore";
-import { taskbarWindows } from "../wm95/windowStore";
+import { dispatchWindow } from "../wm95/windowRuntime";
+import type { WindowEntry, WindowAction } from "../wm95/windowStore";
 
-const VIEWPORT_MARGIN = 16;
-const TASKBAR_HEIGHT = 44;
 const SNAP_THRESHOLD = 24;
 const MIN_W = 240;
 const MIN_H = 160;
@@ -59,7 +55,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ entry, onClose, childr
       const dx = e.clientX - x, dy = e.clientY - y;
       const newX = rect.x + dx, newY = rect.y + dy;
       // detect snap
-      const vw = window.innerWidth, vh = window.innerHeight;
+      const vw = window.innerWidth;
       const zone: SnapZone | null =
         newX < SNAP_THRESHOLD ? "left" :
         vw - (newX + rect.width) < SNAP_THRESHOLD ? "right" :

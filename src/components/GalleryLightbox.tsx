@@ -256,7 +256,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     () => { if (zoomScale <= 1) handlePrev(); }
   );
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
@@ -264,9 +264,9 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     newUrl.searchParams.delete("view");
     window.history.replaceState(null, "", newUrl.toString());
     onClose();
-  };
+}, [onClose]);
 
-  const toggleNativeFullscreen = () => {
+  const toggleNativeFullscreen = useCallback(() => {
     if (!containerRef.current) return;
 
     if (!document.fullscreenElement) {
@@ -284,40 +284,40 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
         })
         .catch((err) => console.error("Lỗi tắt Fullscreen:", err));
     }
-  };
+}, [showToast]);
 
   // Zoom Handler
-  const handleZoomIn = () => {
+  const handleZoomIn = useCallback(() => {
     setTransform((prev) => {
       const next = xfZoomIn(prev);
       showToast(`\u{1F50D} Phóng to: ${zoomPercent(next.zoom)}%`);
       return next;
     });
-  };
+}, [showToast]);
 
-  const handleZoomOut = () => {
+  const handleZoomOut = useCallback(() => {
     setTransform((prev) => {
       const next = xfZoomOut(prev);
       showToast(`\u{1F50D} Thu nhỏ: ${zoomPercent(next.zoom)}%`);
       return next;
     });
-  };
+}, [showToast]);
 
-  const handleRotate = () => {
+  const handleRotate = useCallback(() => {
     setTransform((prev) => {
       const next = xfRotate(prev);
       showToast(`\u{1F504} Xoay góc: ${next.rotation}\u00B0`);
       return next;
     });
-  };
+}, [showToast]);
 
-  const handleFlipH = () => {
+  const handleFlipH = useCallback(() => {
     setTransform((prev) => {
       const next = xfFlipH(prev);
       showToast(next ? "\u{1FA9E} Đã lật gương ngang" : "\u{1FA9E} Đã khôi phục hướng gốc");
       return next;
     });
-  };
+}, [showToast]);
 
   // Wheel Zoom
   const handleWheel = (e: React.WheelEvent) => {
@@ -355,7 +355,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   };
 
   // Chuyển nhanh qua filter tiếp theo
-  const cycleFilter = () => {
+  const cycleFilter = useCallback(() => {
     const filterIds = VISUAL_FILTERS.map(f => f.id);
     const currentIndex = filterIds.indexOf(activeFilter);
     const nextIndex = (currentIndex + 1) % filterIds.length;
@@ -363,10 +363,10 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     setActiveFilter(nextFilter);
     const filterObj = VISUAL_FILTERS.find(f => f.id === nextFilter);
     showToast(`🎨 Bộ lọc: ${filterObj?.icon} ${filterObj?.label}`);
-  };
+}, [showToast, activeFilter]);
 
   // Tải ảnh chất lượng cao
-  const handleDownload = async () => {
+  const handleDownload = useCallback(async () => {
     if (!activeSubmission || isDownloading) return;
     setIsDownloading(true);
     showToast("💾 Đang tải ảnh xuống máy...");
@@ -384,21 +384,18 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       showToast("✓ Đã tải ảnh thành công!");
-    } catch (err) {
+    } catch {
       window.open(activeSubmission.image_url, "_blank");
       showToast("↗ Đã mở ảnh gốc trong tab mới");
     } finally {
       setIsDownloading(false);
     }
-  };
+}, [showToast, activeSubmission, isDownloading]);
 
   // Sao chép ảnh trực tiếp vào Clipboard (Image Blob)
   const handleCopyImage = async () => {
     if (!activeSubmission) return;
     try {
-      const response = await fetch(activeSubmission.image_url);
-      const blob = await response.blob();
-      
       const img = new Image();
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
@@ -423,7 +420,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
           }
         }, "image/png");
       };
-    } catch (err) {
+    } catch {
       handleCopyLink();
     }
   };
@@ -479,7 +476,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, submissions.length, handleNext, handlePrev, showToast]);
+  }, [currentIndex, submissions.length, handleNext, handlePrev, showToast, handleClose, cycleFilter, handleRotate, handleFlipH, handleZoomIn, handleZoomOut, resetTransform, toggleNativeFullscreen, handleDownload]);
 
   // Đồng bộ trạng thái khi trình duyệt thay đổi fullscreen bằng phím cứng F11 hoặc chuột
   useEffect(() => {

@@ -564,7 +564,7 @@
         );
         updateServiceRow(serviceKey, status);
       }
-    } catch (err) {
+    } catch {
       for (const serviceKey of Object.keys(config.services)) {
         updateServiceRow(serviceKey, 'error');
       }

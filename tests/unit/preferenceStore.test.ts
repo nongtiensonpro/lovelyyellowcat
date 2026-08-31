@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // Tách phần pure schema parsing — không dùng module scope của preferenceStore.
 // Tại runtime: dùng dynamic import.
@@ -21,10 +21,7 @@ describe("preferenceStore schema & defaults", () => {
     const mod = await import("../../src/ui/services/preferenceStore");
     // mock window cho test (setter ở module không sẽ fail nếu thiếu — ta wrap)
     (globalThis as { window?: unknown }).window = globalThis as unknown;
-    // ép schema bằng cách set trước
-    const before = mod.getPreferences();
-    // Không thể gọi setPreferences vì BroadcastChannel postMessage — đóng test: kiểm tra pure helper
-    // Thay bằng kiểm tra default shape
+    // Kiểm tra export shape (module side-effect an toàn với SSR guard)
     expect(typeof mod.PREF_STORAGE_KEY).toBe("string");
     expect(mod.PREF_STORAGE_KEY).toBe("lyc_prefs_v1");
     // Khẳng định cấu trúc export

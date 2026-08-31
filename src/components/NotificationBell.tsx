@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 
 const supabaseClient = getSupabaseBrowserClient();
@@ -33,7 +33,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
   }
 
   // Lấy các thông báo hiện có của người dùng
-  const fetchNotifications = async () => {
+  // useCallback — deps thật (exhaustive-deps)
+  const fetchNotifications = useCallback(async () => {
     if (!currentUser) return;
     const { data, error } = await supabaseClient
       .from("notifications")
@@ -45,7 +46,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
     if (!error && data) {
       setNotifications(data);
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -99,7 +100,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
         } catch {}
       }
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, fetchNotifications]);
 
   // Click ra ngoài để tự động đóng Popover thông báo
   useEffect(() => {

@@ -6,7 +6,6 @@ import { windowStoreReducer, topmostWindow, visibleWindows, taskbarWindows, DEFA
 type Listener = (state: WindowEntry[]) => void;
 
 const STORAGE_KEY = "lyc_wm_v1";
-const PERSIST_KEYS = new Set<string>(); // các id được phép persist — đăng ký khi khai báo window
 
 let state: WindowEntry[] = [];
 let viewport: ReduceOpts["viewport"] = { width: 1024, height: 768 };

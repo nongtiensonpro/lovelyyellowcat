@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 // Phase 5: pure particle physics (unit-tested) — spawn + step
 import { spawnBurst, stepParticles, type Particle } from "./article/particleBurst";
@@ -26,11 +26,11 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
   const [particles, setParticles] = useState<Particle[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const particleIdRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
 
   // Tải danh sách cảm xúc hiện có từ database (đọc công khai, không cần xác thực)
-  const fetchReactions = async () => {
+  // useCallback — deps thật (articleId): cho phép effect phụ thuộc an toàn (exhaustive-deps)
+  const fetchReactions = useCallback(async () => {
     const { data, error } = await supabaseClient
       .from("reactions")
       .select("emoji, profile_id")
@@ -40,7 +40,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
       setReactions(data);
       setLiveMsg(`${data.length} biểu tượng cảm xúc đã ghi nhận.`);
     }
-  };
+  }, [articleId]);
 
   useEffect(() => {
     fetchReactions();
@@ -69,7 +69,7 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [articleId]);
+  }, [articleId, fetchReactions]);
 
   // Vòng lặp cập nhật chuyển động cho các hạt bay (Particles)
   useEffect(() => {

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ErrorBoundary } from "../ui/kernel/ErrorBoundary";
-import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import {
   toBase64,
   fromBase64,
@@ -19,9 +18,9 @@ import {
 import { buildSiteKnowledgePrompt } from "../lib/siteKnowledge";
 import { uiAlert, uiConfirm } from "../ui/wm95/dialogService";
 // Phase 6: pure modules (unit-tested) — persona data + stream core + safe markdown
-import { PERSONAS, PERSONA_PROMPTS, FALLBACK_MODEL_ORDER, MODEL_OPTIONS, TOPIC_CATEGORIES, findPersona, personaSystemPrompt } from "./ai/aiPersonaData";
+import { PERSONAS, FALLBACK_MODEL_ORDER, MODEL_OPTIONS, TOPIC_CATEGORIES, findPersona, personaSystemPrompt } from "./ai/aiPersonaData";
 import {
-  mergeModelUsage, formatGeminiContents, modelsToTryFor,
+  mergeModelUsage, formatGeminiContents,
   isLocationError, isPolicyError, isPolicyFinishReason, isRecoverableStreamFailure,
   parseSseLine, splitSseBuffer, buildContinuationContents, clampTemperature,
   readErrorBody,
@@ -43,7 +42,6 @@ export interface ChatMessage {
   errorDetail?: string;
   isLocationBlocked?: boolean;
 }
-
 
 export interface ModelStats {
   model: string;
@@ -69,10 +67,8 @@ export interface ChatSession {
   isLocalOnly?: boolean;
 }
 
-
 const STORAGE_KEY = "vapor_ai_chat_sessions_v2"; // legacy, chỉ dùng để migrate 1 lần rồi xóa
 const API_KEY_STORAGE = "user_gemini_api_key";
-const MAX_CONTEXT_MESSAGES = 24;
 // Phát âm thanh retro 8-bit đơn giản qua Web Audio API
 function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.08) {
   try {
@@ -95,105 +91,6 @@ function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.0
   } catch {
     // Ignore audio errors if blocked by browser policy
   }
-}
-
-// Hàm gọi trực tiếp Google AI Studio từ trình duyệt của người dùng (Bỏ qua 100% chặn IP Cloudflare)
-async function executeClientDirectChat(
-  apiKey: string,
-  messages: Array<{ role: string; content: string }>,
-  persona: string,
-  preferredModel: string,
-  allowFallback: boolean,
-  temperature: number
-) {
-  const systemPrompt = personaSystemPrompt(persona, buildSiteKnowledgePrompt(messages));
-  let modelsToTry: string[] = [];
-
-  if (preferredModel && preferredModel !== "auto") {
-    if (allowFallback) {
-      modelsToTry = [preferredModel, ...FALLBACK_MODEL_ORDER.filter(m => m !== preferredModel)];
-    } else {
-      modelsToTry = [preferredModel];
-    }
-  } else {
-    modelsToTry = [...FALLBACK_MODEL_ORDER];
-  }
-
-  const formattedContents = formatGeminiContents(messages);
-
-  const attemptLogs: Array<{ model: string; status: number; error: string }> = [];
-  let successfulReply: string | null = null;
-  let modelUsed: string = "";
-  const startTime = Date.now();
-
-  for (const model of modelsToTry) {
-    const abortController = new AbortController();
-    const timeout = window.setTimeout(() => abortController.abort(), 120_000);
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey.trim() },
-        signal: abortController.signal,
-        body: JSON.stringify({
-          contents: formattedContents,
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          generationConfig: {
-            temperature: clampTemperature(temperature),
-            maxOutputTokens: CLIENT_MAX_OUTPUT_TOKENS,
-          },
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const candidateText = (data?.candidates || [])
-          .flatMap((candidate: any) => candidate?.content?.parts || [])
-          .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
-          .join("");
-        if (candidateText) {
-          successfulReply = candidateText;
-          modelUsed = model;
-          break;
-        } else {
-          attemptLogs.push({ model, status: response.status, error: "API 200 nhưng candidates rỗng." });
-        }
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        attemptLogs.push({
-          model,
-          status: response.status,
-          error: errData.error?.message || errData.message || `HTTP ${response.status}`
-        });
-      }
-    } catch (err: any) {
-      attemptLogs.push({ model, status: 0, error: err?.message || String(err) });
-    } finally {
-      window.clearTimeout(timeout);
-    }
-  }
-
-  const durationMs = Date.now() - startTime;
-  if (successfulReply) {
-    return { success: true, reply: successfulReply, model: modelUsed, durationMs };
-  }
-
-  const logDetails = attemptLogs
-    .map((att, idx) => `${idx + 1}. [${att.model}] (HTTP ${att.status}): ${att.error}`)
-    .join("\n");
-
-  const hasQuotaError = attemptLogs.some(a => a.error?.includes("Quota exceeded") || a.status === 429);
-
-  return {
-    success: false,
-    model: attemptLogs.length > 0 ? attemptLogs[attemptLogs.length - 1].model : preferredModel,
-    durationMs: Date.now() - startTime,
-    hasQuotaError,
-    reply: hasQuotaError
-      ? "Meow~! Hạn mức miễn phí của API Key BYOK hiện đang bị quá tải. Bạn hãy thử model khác hoặc nhập một API Key Gemini khác trong Cài đặt nhé! 🐱💾"
-      : "Meow~! Mạng nơ-ron Google AI Studio gặp lỗi phản hồi. Bạn hãy mở chi tiết lỗi bên dưới để xem thêm nhé! 🐱💾",
-    errorDetail: `[CLIENT-SIDE DIRECT EXECUTION]\nChi tiết từng model:\n${logDetails}`,
-  };
 }
 
 // Hàm gọi trực tiếp có streaming — hiển thị gõ dần cho BYOK
@@ -446,7 +343,7 @@ const AiChatStationInner: React.FC = () => {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passphraseInput, setPassphraseInput] = useState("");
   const [isFirstSetup, setIsFirstSetup] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [, setAuthChecked] = useState(false); // chỉ cần setter — giá trị đọc không dùng
   const [needsLogin, setNeedsLogin] = useState(false);
   const [isAccountBanned, setIsAccountBanned] = useState(false);
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -691,7 +588,7 @@ const AiChatStationInner: React.FC = () => {
       setShowPassphraseModal(false);
       setPassphraseInput("");
       await loadSessionsFromSupabase(mk);
-    } catch (e: any) {
+    } catch {
       setUnlockError("Mật khẩu không đúng hoặc dữ liệu bị hỏng. Vui lòng thử lại.");
     } finally {
       setIsE2ELoading(false);

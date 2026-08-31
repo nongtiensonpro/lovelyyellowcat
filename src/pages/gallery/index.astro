@@ -19,7 +19,6 @@ const { data: dbSubmissions } = await supabase
   .order("created_at", { ascending: false });
 
 const initialSubmissions = dbSubmissions || [];
-import { ErrorBoundary } from "../../ui/kernel/ErrorBoundary";
 ---
 
 <BaseLayout

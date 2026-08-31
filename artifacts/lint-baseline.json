@@ -1,18 +1,17 @@
 {
   "_comment": "Ratchet nợ lint (W-8) — con số mỗi rule CHỈ ĐƯỢC GIẢM. Tăng = lint gate fail. Sửa xong nhóm nào chạy npm run lint:baseline để cập nhật.",
-  "total": 397,
+  "total": 338,
   "rules": {
-    "@typescript-eslint/no-unused-vars": 50,
-    "@typescript-eslint/no-explicit-any": 200,
+    "@typescript-eslint/no-explicit-any": 196,
     "no-console": 58,
     "@typescript-eslint/no-unused-expressions": 5,
     "jsx-a11y/no-autofocus": 1,
     "jsx-a11y/click-events-have-key-events": 13,
     "jsx-a11y/no-static-element-interactions": 13,
     "jsx-a11y/label-has-associated-control": 46,
-    "react-hooks/exhaustive-deps": 6,
     "jsx-a11y/alt-text": 2,
     "jsx-a11y/role-has-required-aria-props": 1,
-    "jsx-a11y/no-noninteractive-element-interactions": 2
+    "jsx-a11y/no-noninteractive-element-interactions": 2,
+    "react-hooks/exhaustive-deps": 1
   }
 }

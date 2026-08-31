@@ -5,7 +5,7 @@
 import DialogHost from "../wm95/DialogHost";
 import { CommandPalette } from "./CommandPalette";
 import { WMHost } from "../wm95/WMHost";
-import { registerDefaultCommands } from "./defaultCommands";
+import "./defaultCommands"; // side-effect: tự đăng ký lệnh Ctrl+K
 import { fmFontHref } from "./fonts";
 import { CRT_ENABLED_DEFAULT } from "./crt";
 // Side-effect: đăng ký FXBootstrap. Vite sẽ bundle nó vào trong client.js,

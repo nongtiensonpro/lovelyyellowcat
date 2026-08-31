@@ -3,7 +3,7 @@
 // object/array MỚI mỗi lần gọi khi state không đổi => re-render vô hạn.
 // Contract: gọi getSnapshot nhiều lần liên tiếp (không mutate) PHẢI cùng tham chiếu.
 import { describe, it, expect } from "vitest";
-import { getPreferences, setPreferences, DEFAULT_PREFERENCES } from "../../src/ui/services/preferenceStore";
+import { getPreferences, setPreferences } from "../../src/ui/services/preferenceStore";
 import { getCommands, registerCommand } from "../../src/ui/shell/commands";
 import { getWindows } from "../../src/ui/wm95/windowRuntime";
 import { getDialogState } from "../../src/ui/wm95/dialogService";

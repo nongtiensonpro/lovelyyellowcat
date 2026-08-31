@@ -549,7 +549,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
         setTimeout(() => {
           shareBtn.textContent = originalText;
         }, 2000);
-      } catch (err) {
+      } catch {
         import("../../ui/wm95/dialogService").then(function (m) {
           m.uiAlert("Đường dẫn: " + window.location.href, "share-url");
         });

@@ -4,10 +4,6 @@ import React from "react";
 import { renderToString } from "react-dom/server";
 import { ErrorBoundary } from "../../src/ui/kernel/ErrorBoundary";
 
-function Boom(): React.ReactElement {
-  throw new Error("TEST_EXPLOSION");
-}
-
 function Fine(): React.ReactElement {
   return <div data-testid="ok">OK</div>;
 }

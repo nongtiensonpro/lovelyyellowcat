@@ -1,7 +1,7 @@
 // telemetry.test.ts — Phase 8: no-PII contract + sampling + safe path.
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
-  getSessionId, safePath, compactUA, isSampled, sendTelemetry,
+  safePath, compactUA, isSampled, sendTelemetry,
 } from "../../src/ui/services/telemetry";
 
 describe("safePath", () => {

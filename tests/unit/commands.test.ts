@@ -6,9 +6,7 @@ const noop = () => {};
 describe("registerCommand", () => {
   beforeEach(() => {
     // clear registry by unregistering all
-    for (const c of getCommands()) {
-      // can't directly unregister without handle; use delete pattern by re-registering
-    }
+    // registry reset qua re-import module trong test sau — không cần loop ở đây
   });
 
   it("đăng ký lệnh, danh sách tăng", () => {
