@@ -1,6 +1,7 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../../lib/supabase";
+import { parsePage, calcPage, buildAdminUrl } from "../../../components/admin/adminTable";
 import { logAdminAction } from "../../../lib/adminAudit";
 
 const PAGE_SIZE = 20;
@@ -34,19 +35,12 @@ const url = new URL(Astro.request.url);
 const search = url.searchParams.get("search")?.trim() || "";
 const statusFilter = url.searchParams.get("status") || "";
 const sortKey = url.searchParams.get("sort") || "newest";
-const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+const page = parsePage(url.searchParams.get("page"));
 
 const msgType = url.searchParams.get("type");
 const msgText = url.searchParams.get("msg");
 
-function buildUrl(params: Record<string, string>) {
-  const u = new URL("/admin/articles", Astro.url.origin);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v) u.searchParams.set(k, v);
-    else u.searchParams.delete(k);
-  });
-  return u.pathname + u.search;
-}
+const buildUrl = (params: Record<string, string>) => buildAdminUrl("/admin/articles", Astro.url.origin, params);
 
 const redirectWithResult = (ok: boolean, message: string) => {
   const u = new URL("/admin/articles", Astro.url.origin);
@@ -310,7 +304,7 @@ query = query.order(
 const from = (page - 1) * PAGE_SIZE;
 const { data: articles, count: totalArticles } = await query.range(from, from + PAGE_SIZE - 1);
 
-const totalPages = Math.max(1, Math.ceil((totalArticles || 0) / PAGE_SIZE));
+const totalPages = calcPage(totalArticles || 0, page, PAGE_SIZE).totalPages;
 
 const statusCounts = { published: 0, draft: 0, archived: 0 };
 const { data: allStatuses } = await supabase

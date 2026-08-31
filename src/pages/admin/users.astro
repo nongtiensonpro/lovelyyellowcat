@@ -1,6 +1,7 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
+import { parsePage, calcPage, buildAdminUrl } from "../../components/admin/adminTable";
 import { UserManagementActions } from "../../components/UserManagementActions";
 
 // ============================================================
@@ -32,7 +33,7 @@ if (!userProfile || userProfile.role !== "admin") {
 
 // ── Đọc query params ──
 const url = new URL(Astro.request.url);
-const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
+const page = parsePage(url.searchParams.get("page"));
 const search = url.searchParams.get("search")?.trim() || "";
 const roleFilter = url.searchParams.get("role") || "";
 const statusFilter = url.searchParams.get("status") || "";
@@ -64,7 +65,7 @@ const to = from + USERS_PER_PAGE - 1;
 query = query.order("created_at", { ascending: false }).range(from, to);
 
 const { data: users, count: totalUsers } = await query;
-const totalPages = Math.ceil((totalUsers || 0) / USERS_PER_PAGE);
+const totalPages = calcPage(totalUsers || 0, page, USERS_PER_PAGE).totalPages;
 
 // ── Thống kê nhanh ──
 const { count: adminCount } = await supabase
@@ -99,14 +100,7 @@ const { data: recentLogs } = await supabase
 // ── Đếm comments & submissions cho admin bar ── (đã chuyển vào AdminLayout)
 
 // Hàm build URL giữ params
-function buildUrl(params: Record<string, string>) {
-  const u = new URL(url.href);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v) u.searchParams.set(k, v);
-    else u.searchParams.delete(k);
-  });
-  return u.pathname + u.search;
-}
+const buildUrl = (params: Record<string, string>) => buildAdminUrl("/admin/users", Astro.url.origin, params);
 
 // Hàm format ngày
 function formatDate(dateStr: string) {

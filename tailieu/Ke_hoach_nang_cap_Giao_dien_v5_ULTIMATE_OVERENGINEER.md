@@ -519,6 +519,21 @@ Mỗi phase là PR nhỏ có baseline/screenshot; không đổi API/database cù
 
 **Bài học:** token pipeline phải gen `@theme` (utility-facing), không chỉ `:root` (raw vars). Utility Tailwind không sinh từ CSS variable — sinh từ `@theme` declaration.
 
+
+### ✅ Phase 7 — HOÀN THÀNH (2026-08-31)
+
+**Pure module admin data-table (pattern lặp 6+ trang):**
+- [x] `admin/adminTable.ts` — parsePage/parsePageSize (NaN/clamp an toàn), calcPage (totalPages/from/hasPrev/hasNext, clamp page vượt tổng, total≤0 an toàn), buildAdminUrl (giữ query, xóa param rỗng, trim), toggleSelection/toggleAllSelection/reconcileSelection (bulk), matchesAdminSearch (multi-token AND), sortByKey (số/string vi-locale/ISO date, null xuống cuối, không mutate) — 24 tests
+
+**Retrofit (mỗi patch verify read-back trong cùng cell):**
+- [x] `admin/comments.astro` — buildUrl fn → buildAdminUrl; parsePage; totalPages → calcPage
+- [x] `admin/users.astro` — buildUrl, parsePage, totalPages (Math.ceil thuần → calcPage)
+- [x] `admin/articles/index.astro` — buildUrl, parsePage, totalPages
+- [x] **Chặn crash tiềm ẩn trước khi deploy:** quét cạn toàn bộ src/pages — phát hiện `articles/index.astro` dùng `parsePage` mà **thiếu import** (cùng pattern lỗi GalleryGrid production!) — sửa ngay, thêm vào quy trình scan cạn "dùng-mà-thiếu-import" cho mọi module
+- [x] Scan kết quả: 3/3 trang admin đều có import đầy đủ; không trang nào khác trong src vi phạm
+
+**Số liệu:** 218/218 tests (23 files, +24) · 5 gates rc=0 · bundle 633KB/176KB
+
 ### ⏭ Bước tiếp theo
 - Phase 2: AppShell hợp nhất, preference store, FXBudget, font self-host, hạ client:load 14→≤4
 - Phase 3: WM/95 thật (drag/z-order/taskbar) + command palette Ctrl+K

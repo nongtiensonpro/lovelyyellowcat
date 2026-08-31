@@ -5,6 +5,8 @@ import { logAdminAction } from "../../lib/adminAudit";
 import { sendCommentDeletedEmail } from "../../lib/emailNotification";
 import { createSupabaseServerClient } from "../../lib/supabase";
 import { env } from "cloudflare:workers";
+// Phase 7: pure admin table helpers (unit-tested)
+import { parsePage, calcPage, buildAdminUrl } from "../../components/admin/adminTable";
 
 const PAGE_SIZE = 20;
 
@@ -25,19 +27,11 @@ if (user) {
   userProfile = data;
 }
 
-// ── Query params: tìm kiếm + phân trang ──
+// ── Query params: tìm kiếm + phân trang (Phase 7: qua adminTable helpers) ──
 const url = new URL(Astro.request.url);
 const search = url.searchParams.get("search")?.trim() || "";
-const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
-
-function buildUrl(params: Record<string, string>) {
-  const u = new URL("/admin/comments", Astro.url.origin);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v) u.searchParams.set(k, v);
-    else u.searchParams.delete(k);
-  });
-  return u.pathname + u.search;
-}
+const page = parsePage(url.searchParams.get("page"));
+const buildUrl = (params: Record<string, string>) => buildAdminUrl("/admin/comments", Astro.url.origin, params);
 
 // Xử lý các hành động POST từ Admin (Xóa bình luận)
 let actionResult: { success: boolean; message: string } | null = null;
@@ -120,11 +114,13 @@ if (search) {
 
 commentsQuery = commentsQuery.order("created_at", { ascending: false });
 
-const from = (page - 1) * PAGE_SIZE;
+// Phase 7: pagination qua adminTable (unit-tested) — from/to từ page, totalPages sau khi có count
+const pageFrom = (page - 1) * PAGE_SIZE;
 const { data: comments, count: commentsCount, error: fetchError } =
-  await commentsQuery.range(from, from + PAGE_SIZE - 1);
+  await commentsQuery.range(pageFrom, pageFrom + PAGE_SIZE - 1);
 
-const totalPages = Math.max(1, Math.ceil((commentsCount || 0) / PAGE_SIZE));
+const pageCalc = calcPage(commentsCount || 0, page, PAGE_SIZE);
+const totalPages = pageCalc.totalPages;
 
 // Tra tiêu đề bài viết cho các bình luận trong trang hiện tại
 // (comments.article_id là TEXT — có thể là uuid hoặc slug cũ)
