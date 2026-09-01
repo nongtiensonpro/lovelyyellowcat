@@ -1,7 +1,6 @@
 import type { APIRoute } from "astro";
-import { createSupabaseServerClient } from "../../lib/supabase";
+import { createSupabaseServerClient, getWorkerEnv } from "../../lib/supabase";
 import { sendBanNotificationEmail, sendUnbanNotificationEmail, sendRoleChangeEmail } from "../../lib/emailNotification";
-import { env } from "cloudflare:workers";
 
 const USERS_PER_PAGE = 10;
 
@@ -179,7 +178,7 @@ export const PUT: APIRoute = async (context) => {
         oldRole: targetProfile.role,
         newRole: newRole,
         contactEmail: "nongtiensonpro@gmail.com",
-      }, env);
+      }, getWorkerEnv());
       emailNote = emailResult.success ? " Email thông báo đã được gửi." : ` (${emailResult.message})`;
     } catch (emailErr: any) {
       emailNote = " (Không gửi được email thông báo)";
@@ -279,7 +278,7 @@ export const POST: APIRoute = async (context) => {
         reason: reason || "Vi phạm quy tắc cộng đồng.",
         contactEmail: "nongtiensonpro@gmail.com",
       },
-      env
+      getWorkerEnv()
     );
 
     const emailNote = emailResult.success
@@ -326,7 +325,7 @@ export const POST: APIRoute = async (context) => {
         recipientName: targetProfile.full_name || targetProfile.email,
         contactEmail: "nongtiensonpro@gmail.com",
       },
-      env
+      getWorkerEnv()
     );
 
     const emailNote = emailResult.success

@@ -1,7 +1,6 @@
 import type { APIRoute } from "astro";
-import { createSupabaseServerClient } from "../../../lib/supabase";
+import { createSupabaseServerClient, getWorkerEnv } from "../../../lib/supabase";
 import { sendWelcomeEmail } from "../../../lib/emailNotification";
-import { env } from "cloudflare:workers";
 
 /**
  * Kiểm tra và làm sạch URL chuyển hướng chống lỗ hổng Open Redirect (CWE-601)
@@ -74,7 +73,7 @@ export const GET: APIRoute = async ({ request, cookies, redirect, url }) => {
                 recipientEmail: profile.email || user.email!,
                 recipientName: profile.full_name || user.user_metadata?.full_name || "Thành viên mới",
                 contactEmail: "nongtiensonpro@gmail.com",
-              }, env).catch((err: any) => {
+              } , getWorkerEnv()).catch((err: any) => {
                 console.error("[AUTH] Lỗi gửi welcome email:", err.message);
               });
             }

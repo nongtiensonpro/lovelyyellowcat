@@ -9,9 +9,15 @@ export const cookieOptions: CookieOptionsWithName = {
   sameSite: "lax",  
 };
 
+export type WorkerEnv = Record<string, string | undefined>;
+export function getWorkerEnv(): WorkerEnv {
+  return env as unknown as WorkerEnv;
+}
+
 export function createSupabaseServerClient(context: { request: Request; cookies: AstroCookies }) {  
-  const supabaseUrl = (env as any)?.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;  
-  const supabaseAnonKey = (env as any)?.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const workerEnv = getWorkerEnv();
+  const supabaseUrl = workerEnv?.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;  
+  const supabaseAnonKey = workerEnv?.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {  
     throw new Error("Biến môi trường của Supabase chưa được thiết lập đầy đủ.");  

@@ -34,6 +34,13 @@ export interface EmailResult {
 // ── Hằng số ──
 
 const SITE_NAME = "Vaporwave Magazine";
+// Batch 11.2: shape của env runtime (Cloudflare Worker env hoặc import.meta.env fallback)
+interface EmailRuntimeEnv {
+  GMAIL_SENDER_EMAIL?: string;
+  GMAIL_APP_PASSWORD?: string;
+  [key: string]: string | undefined;
+}
+
 const CONTACT_EMAIL = "nongtiensonpro@gmail.com";
 const SMTP_HOST = "smtp.gmail.com";
 const SMTP_PORT = 465;
@@ -151,11 +158,12 @@ async function sendViaSmtp(params: {
       success: true,
       message: `Email thông báo đã được gửi đến ${params.to}.`,
     };
-  } catch (error: any) {
-    console.error("[EMAIL] ❌ SMTP error:", error.message);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[EMAIL] ❌ SMTP error:", msg);
     return {
       success: false,
-      message: `Lỗi gửi email: ${error.message}`,
+      message: `Lỗi gửi email: ${msg}`,
     };
   } finally {
     try { socket?.close(); } catch {}
@@ -179,7 +187,7 @@ async function sendEmail(params: {
   to: string;
   subject: string;
   html: string;
-  runtimeEnv?: any;
+  runtimeEnv?: EmailRuntimeEnv;
 }): Promise<EmailResult> {
   const senderEmail = params.runtimeEnv?.GMAIL_SENDER_EMAIL
     || import.meta.env.GMAIL_SENDER_EMAIL
@@ -334,7 +342,7 @@ function buildUnbanEmailHtml(payload: UnbanEmailPayload): string {
 
 export async function sendBanNotificationEmail(
   payload: BanEmailPayload,
-  runtimeEnv?: any
+  runtimeEnv?: EmailRuntimeEnv
 ): Promise<EmailResult> {
   return sendEmail({
     to: payload.recipientEmail,
@@ -346,7 +354,7 @@ export async function sendBanNotificationEmail(
 
 export async function sendUnbanNotificationEmail(
   payload: UnbanEmailPayload,
-  runtimeEnv?: any
+  runtimeEnv?: EmailRuntimeEnv
 ): Promise<EmailResult> {
   return sendEmail({
     to: payload.recipientEmail,
@@ -368,7 +376,7 @@ export interface WelcomeEmailPayload {
 
 export async function sendWelcomeEmail(
   payload: WelcomeEmailPayload,
-  runtimeEnv?: any
+  runtimeEnv?: EmailRuntimeEnv
 ): Promise<EmailResult> {
   const html = `<!DOCTYPE html>
 <html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -434,7 +442,7 @@ const ROLE_ORDER: Record<string, number> = { reader: 0, editor: 1, admin: 2 };
 
 export async function sendRoleChangeEmail(
   payload: RoleChangeEmailPayload,
-  runtimeEnv?: any
+  runtimeEnv?: EmailRuntimeEnv
 ): Promise<EmailResult> {
   const isPromotion = (ROLE_ORDER[payload.newRole] || 0) > (ROLE_ORDER[payload.oldRole] || 0);
   const borderColor = isPromotion ? "#05ffa1" : "#ffa502";
@@ -500,7 +508,7 @@ export interface SubmissionApprovedEmailPayload {
 
 export async function sendSubmissionApprovedEmail(
   payload: SubmissionApprovedEmailPayload,
-  runtimeEnv?: any
+  runtimeEnv?: EmailRuntimeEnv
 ): Promise<EmailResult> {
   const html = `<!DOCTYPE html>
 <html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -551,7 +559,7 @@ export interface SubmissionRejectedEmailPayload {
 
 export async function sendSubmissionRejectedEmail(
   payload: SubmissionRejectedEmailPayload,
-  runtimeEnv?: any
+  runtimeEnv?: EmailRuntimeEnv
 ): Promise<EmailResult> {
   const html = `<!DOCTYPE html>
 <html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -609,7 +617,7 @@ export interface CommentDeletedEmailPayload {
 
 export async function sendCommentDeletedEmail(
   payload: CommentDeletedEmailPayload,
-  runtimeEnv?: any
+  runtimeEnv?: EmailRuntimeEnv
 ): Promise<EmailResult> {
   const truncated = payload.commentContent.length > 200 ? payload.commentContent.substring(0, 200) + "..." : payload.commentContent;
   const html = `<!DOCTYPE html>

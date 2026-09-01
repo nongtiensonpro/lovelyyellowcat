@@ -1,7 +1,8 @@
 {
   "_comment": "Ratchet nợ lint (W-8) — con số mỗi rule CHỈ ĐƯỢC GIẢM. Tăng = lint gate fail. Sửa xong nhóm nào chạy npm run lint:baseline để cập nhật.",
-  "total": 196,
+  "total": 178,
   "rules": {
-    "@typescript-eslint/no-explicit-any": 196
+    "@typescript-eslint/no-explicit-any": 176,
+    "@typescript-eslint/no-unused-vars": 2
   }
 }

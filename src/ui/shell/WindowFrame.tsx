@@ -60,7 +60,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ entry, onClose, childr
         newX < SNAP_THRESHOLD ? "left" :
         vw - (newX + rect.width) < SNAP_THRESHOLD ? "right" :
         newY < SNAP_THRESHOLD ? "top" : null;
-      setSnapZone(zone as any);
+      setSnapZone(zone); // zone đã là SnapZone | null — cast thừa từ bản cũ
       dispatchWindow({ type: "move", id: entry.id, to: { x: newX, y: newY } });
     },
     [entry.id]

@@ -69,5 +69,5 @@ Kỹ thuật chuẩn: `const body = (await request.json()) as SomeType;` — KH�
 - [x] Batch 8 keyboard a11y (28→0) — DONE: interactive thật sửa markup (GalleryGrid cards role=button+Enter/Space, filmstrip, AI session list, UMA dialog role+Esc); MỚI: Esc handler cho SearchModal + UMA (keyboard users hết bị kẹt); backdrop/dialog có Esc sẵn → disable comment đúng JSX/JS context
 - [x] Batch 9 a11y số ít (4→0) — DONE: 2 img alt (HeaderNav avatar, profile lightbox), autoFocus unlock form (disable có lý do), SearchModal combobox→searchbox
 - [x] Batch 10 unused-expressions (5→0) + exhaustive-deps sót (1→0) — DONE: ternary/guard statement → if/else; WindowFrame w vào deps + comment an toàn drag
-- [ ] Batch 11 no-explicit-any (200) — 6 sub-batches
+- [x] Batch 11.1 (ui+aiStreamCore, 3→0) + 11.2 (lib/ 17→0) — DONE: GeminiPart/Candidate interfaces, EmailRuntimeEnv (8 call sites), CloudinaryListResponse hợp nhất, getWorkerEnv() helper export thay (env as any); admin-users/callback call sites sửa theo
 - **Đích: 0 warnings → bỏ rule khỏi override warn, nâng về error thật**

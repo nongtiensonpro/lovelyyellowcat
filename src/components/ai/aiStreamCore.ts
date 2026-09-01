@@ -2,6 +2,10 @@
 // Tách từ AiChatStation.tsx: parse SSE line, phân loại lỗi, quyết định continuation/fallback.
 // Fetch/stream IO nằm ở caller — module này chỉ xử lý text/state → test 100% không network.
 
+// Gemini REST response shape (tối thiểu những gì stream parser dùng) — Batch 11.1
+interface GeminiPart { text?: string }
+interface GeminiCandidate { content?: { parts?: GeminiPart[] } }
+
 export const CLIENT_MAX_OUTPUT_TOKENS = 4096;
 export const CLIENT_INITIAL_RESPONSE_TIMEOUT_MS = 180_000;
 export const CLIENT_STREAM_IDLE_TIMEOUT_MS = 90_000;
@@ -107,8 +111,8 @@ export function parseSseLine(rawLine: string): SseParseResult {
     const error = data?.error?.message || data?.error || data?.message;
     if (error) return { ...empty, error: String(error) };
     const text = (data?.candidates || [])
-      .flatMap((candidate: any) => candidate?.content?.parts || [])
-      .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
+      .flatMap((candidate: GeminiCandidate) => candidate?.content?.parts || [])
+      .map((part: GeminiPart) => (typeof part?.text === "string" ? part.text : ""))
       .join("");
     return { text, usage, finishReason: finish, doneMarker: false, parseErrors: 0 };
   } catch {

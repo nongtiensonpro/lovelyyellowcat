@@ -116,6 +116,25 @@ export interface CloudinaryImageResource {
   filename?: string;
   folder?: string;
 }
+// Batch 11.2: Cloudinary Admin API response shapes (tối thiểu những gì code dùng)
+interface CloudinaryListResponse {
+  resources?: Array<{
+    public_id: string;
+    secure_url?: string;
+    url?: string;
+    created_at: string;
+    bytes: number;
+    width: number;
+    height: number;
+    format: string;
+    filename?: string;
+    folder?: string;
+  }>;
+  next_cursor?: string | null;
+  total_count?: number;
+  error?: { message?: string };
+}
+
 
 export interface CloudinaryListResult {
   resources: CloudinaryImageResource[];
@@ -206,7 +225,7 @@ export async function searchCloudinaryImages(
         body: JSON.stringify(body),
       }
     );
-    const data: any = await response.json().catch(() => ({}));
+    const data: CloudinaryListResponse = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       const apiMsg = data?.error?.message || `HTTP ${response.status}`;
@@ -216,7 +235,7 @@ export async function searchCloudinaryImages(
       return { resources: [], nextCursor: null, error: `${apiMsg} ${diag}.${hint}` };
     }
 
-    const resources: CloudinaryImageResource[] = (data.resources || []).map((r: any) => ({
+    const resources: CloudinaryImageResource[] = (data.resources || []).map((r: NonNullable<CloudinaryListResponse["resources"]>[number]) => ({
       public_id: r.public_id,
       secure_url: r.secure_url || r.url || "",
       created_at: r.created_at,
@@ -233,8 +252,9 @@ export async function searchCloudinaryImages(
       nextCursor: data.next_cursor || null,
       totalCount: typeof data.total_count === "number" ? data.total_count : undefined,
     };
-  } catch (error: any) {
-    return { resources: [], nextCursor: null, error: `${error.message || String(error)} ${diag}` };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    return { resources: [], nextCursor: null, error: `${errMsg} ${diag}` };
   }
 }
 
@@ -288,7 +308,7 @@ export async function listCloudinaryImages(
       `https://api.cloudinary.com/v1_1/${cloudName}/resources/image?${query.toString()}`,
       { headers: { Authorization: cloudinaryBasicAuthHeader(apiKey, apiSecret) } }
     );
-    const data: any = await response.json().catch(() => ({}));
+    const data: CloudinaryListResponse = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       const apiMsg = data?.error?.message || `HTTP ${response.status}`;
@@ -302,8 +322,9 @@ export async function listCloudinaryImages(
       resources: (data.resources || []) as CloudinaryImageResource[],
       nextCursor: data.next_cursor || null,
     };
-  } catch (error: any) {
-    return { resources: [], nextCursor: null, error: `${error.message || String(error)} ${diag}` };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    return { resources: [], nextCursor: null, error: `${errMsg} ${diag}` };
   }
 }
 
@@ -349,8 +370,9 @@ export async function deleteCloudinaryImages(publicIds: string[], runtimeEnv?: C
       } else {
         summary.errors.push(`${publicId}: Cloudinary trả về "${result.result || "unknown"}"`);
       }
-    } catch (error: any) {
-      summary.errors.push(`${publicId}: ${error.message || error}`);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      summary.errors.push(`${publicId}: ${errMsg}`);
     }
   }
 
