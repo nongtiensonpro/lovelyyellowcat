@@ -100,8 +100,10 @@ describe("Gallery lightbox regression — production VISUAL_FILTERS crash", () =
       expect(html).toContain("FILTER");
       expect(errors.join(" ")).not.toContain("VISUAL_FILTERS is not defined");
     } finally {
+      await act(async () => {
+        rootEl?.unmount();
+      });
       console.error = origError;
-      rootEl?.unmount();
       container.remove();
     }
   });

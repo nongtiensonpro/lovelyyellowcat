@@ -464,67 +464,71 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
           {visibleSubmissions.map((sub) => {
             const reactionCount = reactionsMap[sub.id] || 0;
             return (
-              <div
+              <article
                 key={sub.id}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleOpenLightbox(sub.id); } }}
-                className="break-inside-avoid win95-container bg-win-gray p-1 flex flex-col group hover:border-vapor-pink hover:shadow-[0_0_15px_rgba(255,113,206,0.6)] transition-all duration-200 relative cursor-pointer"
-                onClick={() => handleOpenLightbox(sub.id)}
+                className="break-inside-avoid win95-container bg-win-gray p-1 flex flex-col group hover:border-vapor-pink hover:shadow-[0_0_15px_rgba(255,113,206,0.6)] transition-all duration-200 relative"
               >
-                {/* Header Window mini */}
-                <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark text-[10px] flex justify-between items-center">
-                  <span className="truncate max-w-[70%] font-bold uppercase">{sub.title}</span>
-                  <span className="text-[10px] opacity-80 font-mono">ART_VIEW.DLL</span>
-                </div>
+                <a
+                  href={`?view=${encodeURIComponent(sub.id)}`}
+                  aria-label={`Xem tác phẩm: ${sub.title}`}
+                  onClick={(event) => {
+                    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                      return;
+                    }
+                    event.preventDefault();
+                    handleOpenLightbox(sub.id);
+                  }}
+                  className="block w-full cursor-pointer no-underline text-inherit"
+                >
+                  {/* Header Window mini */}
+                  <div className="win95-header py-0.5 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark text-[10px] flex justify-between items-center">
+                    <span className="truncate max-w-[70%] font-bold uppercase">{sub.title}</span>
+                    <span className="text-[10px] opacity-80 font-mono">ART_VIEW.DLL</span>
+                  </div>
 
-                {/* Khung chứa ảnh */}
-                <div className="relative bg-cosmic-mid/10 overflow-hidden aspect-auto min-h-[160px] max-h-[420px] border border-win-dark flex items-center justify-center">
-                  <LazyImage
-                    src={sub.image_url || ""}
-                    alt={sub.title}
-                    className="w-full h-auto max-h-full object-cover filter saturate-[1.1] contrast-[1.03] sm:group-hover:scale-[1.02] transition-transform duration-300"
-                    width="480"
-                    height="360"
+                  {/* Khung chứa ảnh */}
+                  <div className="relative bg-cosmic-mid/10 overflow-hidden aspect-auto min-h-[160px] max-h-[420px] border border-win-dark flex items-center justify-center">
+                    <LazyImage
+                      src={sub.image_url || ""}
+                      alt={sub.title}
+                      className="w-full h-auto max-h-full object-cover filter saturate-[1.1] contrast-[1.03] sm:group-hover:scale-[1.02] transition-transform duration-300"
+                      width="480"
+                      height="360"
+                    />
+                    <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none" />
+                  </div>
+
+                  {/* Footer của tranh */}
+                  <div className="p-2 bg-web-gray-dark flex justify-between items-center text-[10px]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <img
+                        src={sub.profiles?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50&auto=format&fit=crop"}
+                        alt={sub.profiles?.full_name}
+                        className="w-5 h-5 border border-win-dark object-cover filter saturate-150 shrink-0"
+                      />
+                      <span className="truncate text-black font-bold">{sub.profiles?.full_name}</span>
+                    </div>
+                    <div className="flex gap-2 text-win-darkest font-mono font-bold shrink-0">
+                      <span>💜 {reactionCount}</span>
+                    </div>
+                  </div>
+                </a>
+
+                {/* Favorite là control sibling, không lồng trong interactive card link. */}
+                <div className="absolute top-8 right-2 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                  <FavoriteButton
+                    submissionId={sub.id}
+                    currentUser={currentUser}
+                    variant="icon"
+                    initialIsFavorited={isFavoritesOnly ? true : undefined}
+                    onToggle={(isFav) => {
+                      if (isFavoritesOnly && !isFav) {
+                        setSubmissions((prev) => prev.filter((s) => s.id !== sub.id));
+                      }
+                    }}
                   />
-                  <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none" />
-
-                  {/* Nút yêu thích dạng floating */}
-                  <div 
-                    className="absolute top-2 right-2 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20"
-                    role="presentation"
-                    // chứa FavoriteButton — button thật có keyboard riêng
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <FavoriteButton
-                      submissionId={sub.id}
-                      currentUser={currentUser}
-                      variant="icon"
-                      initialIsFavorited={isFavoritesOnly ? true : undefined}
-                      onToggle={(isFav) => {
-                        if (isFavoritesOnly && !isFav) {
-                          setSubmissions((prev) => prev.filter((s) => s.id !== sub.id));
-                        }
-                      }}
-                    />
-                  </div>
                 </div>
-
-                {/* Footer của tranh */}
-                <div className="p-2 bg-web-gray-dark flex justify-between items-center text-[10px]">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <img
-                      src={sub.profiles?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50&auto=format&fit=crop"}
-                      alt={sub.profiles?.full_name}
-                      className="w-5 h-5 border border-win-dark object-cover filter saturate-150 shrink-0"
-                    />
-                    <span className="truncate text-black font-bold">{sub.profiles?.full_name}</span>
-                  </div>
-                  <div className="flex gap-2 text-win-darkest font-mono font-bold shrink-0">
-                    <span>💜 {reactionCount}</span>
-                  </div>
-                </div>
-              </div>
+              </article>
             );
           })}
         </div>
