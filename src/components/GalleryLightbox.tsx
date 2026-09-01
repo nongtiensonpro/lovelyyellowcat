@@ -766,7 +766,9 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
           {/* CỘT TRÁI: VÙNG XEM ẢNH VÀ ĐIỀU KHIỂN (12 cols khi Zen mode, 8 cols khi thường) */}
           <div className={`${isZenMode ? "col-span-1" : "lg:col-span-8"} flex flex-col gap-2 min-h-0 flex-1`}>
             
-            {/* Vùng Canvas Xem Tranh Chính (Có hỗ trợ Deep Zoom, Pan, Drag & Shaders) */}
+            {/* Vùng Canvas Xem Tranh Chính (Có hỗ trợ Deep Zoom, Pan, Drag & Shaders). Batch 8:
+                vùng zoom/pan chuột + cảm ứng — toàn bộ thao tác có phím tắt riêng (z/x/r/h/mũi tên). */}
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
             <div
               ref={imageWrapperRef}
               onTouchStart={handleTouchStart}
@@ -907,6 +909,10 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                   return (
                     <div
                       key={sub.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Xem tác phẩm ${sub.title}`}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCurrentIndex(sIdx); } }}
                       onClick={() => {
                         if (soundEnabled) playRetroClick(600, 0.02);
                         setCurrentIndex(sIdx);

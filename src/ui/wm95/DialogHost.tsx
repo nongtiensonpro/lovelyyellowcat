@@ -36,7 +36,9 @@ export const DialogHost: React.FC = () => {
   if (dialogs.length === 0) return null;
   const d = top!;
 
+  // Batch 8: backdrop click-dismiss — Esc handled qua dialogService keyboardManager
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className="fixed inset-0 flex items-center justify-center bg-black/60 p-4 backdrop-blur-[2px]"
       style={{ zIndex: modalZ }}

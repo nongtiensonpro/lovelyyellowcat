@@ -110,6 +110,8 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ id, children, showTitl
     <>
       {/* Snap guide overlay */}
       {snapHint && <SnapGuide zone={snapHint} />}
+      {/* Batch 8: dialog có onKeyDown (Alt+F4/Enter) — rule không nhận role=dialog */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         role="dialog"
         aria-label={w.title}

@@ -430,6 +430,9 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
             return (
               <div
                 key={sub.id}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleOpenLightbox(sub.id); } }}
                 className="bg-win-gray p-3 rounded-lg border-4 border-win-light shadow-[inset_-2px_-2px_0_#404040,inset_2px_2px_0_#dfdfdf,6px_6px_0_rgba(0,0,0,0.8)] cursor-pointer group"
                 onClick={() => handleOpenLightbox(sub.id)}
               >
@@ -463,6 +466,9 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
             return (
               <div
                 key={sub.id}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleOpenLightbox(sub.id); } }}
                 className="break-inside-avoid win95-container bg-win-gray p-1 flex flex-col group hover:border-vapor-pink hover:shadow-[0_0_15px_rgba(255,113,206,0.6)] transition-all duration-200 relative cursor-pointer"
                 onClick={() => handleOpenLightbox(sub.id)}
               >
@@ -486,6 +492,8 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
                   {/* Nút yêu thích dạng floating */}
                   <div 
                     className="absolute top-2 right-2 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20"
+                    role="presentation"
+                    // chứa FavoriteButton — button thật có keyboard riêng
                     onClick={(e) => e.stopPropagation()}
                   >
                     <FavoriteButton

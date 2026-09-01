@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface UserManagementActionsProps {
   userId: string;
@@ -21,6 +21,19 @@ export function UserManagementActions({
   const [banReason, setBanReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Batch 8: Esc đóng modal (keyboard users không kẹt)
+  useEffect(() => {
+    if (!showRoleModal && !showBanModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowRoleModal(false);
+        setShowBanModal(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showRoleModal, showBanModal]);
 
   const isSelf = userId === currentAdminId;
 
@@ -181,6 +194,7 @@ export function UserManagementActions({
       {/* ═══════════ MODAL: Đổi Vai Trò ═══════════ */}
       {showRoleModal && (
         <div
+          role="presentation"
           style={{
             position: "fixed",
             inset: 0,
@@ -193,12 +207,14 @@ export function UserManagementActions({
           }}
           onClick={() => setShowRoleModal(false)}
         >
-          <div
+          {/* Batch 8: modal dialog — Esc handled trên panel + window; rule không nhận role=dialog */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+          <div role="dialog"
+            aria-modal="true"
+            aria-label="Đổi vai trò người dùng"
+            tabIndex={-1}
+            onKeyDown={(e) => { if (e.key === "Escape") { setShowRoleModal(false); e.stopPropagation(); } }}
             style={{
-              background: "#c0c0c0",
-              border: "2px outset #fff",
-              borderColor: "#fff #808080 #808080 #fff",
-              width: "380px",
               maxWidth: "90vw",
               fontFamily: "'VT323', 'Courier New', monospace",
               boxShadow: "4px 4px 0 #000",
@@ -311,6 +327,7 @@ export function UserManagementActions({
       {/* ═══════════ MODAL: Ban / Unban ═══════════ */}
       {showBanModal && (
         <div
+          role="presentation"
           style={{
             position: "fixed",
             inset: 0,
@@ -323,12 +340,14 @@ export function UserManagementActions({
           }}
           onClick={() => setShowBanModal(false)}
         >
-          <div
+          {/* Batch 8: modal dialog — Esc handled trên panel + window; rule không nhận role=dialog */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+          <div role="dialog"
+            aria-modal="true"
+            aria-label="Cấm người dùng"
+            tabIndex={-1}
+            onKeyDown={(e) => { if (e.key === "Escape") { setShowBanModal(false); e.stopPropagation(); } }}
             style={{
-              background: "#c0c0c0",
-              border: "2px outset #fff",
-              borderColor: "#fff #808080 #808080 #fff",
-              width: "420px",
               maxWidth: "90vw",
               fontFamily: "'VT323', 'Courier New', monospace",
               boxShadow: "4px 4px 0 #000",

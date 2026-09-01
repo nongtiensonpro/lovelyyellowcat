@@ -58,6 +58,10 @@ export const SearchModal: React.FC = () => {
         e.preventDefault();
         setIsOpen((prev) => !prev);
       }
+      // Batch 8: Esc đóng modal — keyboard users không bị kẹt khi không có chuột
+      if (e.key === "Escape") {
+        setIsOpen((prev) => (prev ? false : prev));
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -134,6 +138,7 @@ export const SearchModal: React.FC = () => {
       {/* Modal Overlay */}
       {isOpen && (
         <div
+          role="presentation"
           className="fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center p-4 z-command backdrop-blur-[2px] overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsOpen(false);
@@ -169,8 +174,8 @@ export const SearchModal: React.FC = () => {
                   ref={searchInputRef}
                   id="unified-search-input"
                   type="text"
-                  role="combobox"
-                  aria-expanded={totalResults > 0}
+                  role="searchbox"
+                  aria-label="Tìm kiếm toàn trang"
                   className="flex-1 p-3 border border-win-dark bg-white outline-none text-xs shadow-inner focus:border-vapor-pink text-black"
                   placeholder="VD: Windows 95, Vaporwave, Neon..."
                   value={query}

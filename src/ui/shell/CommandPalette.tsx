@@ -46,6 +46,8 @@ export function CommandPalette({ role = "public" }: { role?: "public" | "auth" |
   if (!open) return null;
 
   return (
+    // Backdrop click-to-close: Esc đã xử lý ở onKeyDown document (batch 8) — phụ kiện bổ sung bằng chuột
+    /* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
     <div
       className="fixed inset-0 flex items-start justify-center bg-black/60 backdrop-blur-[2px] p-4 pt-16 sm:pt-24"
       style={{ zIndex: 500 }}
@@ -92,6 +94,8 @@ export function CommandPalette({ role = "public" }: { role?: "public" | "auth" |
           )}
           {filtered.map((cmd, i) => (
             <li
+              // li role=option: Enter/Arrows điều khiển từ input onKeyDown — li là target hiển thị
+              // eslint-disable-next-line jsx-a11y/click-events-have-key-events
               key={cmd.id}
               role="option"
               aria-selected={i === selected}

@@ -1202,6 +1202,8 @@ const AiChatStationInner: React.FC = () => {
                 onChange={(e) => setPassphraseInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") isFirstSetup ? handleSetupPassphrase(passphraseInput) : handleUnlock(passphraseInput); }}
                 className="w-full p-2 border border-win-dark bg-white font-mono text-xs"
+                /* Batch 8: form unlock 1 field — autoFocus là intent rõ ràng của user khi mở unlock */
+                // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
               />
               {unlockError && <p className="text-red-700 text-xs font-bold bg-red-100 border border-red-300 p-2">{unlockError}</p>}
@@ -1409,6 +1411,10 @@ const AiChatStationInner: React.FC = () => {
                     return (
                       <div
                         key={s.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Mở phiên chat ${pObj.name || ""}`}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveSessionId(s.id); } }}
                         onClick={() => {
                           setActiveSessionId(s.id);
                           setSelectedPersonaId(s.persona || "cybercat");

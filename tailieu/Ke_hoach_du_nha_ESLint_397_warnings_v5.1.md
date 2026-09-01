@@ -66,8 +66,8 @@ Kỹ thuật chuẩn: `const body = (await request.json()) as SomeType;` — KH�
 - [x] Batch 5 no-unused-vars (50→0) — DONE: imports dead xóa, catch(e) → catch, dead props/refs xóa, AppShell side-effect import; AI dead code -4KB; GalleryLightbox bỏ fetch thừa (tiết kiệm 1 request network mỗi copy)
 - [x] Batch 6 no-console (58→0) — DONE: đọc 58/58 chỗ, quyết định ops-discipline: error-path logging giữ (error/warn), frontend cấm console.log, server paths (api/lib/middleware/admin) off; override có comment trong eslint.config
 - [x] Batch 7 label a11y (46→0) — DONE: 7 lỗi thật TSX sửa htmlFor/id (ArticleEditor, ProfileEditor, SubmissionWizard, AiChatStation, UserManagementActions); 20 false-positive .astro verify tay đúng for= → rule off riêng cho .astro có comment; rule mở rộng controlComponents (Retro*) + depth (wrapping)
-- [ ] Batch 8 keyboard a11y (28)
-- [ ] Batch 9 a11y số ít (4)
+- [x] Batch 8 keyboard a11y (28→0) — DONE: interactive thật sửa markup (GalleryGrid cards role=button+Enter/Space, filmstrip, AI session list, UMA dialog role+Esc); MỚI: Esc handler cho SearchModal + UMA (keyboard users hết bị kẹt); backdrop/dialog có Esc sẵn → disable comment đúng JSX/JS context
+- [x] Batch 9 a11y số ít (4→0) — DONE: 2 img alt (HeaderNav avatar, profile lightbox), autoFocus unlock form (disable có lý do), SearchModal combobox→searchbox
 - [ ] Batch 10 unused-expressions (5)
 - [ ] Batch 11 no-explicit-any (200) — 6 sub-batches
 - **Đích: 0 warnings → bỏ rule khỏi override warn, nâng về error thật**

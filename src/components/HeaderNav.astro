@@ -274,7 +274,7 @@ const currentPath = Astro.url.pathname;
         {userProfile ? (
           <>
             <div class="flex items-center gap-2">
-              <img src={userProfile.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"} class="w-10 h-10 border border-win-dark filter saturate-150 object-cover" />
+              <img src={userProfile.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop"} alt="Ảnh đại diện" class="w-10 h-10 border border-win-dark filter saturate-150 object-cover" />
               <div class="font-retro leading-tight">
                 <span class="block font-bold text-xs">{userProfile.full_name}</span>
                 <span class="block text-[10px] text-win-dark font-semibold uppercase">● Vai trò: {userProfile.role}</span>

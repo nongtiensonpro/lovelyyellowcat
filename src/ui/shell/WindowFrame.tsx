@@ -141,7 +141,9 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ entry, onClose, childr
   if (entry.state === "closed") return null;
   if (entry.state === "minimized") return null;
 
+  // Batch 8: dialog có đầy đủ onKeyDown (onKey) — rule không nhận role=dialog
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       ref={bodyRef}
       role="dialog"
