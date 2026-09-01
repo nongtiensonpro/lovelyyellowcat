@@ -23,7 +23,7 @@
     "prebuild": "node scripts/build-tokens.mjs --check",
     "policy:ui": "node scripts/check-ui-policy.mjs",
     "budget:ui": "node scripts/check-budgets.mjs",
-    "typecheck": "tsc --noEmit --skipLibCheck",
+    "typecheck": "astro sync && tsc --noEmit --skipLibCheck",
     "lint:baseline": "node scripts/update-lint-baseline.mjs"
   },
   "dependencies": {
