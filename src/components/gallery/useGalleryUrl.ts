@@ -54,10 +54,15 @@ export function useGalleryViewParam(): [
   () => void,
   (id: string) => void,
 ] {
-  const [viewId, setViewId] = useState<string | null>(() => readViewFromUrl());
+  // KHÔNG đọc URL trong useState initializer: trên deep-link, SSR không có
+  // lightbox (window chưa tồn tại) nhưng hydration render đọc được ?view= →
+  // mismatch #418 → React vứt toàn bộ HTML server (chính là bug "URL đổi nhưng
+  // UI đứng im"). Khởi tạo null cho khớp SSR, effect post-hydration mới mở.
+  const [viewId, setViewId] = useState<string | null>(null);
 
   useEffect(() => {
     const sync = () => setViewId(readViewFromUrl());
+    sync(); // deep-link: mở lightbox ngay sau hydration (khớp SSR, không mismatch)
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
   }, []);

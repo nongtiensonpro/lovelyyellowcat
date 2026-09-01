@@ -58,8 +58,11 @@ vi.mock("../../src/ui/kernel/ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+// Mock LazyImage vẫn truyền style (filter/transform) xuống img để test filter chain
 vi.mock("../../src/components/LazyImage", () => ({
-  LazyImage: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+  LazyImage: ({ src, alt, style }: { src: string; alt: string; style?: React.CSSProperties }) => (
+    <img src={src} alt={alt} style={style} />
+  ),
 }));
 
 vi.mock("../../src/components/FavoriteButton", () => ({
@@ -77,6 +80,15 @@ vi.mock("../../src/components/ReactionBar", () => ({
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   window.history.replaceState(null, "", "/gallery");
+  // jsdom chưa có matchMedia — stub cho prefers-reduced-motion check
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: (query: string): Pick<MediaQueryList, "matches" | "media"> => ({
+      matches: false,
+      media: query,
+    }),
+  });
 });
 
 afterEach(() => {
@@ -196,6 +208,121 @@ describe("Gallery rebuild — URL/viewport đồng bộ", () => {
       expect(window.location.search).toBe(`?view=${itemB.id}`);
       const after = document.body.querySelector('[role="dialog"]');
       expect(after?.getAttribute("aria-label")).toContain("Halong_Digital_Nostalgia");
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      window.history.replaceState(null, "", "/gallery");
+    }
+  });
+
+  it("phím Z bật Zen mode: ẩn panel, thoát bằng Esc trả UI lại", async () => {
+    window.history.replaceState(null, "", `/gallery?view=${itemA.id}`);
+    const { root, container } = await renderGrid();
+    try {
+      const dialog = document.body.querySelector('[role="dialog"]');
+      expect(dialog).toBeTruthy();
+
+      // Bật Zen
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "z", bubbles: true }));
+      });
+      const zenBtn = document.body.querySelector<HTMLButtonElement>(
+        '[aria-label^="Thoát chế độ toàn khung"]',
+      );
+      expect(zenBtn).toBeTruthy(); // pill thoát hiện ra khi UI ẩn
+      // Panel hành động bị ẩn (opacity-0 + pointer-events-none)
+      const panel = document.body.querySelector<HTMLElement>('[aria-hidden="true"]');
+      expect(panel).toBeTruthy();
+
+      // Esc thoát Zen (không đóng lightbox)
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      expect(window.location.search).toBe(`?view=${itemA.id}`); // lightbox vẫn mở
+      expect(document.body.querySelector('[role="dialog"]')).toBeTruthy();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      window.history.replaceState(null, "", "/gallery");
+    }
+  });
+
+  it("giữ phím C so sánh: ảnh về filter Gốc, thả trả lại filter đã chọn", async () => {
+    window.history.replaceState(null, "", `/gallery?view=${itemA.id}`);
+    const { root, container } = await renderGrid();
+    try {
+      // chọn filter crt trước (nhấn M một lần)
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "m", bubbles: true }));
+      });
+      const img = document.body.querySelector<HTMLImageElement>('[role="application"] img');
+      const crtCss = "saturate(1.25)";
+      expect(img?.style.filter).toContain(crtCss);
+
+      // giữ C → về Gốc
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+      });
+      expect(img?.style.filter).toBe("none");
+      expect(document.body.textContent).toContain("GỐC");
+
+      // thả C → trả lại crt
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keyup", { key: "c", bubbles: true }));
+      });
+      expect(img?.style.filter).toContain(crtCss);
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      window.history.replaceState(null, "", "/gallery");
+    }
+  });
+
+  it("phím ? mở bảng phím tắt, Esc đóng help trước khi đóng lightbox", async () => {
+    window.history.replaceState(null, "", `/gallery?view=${itemA.id}`);
+    const { root, container } = await renderGrid();
+    try {
+      expect(document.body.querySelector('[aria-label="Bảng phím tắt"]')).toBeNull();
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
+      });
+      expect(document.body.querySelector('[aria-label="Bảng phím tắt"]')).toBeTruthy();
+
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+      // help đóng, lightbox vẫn mở
+      expect(document.body.querySelector('[aria-label="Bảng phím tắt"]')).toBeNull();
+      expect(document.body.querySelector('[role="dialog"]')).toBeTruthy();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      window.history.replaceState(null, "", "/gallery");
+    }
+  });
+
+  it("nút ? trên titlebar mở/đóng help (aria-pressed đồng bộ)", async () => {
+    window.history.replaceState(null, "", `/gallery?view=${itemA.id}`);
+    const { root, container } = await renderGrid();
+    try {
+      const helpBtn = document.body.querySelector<HTMLButtonElement>(
+        '[aria-label^="Bảng phím tắt (phím"]',
+      );
+      expect(helpBtn).toBeTruthy();
+      expect(helpBtn?.getAttribute("aria-pressed")).toBe("false");
+
+      await act(async () => {
+        helpBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      });
+      expect(document.body.querySelector('[aria-label="Bảng phím tắt"]')).toBeTruthy();
+
+      const closeHelp = document.body.querySelector<HTMLButtonElement>(
+        '[aria-label="Đóng bảng phím tắt"]',
+      );
+      await act(async () => {
+        closeHelp?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      });
+      expect(document.body.querySelector('[aria-label="Bảng phím tắt"]')).toBeNull();
     } finally {
       await act(async () => root.unmount());
       container.remove();

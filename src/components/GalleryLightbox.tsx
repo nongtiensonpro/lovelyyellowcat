@@ -1,14 +1,19 @@
-// GalleryLightbox.tsx — trình xem ảnh toàn màn hình. Bản dựng lại 01/09/2026
-// sau khi bug deep-link/?view= tái diễn nhiều lần không rõ nguyên nhân ở bản
-// cũ (1070 dòng). Nguyên tắc:
+// GalleryLightbox.tsx — trình xem ảnh toàn màn hình. v5.4 "Full Frame
+// Experience" (01/09/2026), dựng lại từ nền v5.3.
+// Nguyên tắc giữ nguyên từ bản rebuild:
 //   1. Index hiển thị LUÔN resolve từ prop activeId (single source of truth là
-//      URL) — không cache index, không initialIndex magic.
-//   2. Toàn bộ logic math/navigation/filter nằm trong gallery/*.ts (pure,
-//      unit-tested); component chỉ orchestrate.
-//   3. Đóng = xóa ?view bằng replaceState (Back không rơi vào vòng loop);
-//      chuyển ảnh = replaceState (không spam history).
-//   4. Dialog chuẩn ARIA: role=dialog + aria-modal, focus trap, Escape,
-//      aria-live cho toast, phím tắt đầy đủ (spec D7).
+//      URL) — không cache index.
+//   2. Logic math/navigation/filter nằm trong gallery/*.ts (pure, unit-tested).
+//   3. Đóng = xóa ?view bằng replaceState; chuyển ảnh = replaceState.
+//   4. Dialog chuẩn ARIA + focus trap + phím tắt đầy đủ.
+// Mới v5.4:
+//   - ZEN MODE (phím Z / nút ⛶): ảnh tràn toàn khung 100dvh, UI Win95 tự ẩn,
+//     hiện lại khi di chuột lên mép trên/dưới. Lớp ảnh bỏ khung max-w.
+//   - HOLD-TO-COMPARE (phím C giữ): tạm về filter Gốc để so sánh, thả ra trả lại.
+//   - HELP OVERLAY (phím ?): bảng phím tắt Win95.
+//   - COPY IMAGE (phím C tap... dùng K): canvas → clipboard.
+//   - SHARE URL dùng chính ?view= hiện tại (deep-link copy khớp URL thật).
+//   - Thumb counter trên filmstrip; reduced-motion aware.
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { FavoriteButton } from "./FavoriteButton";
@@ -53,8 +58,9 @@ export interface GalleryLightboxProps {
   onNavigate: (id: string) => void;
 }
 
-/** Âm thanh retro nhẹ, respect autoplay policy. */
-function playRetroClick(freq = 600, duration = 0.04): void {
+/** Âm thanh retro nhẹ, respect autoplay policy + sound toggle. */
+function playRetroClick(freq = 600, duration = 0.04, enabled = true): void {
+  if (!enabled) return;
   try {
     const AudioCtx =
       window.AudioContext ||
@@ -94,6 +100,16 @@ function useSwipe(onSwipeLeft: () => void, onSwipeRight: () => void) {
   };
 }
 
+/** prefers-reduced-motion — tắt animation trang trí. SSR/jsdom-safe. */
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+  } catch {
+    return false;
+  }
+}
+
 export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   submissions,
   activeId,
@@ -109,6 +125,12 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  // v5.4 states
+  const [isZen, setIsZen] = useState(false); // Full Frame mode
+  const [uiPeek, setUiPeek] = useState(false); // UI hiện lại tạm khi rê chuột mép
+  const [isComparing, setIsComparing] = useState(false); // hold-to-compare
+  const [showHelp, setShowHelp] = useState(false); // help overlay
+  const [copiedImg, setCopiedImg] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const filmstripRef = useRef<HTMLDivElement>(null);
@@ -116,11 +138,19 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
   const autoplayStartRef = useRef<number>(0);
   const toastTimeoutRef = useRef<number | null>(null);
 
-  // ── Resolve index TỪ activeId mỗi render — gốc của bug cũ là state index ──
+  // ── Resolve index TỪ activeId mỗi render ──
   const currentIndex = activeId ? submissions.findIndex((s) => s.id === activeId) : -1;
   const active = currentIndex >= 0 ? submissions[currentIndex] : null;
 
-  useFocusTrap(containerRef, true, onClose);
+  // Escape layering: focus trap (capture, document) chạy TRƯ�C window listener.
+  // Trao wrapper cho trap để Esc lần lượt: đóng help -> thoát zen -> đóng lightbox
+  // (nếu trao onClose thẳng, trap sẽ đóng lightbox bất chấp zen/help đang mở).
+  const handleEscapeLayered = useCallback(() => {
+    if (showHelp) setShowHelp(false);
+    else if (isZen) setIsZen(false);
+    else onClose();
+  }, [showHelp, isZen, onClose]);
+  useFocusTrap(containerRef, true, handleEscapeLayered);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -128,8 +158,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     toastTimeoutRef.current = window.setTimeout(() => setToastMsg(null), 2500);
   }, []);
 
-  // Thông báo mỗi khi đổi ảnh: deps theo id (string) — showToast là useCallback
-  // ổn định nên không gây re-run vòng.
+  // Thông báo mỗi khi đổi ảnh
   const activeTitle = active?.title ?? null;
   useEffect(() => {
     if (activeTitle !== null) showToast(`Đang xem: ${activeTitle}`);
@@ -139,7 +168,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     if (submissions.length === 0) return;
     const target = submissions[nextIndex(currentIndex, submissions.length)];
     if (target && target.id !== activeId) {
-      if (soundOn) playRetroClick(750, 0.03);
+      if (soundOn) playRetroClick(750, 0.03, true);
       onNavigate(target.id);
     }
   }, [submissions, currentIndex, activeId, onNavigate, soundOn]);
@@ -148,17 +177,23 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     if (submissions.length === 0) return;
     const target = submissions[prevIndex(currentIndex, submissions.length)];
     if (target && target.id !== activeId) {
-      if (soundOn) playRetroClick(550, 0.03);
+      if (soundOn) playRetroClick(550, 0.03, true);
       onNavigate(target.id);
     }
   }, [submissions, currentIndex, activeId, onNavigate, soundOn]);
 
-  // Reset transform mỗi khi đổi ảnh
+  // Reset transform + thoát compare khi đổi ảnh
   useEffect(() => {
     setTransform(INITIAL_TRANSFORM);
+    setIsComparing(false);
   }, [activeId]);
 
-  // Filmstrip auto-scroll tới thumb active
+  // Zen mode reset UI peek khi thoát
+  useEffect(() => {
+    if (!isZen) setUiPeek(false);
+  }, [isZen]);
+
+  // Filmstrip auto-scroll
   useEffect(() => {
     if (filmstripRef.current && currentIndex >= 0) {
       const thumb = filmstripRef.current.children[currentIndex] as HTMLElement | undefined;
@@ -166,7 +201,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     }
   }, [currentIndex]);
 
-  // Preload ảnh kề (spec D2)
+  // Preload ảnh kề
   useEffect(() => {
     if (currentIndex === -1 || submissions.length === 0) return;
     const urls = submissions.map((s) => s.image_url);
@@ -176,12 +211,12 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     }
   }, [currentIndex, submissions]);
 
-  // ── Keyboard (spec D7) ──
+  // ── Keyboard (mở rộng v5.4) ──
   useEffect(() => {
     if (currentIndex === -1) return;
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       switch (e.key) {
         case "ArrowRight":
           goNext();
@@ -190,7 +225,10 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
           goPrev();
           break;
         case "Escape":
-          onClose();
+          // Zen → thoát Zen trước, help → đóng help, cuối cùng mới đóng lightbox
+          if (showHelp) setShowHelp(false);
+          else if (isZen) setIsZen(false);
+          else onClose();
           break;
         case " ":
           e.preventDefault();
@@ -208,6 +246,9 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
           setTransform(INITIAL_TRANSFORM);
           showToast("🔍 Khôi phục kích thước 100%");
           break;
+        case "?":
+          setShowHelp((v) => !v);
+          break;
         default: {
           const k = e.key.toLowerCase();
           if (k === "f") {
@@ -216,6 +257,22 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
             } else {
               containerRef.current?.requestFullscreen?.().catch(() => {});
             }
+          } else if (k === "z") {
+            // Full Frame / Zen mode
+            setIsZen((v) => {
+              showToast(
+                !v
+                  ? "⛶ CHẾ ĐỘ TOÀN KHUNG BẬT — rê chuột vào mép để hiện UI, Z/Esc để thoát"
+                  : "🗖 Đã thoát chế độ toàn khung",
+              );
+              return !v;
+            });
+          } else if (k === "c") {
+            // Hold-to-compare: giữ C xem ảnh gốc
+            if (!e.repeat) showToast("👁 Đang xem GỐC (giữ C) — thả để quay lại bộ lọc");
+            setIsComparing(true);
+          } else if (k === "k") {
+            copyImageToClipboard();
           } else if (k === "m") {
             setActiveFilter((f) => {
               const ids = VISUAL_FILTERS.map((x) => x.id);
@@ -226,16 +283,28 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
           } else if (k === "h") {
             setTransform((t) => xfFlipH(t));
           } else if (k === "s") {
-            setSoundOn((v) => !v);
+            setSoundOn((v) => {
+              showToast(v ? "🔇 Âm thanh TẮT" : "🔊 Âm thanh BẬT");
+              return !v;
+            });
           } else if (k === "l") {
             document.getElementById("lightbox-favorite-btn")?.click();
           }
         }
       }
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "c") setIsComparing(false);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [currentIndex, goNext, goPrev, onClose, showToast]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+    // copyImageToClipboard ổn định qua ref — xem bên dưới
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, goNext, goPrev, onClose, showToast, showHelp, isZen]);
 
   // ── Fullscreen sync (F11) ──
   useEffect(() => {
@@ -244,7 +313,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     return () => document.removeEventListener("fullscreenchange", h);
   }, []);
 
-  // ── Slideshow autoplay (spec D4) ──
+  // ── Slideshow autoplay ──
   useEffect(() => {
     if (!isAutoplay || currentIndex === -1 || submissions.length <= 1) {
       setProgress(0);
@@ -273,8 +342,10 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     };
   }, [isAutoplay, currentIndex, submissions.length, autoplaySpeed, goNext]);
 
-  // ── Copy link / download (spec D8) ──
-  const shareUrl = active ? `${window.location.origin}/gallery/${active.id}` : "";
+  // ── Share URL: dùng ?view= hiện tại (deep-link thật) ──
+  const shareUrl = active
+    ? `${window.location.origin}/gallery?view=${encodeURIComponent(active.id)}`
+    : "";
 
   const handleCopyLink = useCallback(() => {
     navigator.clipboard
@@ -303,6 +374,41 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
       });
   }, [active, showToast]);
 
+  // ── Copy ảnh vào clipboard (Canvas) ──
+  const copyImageToClipboard = useCallback(() => {
+    if (!active) return;
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = active.image_url;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(async (blob) => {
+          if (blob && navigator.clipboard && "write" in navigator.clipboard) {
+            try {
+              await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+              setCopiedImg(true);
+              showToast("📋 Đã sao chép ảnh vào Clipboard!");
+              window.setTimeout(() => setCopiedImg(false), 2000);
+            } catch {
+              handleCopyLink();
+            }
+          } else {
+            handleCopyLink();
+          }
+        }, "image/png");
+      };
+      img.onerror = () => handleCopyLink();
+    } catch {
+      handleCopyLink();
+    }
+  }, [active, showToast, handleCopyLink]);
+
   const cycleFilter = useCallback(() => {
     setActiveFilter((f) => {
       const ids = VISUAL_FILTERS.map((x) => x.id);
@@ -312,7 +418,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
     });
   }, [showToast]);
 
-  // ── Zoom bằng wheel; pan bằng drag ──
+  // ── Zoom wheel; pan pointer drag ──
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -335,15 +441,23 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
 
   const { handleTouchStart, handleTouchEnd } = useSwipe(goNext, goPrev);
 
-  if (!active) {
-    // activeId không hợp lệ (bị xoá / không tồn tại) — đóng nhẹ nhàng, không treo
-    return null;
-  }
+  // UI peek chỉ hoạt động trong Zen: rê chuột lên 60px mép trên hoặc 80px mép dưới
+  const onMouseMoveRoot = (e: React.MouseEvent) => {
+    if (!isZen) return;
+    const nearEdge = e.clientY <= 60 || e.clientY >= window.innerHeight - 80;
+    setUiPeek(nearEdge);
+  };
 
-  // Ngày định dạng UTC deterministic — toLocaleDateString phụ thuộc ICU/timezone
-  // của runtime (SSR workerd khác Chrome) đã gây hydration mismatch #418.
-  const d = new Date(active.created_at);
-  const dateStr = `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
+  if (!active) return null;
+
+  const dateStr = (() => {
+    const dt = new Date(active.created_at);
+    return `${String(dt.getUTCDate()).padStart(2, "0")}/${String(dt.getUTCMonth() + 1).padStart(2, "0")}/${dt.getUTCFullYear()}`;
+  })();
+
+  const effectiveFilter: VisualFilter = isComparing ? "normal" : activeFilter;
+  const chromeHidden = isZen && !uiPeek; // ẩn UI khi zen không peek
+  const reducedMotion = prefersReducedMotion();
 
   return ReactDOM.createPortal(
     <div
@@ -352,8 +466,13 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
       aria-modal="true"
       aria-label={`Xem tác phẩm: ${active.title || "không tên"}`}
       tabIndex={-1}
-      className="fixed inset-0 bg-vapor-night/98 backdrop-blur-md flex flex-col justify-between p-1 sm:p-3 overflow-hidden font-retro text-black select-none"
-      style={{ height: "100dvh", zIndex: "var(--z-index-modal, 600)" }}
+      onMouseMove={onMouseMoveRoot}
+      className="fixed inset-0 bg-vapor-night/98 backdrop-blur-md flex flex-col justify-between overflow-hidden font-retro text-black select-none"
+      style={{
+        height: "100dvh",
+        zIndex: "var(--z-index-modal, 600)",
+        padding: chromeHidden ? 0 : undefined,
+      }}
     >
       <div aria-live="polite" className="sr-only">
         {toastMsg ?? ""}
@@ -365,69 +484,97 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
         </div>
       )}
 
-      {/* Titlebar điều hướng */}
-      <div className="win95-container w-full max-w-6xl mx-auto bg-win-gray flex flex-col relative">
-        <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark flex justify-between items-center text-[10px] font-bold">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={goPrev}
-              className="win95-btn px-2 py-0.5 font-bold"
-              style={{ minHeight: "24px" }}
-              aria-label="Ảnh trước"
-            >
-              ←
-            </button>
-            <span className="font-mono uppercase truncate max-w-[40vw]">
-              CYBER_GALLERY_PRO.EXE — [{active.title}]
+      {/* ═══ TITLEBAR — thu thành floating pill khi zen, ẩn khi chromeHidden ═══ */}
+      <div
+        className={`transition-all duration-300 ${chromeHidden ? "opacity-0 -translate-y-full pointer-events-none h-0 overflow-hidden" : isZen ? "absolute top-2 left-1/2 -translate-x-1/2 w-[92%] z-50 shadow-[0_4px_20px_rgba(0,0,0,0.6)]" : "relative w-full"}`}
+        aria-hidden={chromeHidden}
+      >
+        <div className="win95-container w-full max-w-6xl mx-auto bg-win-gray flex flex-col relative">
+          <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark flex justify-between items-center text-[10px] font-bold">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={goPrev}
+                className="win95-btn px-2 py-0.5 font-bold"
+                style={{ minHeight: "24px" }}
+                aria-label="Ảnh trước"
+              >
+                ←
+              </button>
+              <span className="font-mono uppercase truncate max-w-[40vw]">
+                CYBER_GALLERY_PRO.EXE — [{active.title}]
+              </span>
+              <button
+                type="button"
+                onClick={goNext}
+                className="win95-btn px-2 py-0.5 font-bold"
+                style={{ minHeight: "24px" }}
+                aria-label="Ảnh tiếp theo"
+              >
+                →
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsZen(true)}
+                className={`win95-btn px-2 py-0.5 font-bold ${isZen ? "win95-sunken bg-vapor-blue/25" : ""}`}
+                style={{ minHeight: "24px" }}
+                aria-label="Bật chế độ toàn khung (phím Z)"
+                aria-pressed={isZen}
+                title="Toàn khung (Z)"
+              >
+                ⛶
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHelp((v) => !v)}
+                className="win95-btn px-2 py-0.5 font-bold"
+                style={{ minHeight: "24px" }}
+                aria-label="Bảng phím tắt (phím ?)"
+                aria-pressed={showHelp}
+                title="Phím tắt (?)"
+              >
+                ?
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="win95-btn px-2 py-0.5 font-bold"
+                style={{ minHeight: "24px" }}
+                aria-label="Đóng trình xem"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <div className="px-2 py-0.5 bg-win-gray text-[10px] font-mono flex justify-between">
+            <span>
+              SUBMISSION {currentIndex + 1} / {submissions.length}
             </span>
-            <button
-              type="button"
-              onClick={goNext}
-              className="win95-btn px-2 py-0.5 font-bold"
-              style={{ minHeight: "24px" }}
-              aria-label="Ảnh tiếp theo"
-            >
-              →
-            </button>
+            <span>
+              {zoomPercent(transform.zoom)}% {isFullscreen ? "· FULLSCREEN" : ""}{" "}
+              {isZen ? "· ZEN" : ""}
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="win95-btn px-2 py-0.5 font-bold"
-            style={{ minHeight: "24px" }}
-            aria-label="Đóng trình xem"
-          >
-            ✕
-          </button>
+          {isAutoplay && (
+            <div className="h-1 bg-black" role="presentation">
+              <div
+                className="h-full bg-vapor-pink transition-[width] duration-100"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
         </div>
-        <div className="px-2 py-0.5 bg-win-gray text-[10px] font-mono flex justify-between">
-          <span>
-            SUBMISSION {currentIndex + 1} / {submissions.length}
-          </span>
-          <span>
-            {zoomPercent(transform.zoom)}% {isFullscreen ? "· FULLSCREEN" : ""}
-          </span>
-        </div>
-        {isAutoplay && (
-          <div className="h-1 bg-black" role="presentation">
-            <div
-              className="h-full bg-vapor-pink transition-[width] duration-100"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        )}
       </div>
 
-      {/* Vùng ảnh — role="presentation" wrapper; tương tác zoom/pan nằm trên
-          container dialog (keyboard đã có đầy đủ ←→+−0 F M R H), vùng này chỉ là
-          pointer-gesture phụ. */}
+      {/* ═══ VÙNG ẢNH — full frame: bỏ max-w khi zen ═══ */}
       <div
-        className="flex-1 flex items-center justify-center overflow-hidden py-1"
+        className={`flex-1 flex items-center justify-center overflow-hidden ${chromeHidden ? "p-0" : "py-1"}`}
         role="presentation"
       >
         <div
-          className="relative max-w-4xl w-full"
+          className={`relative ${isZen ? "w-full h-full" : "max-w-4xl w-full"}`}
           role="application"
           aria-label="Vùng xem ảnh — cuộn để zoom, kéo để di chuyển"
           onWheel={onWheel}
@@ -441,21 +588,93 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
           <LazyImage
             src={active.image_url}
             alt={active.title}
-            className="w-full h-auto max-h-[70vh] object-contain"
+            className={
+              isZen ? "w-full h-full object-contain" : "w-full h-auto max-h-[70vh] object-contain"
+            }
             style={{
-              filter: filterCss(activeFilter),
+              filter: filterCss(effectiveFilter),
               transform: transformToCss(transform),
               cursor: isDragging ? "grabbing" : transform.zoom > 1 ? "grab" : "default",
+              transition: reducedMotion ? "none" : undefined,
             }}
           />
-          {(activeFilter === "crt" || activeFilter === "vhs") && (
+          {(effectiveFilter === "crt" || effectiveFilter === "vhs") && (
             <div className="absolute inset-0 pointer-events-none z-40 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.35)_50%)] bg-[length:100%_4px] opacity-70" />
+          )}
+          {/* Badge compare đang giữ */}
+          {isComparing && (
+            <div className="absolute top-2 left-2 z-50 bg-black/80 text-vapor-green font-mono text-[10px] font-bold px-2 py-1 border border-vapor-green pointer-events-none">
+              👁 GỐC (ORIGINAL)
+            </div>
           )}
         </div>
       </div>
 
-      {/* Panel thông tin + hành động */}
-      <div className="win95-container max-w-6xl w-full mx-auto bg-win-gray p-2 space-y-2 max-h-[30vh] overflow-y-auto">
+      {/* Zen: pill nhắc thoát khi UI ẩn */}
+      {chromeHidden && (
+        <button
+          type="button"
+          onClick={() => setIsZen(false)}
+          className="absolute bottom-3 right-3 z-50 bg-black/70 text-white font-mono text-[10px] px-3 py-1.5 border border-win-dark opacity-40 hover:opacity-100 transition-opacity"
+          style={{ minHeight: "28px", minWidth: "28px" }}
+          aria-label="Thoát chế độ toàn khung"
+        >
+          ⛶ Thoát toàn khung (Z)
+        </button>
+      )}
+
+      {/* ═══ HELP OVERLAY — bảng phím tắt Win95 ═══ */}
+      {showHelp && (
+        <div className="absolute inset-0 z-[99998] bg-black/70 flex items-center justify-center p-4">
+          <div
+            className="win95-container bg-win-gray w-full max-w-md"
+            role="dialog"
+            aria-label="Bảng phím tắt"
+          >
+            <div className="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark flex justify-between items-center">
+              <span className="font-bold text-xs">KEYBOARD_SHORTCUTS.HLP</span>
+              <button
+                type="button"
+                onClick={() => setShowHelp(false)}
+                className="win95-btn px-1.5 py-0 font-bold"
+                aria-label="Đóng bảng phím tắt"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-3 bg-win-gray text-[11px] font-mono grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-black">
+              {[
+                ["← / →", "Ảnh trước / tiếp theo"],
+                ["Esc", "Đóng (Zen → thoát Zen trước)"],
+                ["Z", "Toàn khung (Full Frame)"],
+                ["F", "Fullscreen API trình duyệt"],
+                ["Space", "Bật/tắt Slideshow"],
+                ["+ / − / 0", "Zoom in / out / về 100%"],
+                ["M", "Đổi bộ lọc hiệu ứng"],
+                ["C (giữ)", "So sánh nhanh với ảnh Gốc"],
+                ["K", "Copy ảnh vào Clipboard"],
+                ["R / H", "Xoay 90° / Lật ngang"],
+                ["S", "Bật/tắt âm thanh"],
+                ["L", "Lưu yêu thích"],
+                ["?", "Bảng phím tắt này"],
+              ].map(([key, desc]) => (
+                <React.Fragment key={key}>
+                  <kbd className="win95-sunken bg-white px-1.5 border border-win-dark font-bold whitespace-nowrap">
+                    {key}
+                  </kbd>
+                  <span>{desc}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ PANEL THÔNG TIN + HÀNH ĐỘNG — ẩn trong zen (trừ peek) ═══ */}
+      <div
+        className={`win95-container max-w-6xl w-full mx-auto bg-win-gray p-2 space-y-2 max-h-[30vh] overflow-y-auto transition-all duration-300 ${chromeHidden ? "opacity-0 translate-y-full pointer-events-none h-0 overflow-hidden" : ""} ${isZen && !chromeHidden ? "absolute bottom-0 left-1/2 -translate-x-1/2 w-[92%] z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.6)]" : ""}`}
+        aria-hidden={chromeHidden}
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {active.profiles?.avatar_url ? (
@@ -493,6 +712,15 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               style={{ minHeight: "28px" }}
             >
               🔗 LINK
+            </button>
+            <button
+              type="button"
+              onClick={copyImageToClipboard}
+              className="win95-btn px-2 py-1 text-[10px] font-bold"
+              style={{ minHeight: "28px" }}
+              aria-label="Copy ảnh vào clipboard (phím K)"
+            >
+              {copiedImg ? "✅" : "📋"}
             </button>
             <button
               type="button"
@@ -542,6 +770,20 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
             <ReactionBar articleId={active.id} currentUser={currentUser} />
           </div>
           <div className="flex items-center gap-1 flex-wrap">
+            {/* Hold-to-compare button: pointerdown = so sánh, pointerup = thả */}
+            <button
+              type="button"
+              onPointerDown={() => setIsComparing(true)}
+              onPointerUp={() => setIsComparing(false)}
+              onPointerLeave={() => setIsComparing(false)}
+              className={`win95-btn px-2 py-1 text-[10px] font-bold ${isComparing ? "win95-sunken bg-vapor-green/30" : ""}`}
+              style={{ minHeight: "28px" }}
+              aria-pressed={isComparing}
+              aria-label="Giữ để so sánh với ảnh gốc (phím C)"
+              title="Giữ để so sánh ảnh Gốc (C)"
+            >
+              👁 SO SÁNH
+            </button>
             <button
               type="button"
               onClick={cycleFilter}
@@ -626,7 +868,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
           </div>
         </div>
 
-        {/* Filmstrip */}
+        {/* Filmstrip — thumb active có ring + số thứ tự */}
         <div
           ref={filmstripRef}
           className="flex gap-1 overflow-x-auto py-1"
@@ -640,7 +882,7 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
               role="option"
               aria-selected={i === currentIndex}
               onClick={() => onNavigate(s.id)}
-              className={`shrink-0 w-16 h-12 border-2 ${i === currentIndex ? "border-vapor-pink" : "border-win-dark"} bg-black overflow-hidden`}
+              className={`relative shrink-0 w-16 h-12 border-2 ${i === currentIndex ? "border-vapor-pink shadow-[0_0_8px_rgba(255,113,206,0.8)]" : "border-win-dark"} bg-black overflow-hidden`}
             >
               <img
                 src={s.image_url}
@@ -648,6 +890,11 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
+              {i === currentIndex && (
+                <span className="absolute bottom-0 right-0 bg-vapor-pink text-black text-[9px] font-bold px-0.5 leading-tight">
+                  {i + 1}
+                </span>
+              )}
             </button>
           ))}
         </div>
