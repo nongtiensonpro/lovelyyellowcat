@@ -175,8 +175,9 @@ type Row = { [key: string]: unknown };
     <form method="GET" action="/admin/users" class="p-3 bg-win-gray flex flex-wrap gap-3 items-end">
       <!-- Tìm kiếm -->
       <div class="flex-1 min-w-[200px]">
-        <label class="block text-[10px] font-bold uppercase mb-1">Tìm kiếm (tên / email)</label>
+        <label for="u-search" class="block text-[10px] font-bold uppercase mb-1">Tìm kiếm (tên / email)</label>
         <input
+          id="u-search"
           type="text"
           name="search"
           value={search}
@@ -188,8 +189,9 @@ type Row = { [key: string]: unknown };
 
       <!-- Lọc vai trò -->
       <div class="w-36">
-        <label class="block text-[10px] font-bold uppercase mb-1">Vai trò</label>
+        <label for="u-role" class="block text-[10px] font-bold uppercase mb-1">Vai trò</label>
         <select
+          id="u-role"
           name="role"
           class="w-full px-2 py-1.5 border-2 border-win-dark bg-white text-xs font-retro"
           style="border-color: #808080 #fff #fff #808080;"
@@ -203,8 +205,9 @@ type Row = { [key: string]: unknown };
 
       <!-- Lọc trạng thái -->
       <div class="w-36">
-        <label class="block text-[10px] font-bold uppercase mb-1">Trạng thái</label>
+        <label for="u-status" class="block text-[10px] font-bold uppercase mb-1">Trạng thái</label>
         <select
+          id="u-status"
           name="status"
           class="w-full px-2 py-1.5 border-2 border-win-dark bg-white text-xs font-retro"
           style="border-color: #808080 #fff #fff #808080;"

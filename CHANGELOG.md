@@ -1,5 +1,23 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.2] — Tích hợp ESLint đầy đủ (hardening)
+
+### Changed
+- `react-hooks/exhaustive-deps` warn → **error** (deps sai = closure cũ = bug state thật; 0 vi phạm từ v5.1).
+- Bật lại `jsx-a11y/click-events-have-key-events` + `no-static-element-interactions` cho `.astro` — probe 48 file = 0 warning.
+- `reportUnusedDisableDirectives: "error"` — eslint-disable chết = error ngay tại lint (ratchet không đếm được message ruleId=null).
+- Thu hẹp override `no-console`: `src/lib/**` quá rộng → 5 file lib server-only cụ thể (supabaseBrowser/a11y/aiCrypto/markdown/siteKnowledge chạy ở browser islands, giờ chịu rule frontend).
+- Bỏ `astro.config.mjs` khỏi ignores (lint sạch 0 message).
+- **Ratchet per-rule**: logic tách vào `scripts/lint-baseline-core.mjs` (+ `.d.mts`) dùng chung check/update/test — update-lint-baseline từ chối khi BẤT KỲ rule nào tăng, kể cả khi tổng giảm (lỗ hổng cũ: chỉ so tổng — rule A tăng 1→2 + rule B giảm 3→1 vẫn được ghi nhận).
+
+### Fixed
+- 4 bug a11y thật trong admin .astro (label không associate control): users.astro ×3 (u-search/u-role/u-status), comments.astro "Lý do xóa" (id theo `comment.id` vì form lặp mỗi comment).
+- Comment config stale ("v5 hotfix gate") cập nhật theo trạng thái v5.2; WindowFrame disable exhaustive-deps thêm lý do mount-only.
+
+### Docs
+- WAIVERS: W-8 → resolved; thêm W-9 (label rule off cho .astro — false-positive parser, bằng chứng probe 21/21).
+- Kế hoạch + kết quả: `tailieu/Ke_hoach_tich_hop_ESLint_day_du_v5.2.md`
+
 ## [5.1] — Dọn nợ ESLint hoàn thành
 
 ### Xóa bỏ

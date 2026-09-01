@@ -1,7 +1,10 @@
 // update-lint-baseline.mjs — cập nhật baseline SAU khi giảm nợ thành công.
-// Chỉ chấp nhận khi tổng MỚI <= tổng CŨ (không cho phép tăng qua cửa này).
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+// Chỉ chấp nhận khi KHÔNG rule nào tăng so với baseline cũ (kể cả rule mới xuất hiện)
+// — không cho phép tăng qua cửa này. v5.2: trước đây chỉ so tổng (lỗ hổng: rule A
+// tăng + rule B giảm nhiều → tổng giảm → vẫn được ghi nhận).
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
+import { countWarnings, totalOf, checkRatchet } from "./lint-baseline-core.mjs";
 
 const root = process.cwd();
 const resultsPath = join(root, ".eslint-warnings.json");
@@ -10,17 +13,16 @@ if (!existsSync(resultsPath)) {
   process.exit(1);
 }
 const current = JSON.parse(readFileSync(resultsPath, "utf8"));
-const counts = {};
-for (const f of current) {
-  for (const m of f.messages) {
-    if (m.severity === 1 && m.ruleId) counts[m.ruleId] = (counts[m.ruleId] || 0) + 1;
-  }
-}
+const counts = countWarnings(current);
+
 const basePath = join(root, "artifacts/lint-baseline.json");
 const old = JSON.parse(readFileSync(basePath, "utf8"));
-const newTotal = Object.values(counts).reduce((a, b) => a + b, 0);
-if (newTotal > old.total) {
-  console.error(`TỪ CHỐI: ${newTotal} > baseline ${old.total} — nợ phải GIẢM trước khi cập nhật.`);
+
+const newTotal = totalOf(counts);
+const ratchetFailures = checkRatchet(old, counts);
+if (ratchetFailures.length > 0 || newTotal > old.total) {
+  console.error(`TỪ CHỐI cập nhật baseline — vi phạm ratchet: ${ratchetFailures.join(", ") || `${newTotal} > ${old.total}`}`);
+  console.error("Mỗi rule chỉ được GIẢM trước khi cập nhật baseline.");
   process.exit(1);
 }
 writeFileSync(basePath, JSON.stringify({
@@ -29,4 +31,4 @@ writeFileSync(basePath, JSON.stringify({
   rules: counts,
 }, null, 2) + "\n", "utf8");
 console.log(`baseline cập nhật: ${old.total} → ${newTotal}`);
-try { const { unlinkSync } = await import("node:fs"); unlinkSync(resultsPath); } catch { /* ignore */ }
+try { unlinkSync(resultsPath); } catch { /* ignore */ }

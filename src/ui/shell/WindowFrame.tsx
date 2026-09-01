@@ -32,6 +32,8 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ entry, onClose, childr
     setPrevFocus((document.activeElement as HTMLElement) ?? null);
     bodyRef.current?.focus();
     return () => { prevFocus?.focus?.(); };
+    // Mount-only: focus body lúc mở window; prevFocus chỉ đọc lại lúc cleanup —
+    // chủ ý không đưa vào deps (re-render không được refocus).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
