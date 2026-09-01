@@ -145,9 +145,9 @@ export const ReactionBar: React.FC<ReactionBarProps> = ({ articleId, currentUser
         }
         fetchReactions(); // Đồng bộ lại ngay lập tức
       }
-    } catch (err: any) {
+    } catch (err ) {
       console.error("Lỗi mạng handleReact:", err);
-      setErrorMessage(`Lỗi kết nối: ${err.message || err}`);
+      setErrorMessage(`Lỗi kết nối: ${err instanceof Error ? err.message : String(err)}`);
       setTimeout(() => setErrorMessage(null), 5000);
     }
   };

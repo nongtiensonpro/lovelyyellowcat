@@ -108,12 +108,12 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
         type: "info",
         redirectUrl: null
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setAlertBox({
         show: true,
         title: "UPLOAD_FAILURE.ERR",
-        message: "Gặp sự cố khi truyền tải ảnh bìa lên Cloudinary: " + err.message,
+        message: "Gặp sự cố khi truyền tải ảnh bìa lên Cloudinary: " + (err instanceof Error ? err.message : String(err)),
         type: "error",
         redirectUrl: null
       });
@@ -158,12 +158,12 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
         type: "success",
         redirectUrl: `/profile/${profile.id}`
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setAlertBox({
         show: true,
         title: "SAVE_ERROR.ERR",
-        message: err.message || "Không thể cập nhật hồ sơ cá nhân.",
+        message: (err instanceof Error ? err.message : "") || "Không thể cập nhật hồ sơ cá nhân.",
         type: "error",
         redirectUrl: null
       });

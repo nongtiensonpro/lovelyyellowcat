@@ -65,7 +65,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
           table: "favorites",
           filter: `submission_id=eq.${submissionId}`
         },
-        (payload: any) => {
+        (payload: { eventType?: string; new?: { profile_id?: string }; old?: Record<string, unknown> }) => {
           if (payload.new && payload.new.profile_id === currentUser.id) {
             setIsFavorited(true);
           } else if (payload.eventType === "DELETE" && payload.old) {
@@ -114,9 +114,10 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({
       const newState = !isFavorited;
       setIsFavorited(newState);
       if (onToggle) onToggle(newState);
-    } catch (err: any) {
-      console.error("Lỗi khi thay đổi yêu thích:", err.message);
-      setErrorMsg(`Lỗi: ${err.message || err}`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error("Lỗi khi thay đổi yêu thích:", errMsg);
+      setErrorMsg(`Lỗi: ${errMsg}`);
       setTimeout(() => setErrorMsg(null), 5000);
     } finally {
       setIsLoading(false);

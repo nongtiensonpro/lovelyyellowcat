@@ -72,7 +72,7 @@ function useSwipe(onSwipeLeft: () => void, onSwipeRight: () => void) {
 // Hàm phát âm thanh retro nhẹ nhàng
 function playRetroClick(freq = 600, duration = 0.04) {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioCtx = window.AudioContext || ((window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
@@ -408,8 +408,8 @@ export const GalleryLightbox: React.FC<GalleryLightboxProps> = ({
         canvas.height = img.naturalHeight;
         ctx?.drawImage(img, 0, 0);
         canvas.toBlob(async (pngBlob) => {
-          if (pngBlob && (navigator.clipboard as any)?.write) {
-            await (navigator.clipboard as any).write([
+          if (pngBlob && (navigator.clipboard as unknown as { write?: (items: ClipboardItem[]) => Promise<void> })?.write) {
+            await (navigator.clipboard as unknown as { write: (items: ClipboardItem[]) => Promise<void> }).write([
               new ClipboardItem({ "image/png": pngBlob })
             ]);
             setCopiedImage(true);

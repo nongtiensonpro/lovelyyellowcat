@@ -71,7 +71,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ currentUser 
             if (cancelled) return;
             setNotifications((prev) => [payload.new as Notification, ...prev]);
             try {
-              const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+              const Ctx = window.AudioContext || ((window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
               if (!Ctx) return;
               const context = new Ctx();
               const osc = context.createOscillator();

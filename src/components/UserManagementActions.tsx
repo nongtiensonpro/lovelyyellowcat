@@ -267,7 +267,7 @@ export function UserManagementActions({
               <select
                 id="uma-role"
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as any)}
+                onChange={(e) => setSelectedRole(e.target.value as "reader" | "editor" | "admin")}
                 style={{
                   width: "100%",
                   padding: "6px",

@@ -102,7 +102,7 @@ export const AiChatWindow: React.FC = () => {
       } else {
         throw new Error(data.error || "Không nhận được phản hồi từ AI.");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi trò chuyện với AI:", err);
       const errorMsg: ChatMessage = {
         id: `err-${Date.now()}`,

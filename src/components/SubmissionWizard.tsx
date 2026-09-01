@@ -64,8 +64,8 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
           // @ts-expect-error — type def thư viện chưa khớp runtime API này
           window.grecaptcha.execute(sitekey, { action }).then((token: string) => {
             resolve(token);
-          }).catch((err: any) => {
-            console.error("Lỗi lấy token reCAPTCHA v3:", err);
+          }).catch(() => {
+            console.error("Lỗi lấy token reCAPTCHA v3 (fallback null):");
             resolve(null);
           });
         });
@@ -158,8 +158,8 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
 
       setStep(3);
       setMessage({ type: "success", text: "GỬI TÁC PHẨM THÀNH CÔNG!" });
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message });
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : String(err) });
     } finally {
       setIsSubmitting(false);
     }

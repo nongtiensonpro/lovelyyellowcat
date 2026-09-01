@@ -151,7 +151,7 @@ const {
     let isDestroyed = false;
 
     // ─── Fisher-Yates Shuffle ───
-    function shuffle(arr: any[]) {
+    function shuffle(arr: string[]) {
       for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -498,8 +498,9 @@ const {
 
   function bootAll() {
     document.querySelectorAll<HTMLElement>(".pixel-text-wrapper").forEach((wrapper) => {
-      if ((wrapper as any).__pixelTextCleanup) {
-        (wrapper as any).__pixelTextCleanup();
+      const wrapperEl = wrapper as unknown as { __pixelTextCleanup?: () => void };
+            if (wrapperEl.__pixelTextCleanup) {
+        wrapperEl.__pixelTextCleanup?.();
       }
       initPixelText(wrapper);
     });

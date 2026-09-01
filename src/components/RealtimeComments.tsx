@@ -3,6 +3,8 @@ import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 // Phase 5: pure comment tree helpers (unit-tested) — depth rule + thụt đầu dòng
 import { rootComments, repliesFor, nextReplyDepth, depthClassFor } from "./article/commentTree";
 
+interface CommentRow { id: string; article_id: string; content: string; created_at: string; parent_id: string | null; depth: number; profile_id: string; full_name: string | null; avatar_url: string | null; }
+
 const supabaseClient = getSupabaseBrowserClient();
 
 interface Comment {
@@ -48,7 +50,7 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
     });
 
     if (!error && data) {
-      const formattedComments: Comment[] = data.map((c: any) => ({
+      const formattedComments: Comment[] = data.map((c: CommentRow) => ({
         id: c.id,
         article_id: c.article_id,
         content: c.content,
@@ -119,9 +121,9 @@ export const RealtimeComments: React.FC<RealtimeCommentsProps> = ({
       }
 
       return true;
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi mạng gửi bình luận:", err);
-      setErrorMessage(`Sự cố kết nối mạng: ${err.message || err}`);
+      setErrorMessage(`Sự cố kết nối mạng: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     } finally {
       setIsSending(false);

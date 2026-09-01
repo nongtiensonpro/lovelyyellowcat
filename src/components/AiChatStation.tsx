@@ -72,7 +72,7 @@ const API_KEY_STORAGE = "user_gemini_api_key";
 // Phát âm thanh retro 8-bit đơn giản qua Web Audio API
 function playRetroBeep(freq = 440, type: OscillatorType = "sine", duration = 0.08) {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  const AudioCtx = window.AudioContext || ((window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
@@ -103,7 +103,7 @@ async function executeClientDirectChatStream(
   temperature: number,
   onChunk: (text: string, model: string) => void,
   onModelStart?: (model: string) => void
-): Promise<{ success: boolean; model: string; durationMs: number; usage?: ModelUsage; finishReason?: string; incomplete?: boolean; incompleteReason?: string; hasQuotaError?: boolean; isLocationBlocked?: boolean; reply?: string; errorDetail?: string }> {
+): Promise<{ success: boolean; model: string; durationMs: number; usage?: ModelUsage; finishReason?: string; incomplete?: boolean; incompleteReason?: string; hasQuotaError?: boolean; isLocationBlocked?: boolean; reply?: string; errorDetail?: string; error?: string }> {
   const systemPrompt = personaSystemPrompt(persona, buildSiteKnowledgePrompt(messages));
   let modelsToTry: string[] = [];
   if (preferredModel && preferredModel !== "auto") {
@@ -264,12 +264,14 @@ async function executeClientDirectChatStream(
             };
           }
           break;
-        } catch (err: any) {
-          failureReason = err?.name === "AbortError"
+        } catch (err) {
+          const errName = err instanceof Error ? err.name : "";
+          const errMsg = err instanceof Error ? err.message : String(err);
+          failureReason = errName === "AbortError"
             ? timeoutPhaseHolder.phase === "idle"
               ? `Stream không có dữ liệu mới trong ${Math.round(CLIENT_STREAM_IDLE_TIMEOUT_MS / 1000)} giây.`
               : `Không nhận được response trong ${Math.round(CLIENT_INITIAL_RESPONSE_TIMEOUT_MS / 1000)} giây.`
-            : err?.message || String(err);
+            : errMsg;
           if (partialText && continuationCount < CLIENT_MAX_CONTINUATIONS && isRecoverableStreamFailure(failureReason)) {
             continuationCount += 1;
             requestContents = buildContinuation(partialText);
@@ -501,7 +503,7 @@ const AiChatStationInner: React.FC = () => {
   const createNewSession = (personaId = "cybercat") => {
     if (isUnlocked && masterKey) {
       createNewSessionEncrypted(personaId, masterKey);
-      return null as any;
+      return null;
     }
     const persona = PERSONAS.find(p => p.id === personaId) || PERSONAS[0];
     const newSession: ChatSession = {
@@ -563,8 +565,8 @@ const AiChatStationInner: React.FC = () => {
       setPassphraseInput("");
       // Migrate localStorage cũ nếu có (đã mã hóa xong sẽ xóa)
       await loadSessionsFromSupabase(mk);
-    } catch (e: any) {
-      setUnlockError(e.message || "Thiết lập thất bại");
+    } catch (e) {
+      setUnlockError(e instanceof Error ? e.message : "Thiết lập thất bại");
     } finally {
       setIsE2ELoading(false);
     }
@@ -857,7 +859,7 @@ const AiChatStationInner: React.FC = () => {
             ? { ...s, messages: s.messages.map(m => m.id === placeholderId ? { ...m, content: "", modelName: model, modelStats: undefined } : m) }
             : s));
         };
-        const result: any = await executeClientDirectChatStream(
+        const result = await executeClientDirectChatStream(
           effectiveApiKey,
           updatedMessages.map(m => ({ role: m.role, content: m.content })),
           session.persona,
@@ -915,7 +917,7 @@ const AiChatStationInner: React.FC = () => {
         return;
       }
 
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       const errMsg: ChatMessage = {
         id: `err-${Date.now()}`,
@@ -923,7 +925,7 @@ const AiChatStationInner: React.FC = () => {
         content: "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp chút nghẽn sóng. Bạn hãy đợi một lát rồi thử nhắn lại với Mèo Vàng nhé! 🐱💾",
         timestamp: `${new Date().getHours().toString().padStart(2, "0")}:${new Date().getMinutes().toString().padStart(2, "0")}`,
         isError: true,
-        errorDetail: `[CLIENT_FETCH_EXCEPTION]: ${err?.message || err}`,
+        errorDetail: `[CLIENT_FETCH_EXCEPTION]: ${err instanceof Error ? err.message : String(err)}`,
       };
       setSessions(prev =>
         prev.map(s =>
@@ -988,7 +990,7 @@ const AiChatStationInner: React.FC = () => {
     };
 
     try {
-      const result: any = await executeClientDirectChatStream(
+        const result = await executeClientDirectChatStream(
         effectiveApiKey,
         continuationContext,
         session.persona,

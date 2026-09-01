@@ -58,7 +58,7 @@ const GalleryGridInner: React.FC<GalleryGridProps> = ({
 
     if (!error && data) {
       const counts: Record<string, number> = {};
-      data.forEach((r: any) => {
+      data.forEach((r: { article_id: string }) => {
         counts[r.article_id] = (counts[r.article_id] || 0) + 1;
       });
       setReactionsMap(counts);
