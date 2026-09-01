@@ -132,3 +132,39 @@ Trang admin tạo/sửa/xoá/tạm dừng hoạt động tốt, NHƯNG phía pub
 - Realtime: admin tạo xong popup hiện ngay không cần reload (hiện cache SSR per-request).
 - NotificationBell cộng gộp popup mới làm badge "cửa sổ mới" thay vì chỉ list.
 - i18n key "THÔNG BÁO HỆ THỐNG" — đang hard-code tiếng Việt.
+
+---
+
+## BẢN NÂNG CẤP: PREVIEW.ALL (01/09/2026, sau bản hoàn thiện đầu)
+
+### Vấn đề user báo
+MARQUEE_PREVIEW.LIVE chỉ mô phỏng 1 kiểu hiển thị → admin không biết thông báo
+sẽ trông thế nào khi chọn marquee / banner / popup.
+
+### Giải pháp: PREVIEW.ALL — 3 khung mô phỏng trực quan
+- Khung ① 🎞️ MARQUEE: ticker chữ chạy đúng cấu trúc site (pause on hover)
+- Khung ② 🚩 BANNER: dải THÔNG BÁO + nút ✕ (mờ, minh hoạ tính năng dismiss)
+- Khung ③ 🪟 POPUP: cửa sổ Win95 ANNOUNCE.EXE thu nhỏ: icon + title + body + OK
+  + icon tự đổi 🖼️ khi text chứa "triển lãm/gallery/exhibition"
+- 3 khung cập nhật **live** theo ô Tiêu đề + Nội dung; đổi select "Kiểu hiển thị"
+  → khung tương ứng sáng viền neon + badge "✔ ĐANG CHỌN" + label header đổi.
+- Header: `👁 PREVIEW.ALL — XEM TRƯỚC CẢ 3 KIỂU` + `KIỂU ĐANG CHỌN: …`
+
+### Kiến trúc (test được)
+| File | Vai trò |
+|---|---|
+| `src/lib/announcementPreview.ts` (MỚI) | Pure wiring: `marqueePreviewText`, `typeLabel`, `popupIconFor`, `initAnnouncementPreview(doc)` (trả về cleanup fn) |
+| `src/pages/admin/announcements.astro` | Markup 3 khung + `<style>` highlight + script chỉ import+gọi init |
+| `tests/unit/announcementPreview.test.ts` (MỚI) | 9 test: 4 pure helpers + 5 jsdom wiring (init active đúng khung, đổi select, gõ title/body, xoá body, placeholder) |
+
+### Verification
+- test: 28 files / 266 tests (9 mới) — PASS
+- lint 0/0 · typecheck · stylelint · policy:ui · budget:ui · build · prettier — PASS
+- Build artifact audit: markup (3 khung) + script inline đầy đủ trong entry.mjs
+  (renderScript mechanism, cùng cơ chế popup đã E2E pass) + CSS trong chunk server.
+
+### Lỗi vặt trong quá trình (đã sửa)
+- ESLint no-var/unused-vars trong script inline → chuyển logic sang lib module.
+- Test import JSDOM trực tiếp sai convention dự án → `// @vitest-environment jsdom` + global document.
+- `buildDoc()` trả `doc` chưa khai báo → `return { doc: document, win: window }`.
+- outDir thật là `build/` (không phải `dist/`) — lần đầu audit sai chỗ.

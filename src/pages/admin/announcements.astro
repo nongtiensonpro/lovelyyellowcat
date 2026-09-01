@@ -190,28 +190,120 @@ type Row = { [key: string]: unknown };
     }
   </div>
 
-  <!-- Preview marquee trực tiếp -->
+  <!-- PREVIEW.ALL: mô phỏng cả 3 kiểu hiển thị, cập nhật live theo form -->
   <div class="win95-container mb-6 font-retro text-black" id="ann-preview-box">
-    <div class="win95-header py-0.5"><span>👁 MARQUEE_PREVIEW.LIVE</span></div>
-    <div class="p-2 bg-win-gray">
-      <div
-        class="win95-sunken bg-cosmic-black text-vapor-orange font-mono text-[10px] py-1 px-2 overflow-hidden flex items-center border border-win-dark"
+    <div class="win95-header py-0.5 flex items-center justify-between">
+      <span>👁 PREVIEW.ALL — XEM TRƯỚC CẢ 3 KIỂU</span>
+      <span id="ann-preview-active-label" class="text-[9px] text-win-darkest font-mono"
+        >KIỂU ĐANG CHỌN: 🎞️ MARQUEE</span
       >
-        <span
-          class="font-bold font-retro tracking-wider shrink-0 pr-2 border-r border-vapor-purple/40 mr-2 text-vapor-pink"
-          >PREVIEW:</span
+    </div>
+    <div class="p-3 bg-win-gray space-y-3">
+      <!-- 1. MARQUEE: đúng cấu trúc ticker trên site -->
+      <div data-preview-type="marquee" class="ann-preview-card win95-sunken border border-win-dark">
+        <div class="flex items-center justify-between px-2 pt-1">
+          <span class="text-[9px] font-bold text-win-dark font-mono"
+            >① 🎞️ MARQUEE — chữ chạy đầu trang</span
+          >
+          <span data-selected-badge class="hidden ann-selected-badge">✔ ĐANG CHỌN</span>
+        </div>
+        <div
+          class="m-2 win95-sunken bg-cosmic-black text-vapor-orange font-mono text-[10px] py-1 px-2 overflow-hidden flex items-center"
         >
-        <div class="overflow-hidden relative w-full flex">
-          <div class="animate-marquee marquee-pausable whitespace-nowrap flex gap-12">
-            <span id="ann-preview-text">[THÔNG BÁO] (nhập tiêu đề để xem trước...)</span>
-            <span aria-hidden="true" id="ann-preview-text-2"
-              >[THÔNG BÁO] (nhập tiêu đề để xem trước...)</span
+          <span
+            class="font-bold font-retro tracking-wider shrink-0 pr-2 border-r border-vapor-purple/40 mr-2 text-vapor-pink"
+            >PREVIEW:</span
+          >
+          <div class="overflow-hidden relative w-full flex">
+            <div class="animate-marquee marquee-pausable whitespace-nowrap flex gap-12">
+              <span data-preview-marquee-text>[THÔNG BÁO] (nhập tiêu đề để xem trước...)</span>
+              <span aria-hidden="true" data-preview-marquee-text-2
+                >[THÔNG BÁO] (nhập tiêu đề để xem trước...)</span
+              >
+            </div>
+          </div>
+        </div>
+        <p class="px-2 pb-1 text-[8px] text-win-darkest font-mono">
+          Rê chuột lên dòng để tạm dừng.
+        </p>
+      </div>
+
+      <!-- 2. BANNER: đúng cấu trúc banner header trên site -->
+      <div data-preview-type="banner" class="ann-preview-card win95-sunken border border-win-dark">
+        <div class="flex items-center justify-between px-2 pt-1">
+          <span class="text-[9px] font-bold text-win-dark font-mono"
+            >② 🚩 BANNER — dải màu nổi bật</span
+          >
+          <span data-selected-badge class="hidden ann-selected-badge">✔ ĐANG CHỌN</span>
+        </div>
+        <div class="m-2 win95-container text-black" role="presentation">
+          <div class="flex items-stretch">
+            <div
+              class="win95-header bg-gradient-to-r from-vapor-orange to-vapor-pink px-3 py-2 flex items-center gap-2 shrink-0"
             >
+              <span aria-hidden="true">🚩</span>
+              <span class="font-bold text-[10px]">THÔNG BÁO</span>
+            </div>
+            <div class="flex-1 bg-win-gray px-3 py-2 min-w-0 flex items-center gap-2">
+              <p data-preview-banner-title class="text-xs font-bold truncate flex-1">
+                (nhập tiêu đề để xem trước...)
+              </p>
+              <span
+                class="win95-btn px-1.5 py-0 text-[10px] font-bold shrink-0 opacity-60"
+                aria-hidden="true">✕</span
+              >
+            </div>
+          </div>
+        </div>
+        <p class="px-2 pb-1 text-[8px] text-win-darkest font-mono">
+          Visitor bấm ✕ để ẩn trong phiên (session).
+        </p>
+      </div>
+
+      <!-- 3. POPUP: cửa sổ Win95 như visitor thấy -->
+      <div data-preview-type="popup" class="ann-preview-card win95-sunken border border-win-dark">
+        <div class="flex items-center justify-between px-2 pt-1">
+          <span class="text-[9px] font-bold text-win-dark font-mono"
+            >③ 🪟 POPUP — cửa sổ Win95 một lần mỗi phiên</span
+          >
+          <span data-selected-badge class="hidden ann-selected-badge">✔ ĐANG CHỌN</span>
+        </div>
+        <div
+          class="m-2 relative bg-[repeating-linear-gradient(45deg,#e8e4d8_0_10px,#dcd8cc_10px_20px)] min-h-28 flex items-center justify-center p-3"
+        >
+          <div class="win95-container text-black w-full max-w-xs relative" role="presentation">
+            <div class="win95-header flex items-center justify-between">
+              <span class="text-[10px] font-bold flex items-center gap-1"
+                ><span aria-hidden="true">📣</span> THÔNG BÁO HỆ THỐNG</span
+              >
+              <span class="win95-btn px-1 py-0 text-[9px] opacity-60" aria-hidden="true">✕</span>
+            </div>
+            <div class="p-3 bg-win-gray text-center">
+              <p data-preview-popup-icon class="text-lg leading-none mb-1">📣</p>
+              <p data-preview-popup-title class="text-xs font-extrabold mb-2 break-words">
+                (nhập tiêu đề để xem trước...)
+              </p>
+              <div
+                data-preview-popup-body-wrap
+                class="hidden win95-sunken bg-white px-2 py-1.5 mb-2 max-h-16 overflow-y-auto"
+              >
+                <p data-preview-popup-body class="text-[10px] text-left break-words"></p>
+              </div>
+              <button
+                type="button"
+                tabindex="-1"
+                class="win95-btn px-3 py-1 text-[10px] font-bold w-full"
+                aria-hidden="true">OK</button
+              >
+              <p class="text-[8px] text-win-darkest mt-1.5 font-mono">MỖI PHIÊN TRUY CẬP MỘT LẦN</p>
+            </div>
           </div>
         </div>
       </div>
-      <p class="text-[9px] text-win-darkest mt-1 font-mono">
-        Rê chuột lên dòng chạy để tạm dừng. Preview cập nhật theo ô Tiêu đề + Nội dung.
+
+      <p class="text-[9px] text-win-darkest font-mono">
+        💡 Cả 3 khung cập nhật trực tiếp theo Tiêu đề + Nội dung. Chọn "Kiểu hiển thị" ở form bên
+        dưới → khung tương ứng sáng viền neon.
       </p>
     </div>
   </div>
@@ -344,24 +436,33 @@ type Row = { [key: string]: unknown };
     </div>
   </div>
 
+  <style>
+    /* Khung preview được chọn sáng viền neon; khung khác mờ nhẹ */
+    .ann-preview-card {
+      opacity: 0.55;
+      transition:
+        opacity 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+    .ann-preview-card.ann-preview-active {
+      opacity: 1;
+      box-shadow:
+        0 0 0 2px var(--vapor-cyan, #00f0ff),
+        0 0 12px rgba(0, 240, 255, 0.45);
+    }
+    .ann-selected-badge {
+      font-size: 8px;
+      font-weight: 700;
+      padding: 1px 6px;
+      background: #000;
+      color: var(--vapor-cyan, #00f0ff);
+      font-family: var(--font-retro, monospace);
+      letter-spacing: 0.05em;
+    }
+  </style>
   <script>
-    // Preview marquee live: title + body -> text chạy; không framework.
-    (function () {
-      const title = document.getElementById("ann-title") as HTMLInputElement | null;
-      const body = document.getElementById("ann-body") as HTMLTextAreaElement | null;
-      const t1 = document.getElementById("ann-preview-text");
-      const t2 = document.getElementById("ann-preview-text-2");
-      function update() {
-        const tv = title?.value.trim() || "";
-        const bv = body?.value.trim() || "";
-        const text = tv
-          ? `[THÔNG BÁO] ${tv}${bv ? " — " + bv : ""}`
-          : "[THÔNG BÁO] (nhập tiêu đề để xem trước...)";
-        if (t1) t1.textContent = text;
-        if (t2) t2.textContent = text;
-      }
-      title?.addEventListener("input", update);
-      body?.addEventListener("input", update);
-    })();
+    // PREVIEW.ALL — wiring tách vào src/lib/announcementPreview.ts (unit-test được).
+    import { initAnnouncementPreview } from "../../lib/announcementPreview";
+    initAnnouncementPreview(document);
   </script>
 </AdminLayout>
