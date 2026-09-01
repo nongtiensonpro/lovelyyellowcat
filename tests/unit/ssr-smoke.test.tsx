@@ -34,7 +34,7 @@ describe("SSR smoke — gallery islands", () => {
         initialSubmissions: [],
         currentUser: null,
         isFavoritesOnly: false,
-      })
+      }),
     );
     expect(typeof html).toBe("string");
   });
@@ -80,7 +80,9 @@ describe("Gallery lightbox regression — production VISUAL_FILTERS crash", () =
     let rootEl: ReturnType<typeof ReactDOMClient.createRoot> | null = null;
     const errors: unknown[] = [];
     const origError = console.error;
-    console.error = (...args: unknown[]) => { errors.push(args[0]); };
+    console.error = (...args: unknown[]) => {
+      errors.push(args[0]);
+    };
     try {
       rootEl = ReactDOMClient.createRoot(container);
       await act(async () => {
@@ -90,14 +92,16 @@ describe("Gallery lightbox regression — production VISUAL_FILTERS crash", () =
             activeId: "test-1",
             currentUser: null,
             onClose: () => {},
-          })
+            onNavigate: () => {},
+          }),
         );
       });
       // act thứ 2: flush effect sync activeId → currentIndex → activeSubmission → filter UI
       await act(async () => {});
       // Lightbox render qua createPortal vào document.body — nội dung nằm ngoài container
       const html = document.body.innerHTML;
-      expect(html).toContain("FILTER");
+      // Lightbox mới: nút filter hiển thị id filter hiện tại ("🎨 NORMAL")
+      expect(html).toContain("🎨 NORMAL");
       expect(errors.join(" ")).not.toContain("VISUAL_FILTERS is not defined");
     } finally {
       await act(async () => {
@@ -109,7 +113,8 @@ describe("Gallery lightbox regression — production VISUAL_FILTERS crash", () =
   });
 
   it("galleryFilters module export VISUAL_FILTERS đầy đủ (nguồn chân lý filter)", async () => {
-    const { VISUAL_FILTERS, filterCss } = await import("../../src/components/gallery/galleryFilters");
+    const { VISUAL_FILTERS, filterCss } =
+      await import("../../src/components/gallery/galleryFilters");
     expect(Array.isArray(VISUAL_FILTERS)).toBe(true);
     expect(VISUAL_FILTERS.length).toBeGreaterThan(0);
     for (const f of VISUAL_FILTERS) {
