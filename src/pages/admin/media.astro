@@ -578,7 +578,7 @@ const pageUsed = resources.length - pageOrphans;
         b.addEventListener("change", refreshCount);
       });
       const delBtn = document.querySelector(".bulk-del");
-      delBtn && delBtn.addEventListener("click", function (e) {
+      if (delBtn) delBtn.addEventListener("click", function (e) {
         const checked = Array.prototype.slice.call(document.querySelectorAll(".media-check")).filter(function (b) { return b.checked; });
         if (checked.length === 0) return;
         const usedCount = checked.filter(function (b) {

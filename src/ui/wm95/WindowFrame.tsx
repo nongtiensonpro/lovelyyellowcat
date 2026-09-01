@@ -73,7 +73,9 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({ id, children, showTitl
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [id, snapHint]);
+  // w trong deps: re-attach listeners khi window state đổi — an toàn cho drag vì
+  // pointer capture thuộc target element (không mất khi swap listener), drag state nằm trong dragRef.
+  }, [id, snapHint, w]);
 
   if (!w) return null;
   if (w.state === "minimized") return null;

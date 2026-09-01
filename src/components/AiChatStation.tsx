@@ -1200,7 +1200,7 @@ const AiChatStationInner: React.FC = () => {
                 placeholder={isFirstSetup ? "Đặt mật khẩu mới (≥8 ký tự)" : "Nhập mật khẩu mã hóa"}
                 value={passphraseInput}
                 onChange={(e) => setPassphraseInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") isFirstSetup ? handleSetupPassphrase(passphraseInput) : handleUnlock(passphraseInput); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { if (isFirstSetup) { handleSetupPassphrase(passphraseInput); } else { handleUnlock(passphraseInput); } } }}
                 className="w-full p-2 border border-win-dark bg-white font-mono text-xs"
                 /* Batch 8: form unlock 1 field — autoFocus là intent rõ ràng của user khi mở unlock */
                 // eslint-disable-next-line jsx-a11y/no-autofocus

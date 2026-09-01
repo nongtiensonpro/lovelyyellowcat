@@ -475,7 +475,7 @@ const { data: featuredArtworks } = await supabase
           } else {
             videoEl.style.display = "";
             const play = videoEl.play ? videoEl.play() : Promise.resolve();
-            play && play.catch(function() {});
+            if (play) { play.catch(function() {}); }
           }
         } catch {
           // graceful degradation: video hiện với preload mặc định

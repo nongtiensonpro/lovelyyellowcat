@@ -68,6 +68,6 @@ Kỹ thuật chuẩn: `const body = (await request.json()) as SomeType;` — KH�
 - [x] Batch 7 label a11y (46→0) — DONE: 7 lỗi thật TSX sửa htmlFor/id (ArticleEditor, ProfileEditor, SubmissionWizard, AiChatStation, UserManagementActions); 20 false-positive .astro verify tay đúng for= → rule off riêng cho .astro có comment; rule mở rộng controlComponents (Retro*) + depth (wrapping)
 - [x] Batch 8 keyboard a11y (28→0) — DONE: interactive thật sửa markup (GalleryGrid cards role=button+Enter/Space, filmstrip, AI session list, UMA dialog role+Esc); MỚI: Esc handler cho SearchModal + UMA (keyboard users hết bị kẹt); backdrop/dialog có Esc sẵn → disable comment đúng JSX/JS context
 - [x] Batch 9 a11y số ít (4→0) — DONE: 2 img alt (HeaderNav avatar, profile lightbox), autoFocus unlock form (disable có lý do), SearchModal combobox→searchbox
-- [ ] Batch 10 unused-expressions (5)
+- [x] Batch 10 unused-expressions (5→0) + exhaustive-deps sót (1→0) — DONE: ternary/guard statement → if/else; WindowFrame w vào deps + comment an toàn drag
 - [ ] Batch 11 no-explicit-any (200) — 6 sub-batches
 - **Đích: 0 warnings → bỏ rule khỏi override warn, nâng về error thật**

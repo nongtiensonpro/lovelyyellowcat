@@ -219,7 +219,7 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
         }
       }
       document.addEventListener("visibilitychange", () => {
-        document.hidden ? stopClock() : startClock();
+        if (document.hidden) { stopClock(); } else { startClock(); }
       });
       startClock();
     </script>

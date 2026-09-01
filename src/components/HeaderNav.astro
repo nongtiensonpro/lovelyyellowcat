@@ -324,7 +324,7 @@ const currentPath = Astro.url.pathname;
     }
   }
   document.addEventListener("visibilitychange", () => {
-    document.hidden ? stopClock() : startClock();
+    if (document.hidden) { stopClock(); } else { startClock(); }
   });
   startClock();
 
