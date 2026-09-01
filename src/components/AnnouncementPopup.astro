@@ -1,0 +1,134 @@
+---
+// AnnouncementPopup.astro — cửa sổ Win95 hiển thị thông báo type="popup",
+// MỖI SESSION MỘT LẦN (sessionStorage). SSR-safe: markup render sẵn với
+// hidden, script inline kiểm tra dismiss-key rồi mới hiện — không flash,
+// không phụ thuộc framework. Focus vào nút OK khi mở (a11y).
+import { dismissKey, safeIdToken } from "../lib/announcementUtils";
+
+interface Props {
+  announcement: {
+    id: string;
+    title: string;
+    body?: string | null;
+  };
+}
+
+const { announcement } = Astro.props;
+const key = dismissKey(announcement.id);
+const idToken = safeIdToken(announcement.id);
+---
+
+<div
+  id={`ann-popup-${idToken}`}
+  class="fixed inset-0 z-[var(--z-index-modal,600)] flex items-center justify-center p-4 hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby={`ann-popup-title-${idToken}`}
+  data-dismiss-key={key}
+>
+  <!-- backdrop -->
+  <div class="absolute inset-0 bg-cosmic-black/70 backdrop-blur-[2px]" data-popup-backdrop></div>
+
+  <!-- Cửa sổ Win95 -->
+  <div
+    class="win95-window relative w-full max-w-md bg-win-gray font-retro text-black shadow-[6px_6px_0_rgba(0,0,0,0.5)]"
+  >
+    <div class="win95-header py-1 px-2 bg-gradient-to-r from-vapor-orange to-vapor-pink">
+      <div class="flex items-center gap-1.5 font-bold text-xs">
+        <span aria-hidden="true">📣</span>
+        <span id={`ann-popup-title-${idToken}`}>THÔNG BÁO HỆ THỐNG</span>
+      </div>
+      <button
+        type="button"
+        class="win95-btn py-0 px-1.5 text-[10px] font-bold"
+        data-popup-close
+        aria-label="Đóng thông báo">✕</button
+      >
+    </div>
+
+    <div class="p-4 bg-win-gray space-y-3">
+      <div class="flex items-start gap-3">
+        <span aria-hidden="true" class="text-3xl shrink-0">📢</span>
+        <div class="min-w-0">
+          <p class="font-extrabold text-sm leading-snug">{announcement.title}</p>
+          {
+            announcement.body && (
+              <p class="text-xs mt-1.5 leading-relaxed text-black/80 whitespace-pre-line">
+                {announcement.body}
+              </p>
+            )
+          }
+        </div>
+      </div>
+
+      <div
+        class="win95-sunken bg-white p-1.5 text-[9px] font-mono text-win-darkest uppercase text-center"
+      >
+        // WINPOPUP.SYS // MỖI PHIÊN TRUY CẬP MỘT LẦN //
+      </div>
+
+      <div class="flex justify-end pt-1 border-t border-win-dark">
+        <button
+          type="button"
+          class="win95-btn px-6 py-1.5 font-bold text-xs bg-vapor-orange/25"
+          data-popup-close
+          style="min-height: 30px; min-width: 90px;">OK</button
+        >
+      </div>
+    </div>
+
+    <div class="win95-statusbar justify-between text-[9px]">
+      <span>WINPOPUP STATION</span>
+      <span class="win95-statusbar-panel font-mono text-vapor-green font-bold">NEW MAIL</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Script bundled (không define:vars) — tìm popup qua data-attribute để không
+  // phụ thuộc vị trí DOM. Key dismiss đọc từ data-dismiss-key (SSR đã ghi sẵn).
+  (function () {
+    function init(root: Element) {
+      const key = root.getAttribute("data-dismiss-key") || "";
+      let shown = false;
+      function show() {
+        if (shown) return;
+        shown = true;
+        try {
+          if (key && sessionStorage.getItem(key) === "1") return; // đã dismiss trong session này
+        } catch {
+          /* storage chặn — vẫn hiện (fail-open) */
+        }
+        root.classList.remove("hidden");
+        const buttons = root.querySelectorAll("[data-popup-close]");
+        const ok = buttons[buttons.length - 1];
+        if (ok instanceof HTMLElement) ok.focus();
+      }
+      function close() {
+        root.classList.add("hidden");
+        try {
+          if (key) sessionStorage.setItem(key, "1");
+        } catch {
+          /* ignore */
+        }
+      }
+      root.querySelectorAll("[data-popup-close]").forEach(function (btn) {
+        btn.addEventListener("click", close);
+      });
+      const backdrop = root.querySelector("[data-popup-backdrop]");
+      if (backdrop) backdrop.addEventListener("click", close);
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !root.classList.contains("hidden")) close();
+      });
+      // hiện sau khi trang sẵn sàng (tránh layout shift khi đang boot)
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", show);
+      } else {
+        show();
+      }
+    }
+    document
+      .querySelectorAll<HTMLElement>('[role="dialog"][data-dismiss-key^="lyc_ann_dismissed_"]')
+      .forEach(init);
+  })();
+</script>

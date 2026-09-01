@@ -1,23 +1,41 @@
 ---
+import { marqueeTextFrom, type AnnouncementLike } from "../lib/announcementUtils";
+
 interface Props {
   text?: string;
+  /** Thông báo type=marquee đang active từ BaseLayout — ưu tiên hiển thị. */
+  announcement?: AnnouncementLike | null;
 }
 
-const {
-  text = "★ CHÀO MỪNG ĐẾN VỚI VAPORWAVE ART JOURNAL // A CYBERNETIC OASIS ★ MẠNG LƯỚI NGHỆ THUẬT SỐ HOÀI CỔ 1995-2026 ★ THAM GIA TRIỂN LÃM & ĐĂNG TẢI TÁC PHẨM CỦA BẠN NGAY HÔM NAY ★ REALTIME ARTSTREAM ACTIVATED ★",
-} = Astro.props;
+const DEFAULT_TEXT =
+  "★ CHÀO MỪNG ĐẾN VỚI VAPORWAVE ART JOURNAL // A CYBERNETIC OASIS ★ MẠNG LƯỚI NGHỆ THUẬT SỐ HOÀI CỔ 1995-2026 ★ THAM GIA TRIỂN LÃM & ĐĂNG TẢI TÁC PHẨM CỦA BẠN NGAY HÔM NAY ★ REALTIME ARTSTREAM ACTIVATED ★";
+
+const { announcement = null } = Astro.props;
+const text = announcement ? marqueeTextFrom(announcement) : DEFAULT_TEXT;
+const isAnnouncement = Boolean(announcement);
 ---
 
-<div class="win95-sunken bg-cosmic-black text-vapor-green font-mono text-[10px] sm:text-xs py-1 px-2 overflow-hidden flex items-center border border-win-dark select-none">
+<div
+  class:list={[
+    "win95-sunken bg-cosmic-black font-mono text-[10px] sm:text-xs py-1 px-2 overflow-hidden flex items-center border border-win-dark select-none",
+    isAnnouncement ? "text-vapor-orange" : "text-vapor-green",
+  ]}
+  role={isAnnouncement ? "status" : undefined}
+>
   <div class="flex items-center gap-1.5 shrink-0 pr-3 border-r border-vapor-purple/40 mr-2">
     <span class="w-2 h-2 rounded-full bg-vapor-green animate-pulse"></span>
-    <span class="text-vapor-pink font-bold font-retro tracking-wider">LIVE.SYS:</span>
+    <span class="text-vapor-pink font-bold font-retro tracking-wider">
+      {isAnnouncement ? "ANNOUNCE.SYS:" : "LIVE.SYS:"}
+    </span>
   </div>
-  
-  <div class="overflow-hidden relative w-full flex">
-    <div class="animate-marquee whitespace-nowrap flex gap-12 font-mono font-medium tracking-wide">
+
+  <div class="overflow-hidden relative w-full flex group">
+    <!-- pause khi hover/focus (WCAG 2.2.2 — moving text phải dừng được) -->
+    <div
+      class="animate-marquee marquee-pausable whitespace-nowrap flex gap-12 font-mono font-medium tracking-wide"
+    >
       <span>{text}</span>
-      <span>{text}</span>
+      <span aria-hidden="true">{text}</span>
     </div>
   </div>
 </div>

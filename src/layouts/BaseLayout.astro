@@ -18,33 +18,49 @@ interface Props {
   showMarquee?: boolean;
 }
 
-const { 
-  title, 
+const {
+  title,
   description = "Tạp chí nghệ thuật số phong cách Vaporwave cổ điển // A Cybernetic Oasis",
   ogImage = "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1200&h=630&fit=crop",
   canonicalUrl,
   articleJsonLd,
   userProfile = null,
-  showMarquee = true
+  showMarquee = true,
 } = Astro.props;
 
 const currentUrl = canonicalUrl || Astro.url.href;
 
-// Thông báo toàn站 đang hoạt động (ưu tiên banner > marquee). Bỏ qua lỗi nếu chưa có bảng.
-let siteAnnouncement: { type?: string; title?: string; body?: string } | null = null;
+// ── Thông báo toàn site (WinPopup Station) ──
+// Fetch tối đa 10 announcement active trong hạn, phân loại qua pure module:
+// marquee → LIVE.SYS ticker; banner → dải nổi bật; popup → cửa sổ 1 lần/session.
+import {
+  partitionByType,
+  dismissKey,
+  safeIdToken,
+  type AnnouncementLike,
+} from "../lib/announcementUtils";
+import AnnouncementPopup from "../components/AnnouncementPopup.astro";
+
+let annPartition: ReturnType<typeof partitionByType> = { marquee: null, banner: null, popup: null };
 try {
-  const annSupabase = createSupabaseServerClient({ request: Astro.request, cookies: Astro.cookies });
+  const annSupabase = createSupabaseServerClient({
+    request: Astro.request,
+    cookies: Astro.cookies,
+  });
   const { data } = await annSupabase
     .from("site_announcements")
-    .select("id, title, body, type")
+    .select("id, title, body, type, is_active, end_at, created_at")
     .eq("is_active", true)
     .gt("end_at", new Date().toISOString())
     .order("created_at", { ascending: false })
-    .limit(1);
-  siteAnnouncement = data?.[0] || null;
+    .limit(10);
+  annPartition = partitionByType((data || []) as AnnouncementLike[]);
 } catch {
   // Chưa chạy migration upgrade_v3 → bỏ qua
 }
+const { marquee: marqueeAnn, banner: siteAnnouncement, popup: popupAnn } = annPartition;
+const bannerDismissKey = siteAnnouncement ? dismissKey(siteAnnouncement.id) : "";
+const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
 ---
 
 <html lang="vi">
@@ -55,18 +71,23 @@ try {
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
-    
+
     <!-- SEO Canonical -->
     <link rel="canonical" href={currentUrl} />
-    <link rel="alternate" type="application/rss+xml" title="LOVELYYELLOWCAT RSS Feed" href="/rss.xml" />
-    
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="LOVELYYELLOWCAT RSS Feed"
+      href="/rss.xml"
+    />
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content={articleJsonLd ? "article" : "website"} />
     <meta property="og:url" content={currentUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={ogImage} />
-    
+
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content={currentUrl} />
@@ -74,73 +95,134 @@ try {
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
-
     <!-- Structured Data JSON-LD -->
-    {articleJsonLd && (
-      <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} is:inline />
-    )}
+    {
+      articleJsonLd && (
+        <script type="application/ld+json" set:html={JSON.stringify(articleJsonLd)} is:inline />
+      )
+    }
 
     <!-- Google reCAPTCHA v2 Library — chỉ tải tại trang gửi tranh để giảm trọng lượng mọi trang khác -->
-    {Astro.url.pathname.startsWith("/submit") && (
-      <script src="https://www.google.com/recaptcha/api.js?render=6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5" async defer></script>
-    )}
+    {
+      Astro.url.pathname.startsWith("/submit") && (
+        <script
+          src="https://www.google.com/recaptcha/api.js?render=6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5"
+          async
+          defer
+        />
+      )
+    }
   </head>
-  <body class="min-h-screen text-white font-body selection:bg-vapor-pink selection:text-black antialiased bg-cosmic-black">
+  <body
+    class="min-h-screen text-white font-body selection:bg-vapor-pink selection:text-black antialiased bg-cosmic-black"
+  >
     <!-- Boot BIOS cho khách lần đầu (1 lần · bỏ qua được · reduced-motion tự ẩn) -->
     <BootSplash />
     <!-- Skip-to-content: điều hướng bàn phím/screen reader -->
-    <AppShell crt={true} role={(Astro.props.userProfile && Astro.props.userProfile.role === "admin") ? "admin" : (Astro.props.userProfile ? "auth" : "public")} />
+    <AppShell
+      crt={true}
+      role={Astro.props.userProfile && Astro.props.userProfile.role === "admin"
+        ? "admin"
+        : Astro.props.userProfile
+          ? "auth"
+          : "public"}
+    />
     <DialogHost client:idle />
     <a class="skip-link" href="#main-content">⏭ Bỏ qua tới nội dung chính</a>
 
     <!-- Outer Black Page Frame (DESIGN-dell-1996 Enterprise Catalog Style) -->
     <div class="min-h-screen bg-cosmic-black">
-      <div class="w-full flex flex-col min-h-screen justify-between bg-gradient-to-b from-cosmic-black via-cosmic-deep to-cosmic-black px-2 sm:px-4 md:px-6 lg:px-8 relative z-10">
-        
-        <!-- Top Banner: Marquee Ticker -->
-        {showMarquee && (
-          <div class="mb-3">
-            <MarqueeTicker />
-          </div>
-        )}
+      <div
+        class="w-full flex flex-col min-h-screen justify-between bg-gradient-to-b from-cosmic-black via-cosmic-deep to-cosmic-black px-2 sm:px-4 md:px-6 lg:px-8 relative z-10"
+      >
+        <!-- Top Banner: Marquee Ticker (ưu tiên thông báo type=marquee đang phát) -->
+        {
+          showMarquee && (
+            <div class="mb-3">
+              <MarqueeTicker announcement={marqueeAnn} />
+            </div>
+          )
+        }
 
         <!-- Thanh điều hướng responsive chuẩn hóa Windows 95 Taskbar -->
         <HeaderNav userProfile={userProfile} />
 
-        <!-- Banner thông báo toàn站 (WinPopUp Station) -->
-        {siteAnnouncement && (
-          <div class="win95-container mb-3 font-retro text-black" role="status">
-            <div class="flex items-stretch">
-              <div class="win95-header bg-gradient-to-r from-vapor-orange to-vapor-pink px-3 py-2 flex items-center gap-2 shrink-0">
-                <span aria-hidden="true">{siteAnnouncement.type === "banner" ? "🚩" : "📣"}</span>
-                <span class="font-bold">THÔNG BÁO</span>
-              </div>
-              <div class="flex-1 bg-win-gray px-3 py-2 min-w-0">
-                <p class="text-xs font-bold truncate sm:whitespace-normal" title={siteAnnouncement.body || siteAnnouncement.title}>
-                  {siteAnnouncement.title}
-                  {siteAnnouncement.body && <span class="hidden md:inline font-normal text-[10px] text-black/70"> — {siteAnnouncement.body}</span>}
-                </p>
+        <!-- Banner thông báo toàn site (WinPopUp Station) — dismiss theo session -->
+        {
+          siteAnnouncement && (
+            <div
+              id={`ann-banner-${bannerIdToken}`}
+              class="win95-container mb-3 font-retro text-black"
+              role="status"
+              data-dismiss-key={bannerDismissKey}
+            >
+              <div class="flex items-stretch">
+                <div class="win95-header bg-gradient-to-r from-vapor-orange to-vapor-pink px-3 py-2 flex items-center gap-2 shrink-0">
+                  <span aria-hidden="true">🚩</span>
+                  <span class="font-bold">THÔNG BÁO</span>
+                </div>
+                <div class="flex-1 bg-win-gray px-3 py-2 min-w-0 flex items-center gap-2">
+                  <p
+                    class="text-xs font-bold truncate sm:whitespace-normal flex-1"
+                    title={siteAnnouncement.body || siteAnnouncement.title}
+                  >
+                    {siteAnnouncement.title}
+                    {siteAnnouncement.body && (
+                      <span class="hidden md:inline font-normal text-[10px] text-black/70">
+                        {" "}
+                        — {siteAnnouncement.body}
+                      </span>
+                    )}
+                  </p>
+                  <button
+                    type="button"
+                    class="win95-btn px-1.5 py-0 text-[10px] font-bold shrink-0"
+                    data-ann-banner-close
+                    aria-label="Ẩn thông báo này"
+                    style="min-height: 22px; min-width: 22px;"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        
+          )
+        }
+
+        <!-- Popup thông báo type=popup — một lần mỗi session -->
+        {
+          popupAnn && (
+            <AnnouncementPopup
+              announcement={{ id: popupAnn.id, title: popupAnn.title, body: popupAnn.body }}
+            />
+          )
+        }
+
         <!-- Nội dung chính -->
         <main id="main-content" class="flex-grow w-full py-2">
           <slot />
         </main>
-        
+
         <!-- Footer hoài cổ Windows 95 kết hợp Catalog 1996 -->
-        <footer class="win95-container mt-12 font-retro text-black bg-win-gray text-[10px] sm:text-xs">
+        <footer
+          class="win95-container mt-12 font-retro text-black bg-win-gray text-[10px] sm:text-xs"
+        >
           <!-- Top Footer Bar: Category & Site Links -->
-          <div class="p-2 border-b border-win-dark flex flex-wrap justify-between items-center gap-2 bg-white/40">
+          <div
+            class="p-2 border-b border-win-dark flex flex-wrap justify-between items-center gap-2 bg-white/40"
+          >
             <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 bg-vapor-green rounded-full inline-block animate-pulse"></span>
+              <span class="w-2.5 h-2.5 bg-vapor-green rounded-full inline-block animate-pulse"
+              ></span>
               <span class="font-bold text-win-titlebar">CYBERSERVER: ONLINE // 99.9% UPTIME</span>
             </div>
-            
+
             <div class="flex flex-wrap items-center gap-3">
-              <button id="toggle-crt-btn" class="win95-btn text-[10px] py-0 px-2 font-bold" style="min-height: 22px;">
+              <button
+                id="toggle-crt-btn"
+                class="win95-btn text-[10px] py-0 px-2 font-bold"
+                style="min-height: 22px;"
+              >
                 📺 CRT: BẬT
               </button>
               <a href="/" class="text-link-blue hover:underline font-bold">Trang Chủ</a>
@@ -153,16 +235,20 @@ try {
               <span class="text-win-dark">|</span>
               <a href="/about" class="text-link-blue hover:underline font-bold">Hệ Thống</a>
               <span class="text-win-dark">|</span>
-              <a href="/terms" class="text-link-blue hover:underline font-bold">Điều Khoản (Terms)</a>
+              <a href="/terms" class="text-link-blue hover:underline font-bold"
+                >Điều Khoản (Terms)</a
+              >
             </div>
           </div>
 
           <!-- Middle Footer Bar: Open Source & MIT License Announcement -->
-          <div class="p-2.5 bg-black/5 border-b border-win-dark flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div
+            class="p-2.5 bg-black/5 border-b border-win-dark flex flex-col sm:flex-row items-center justify-between gap-2"
+          >
             <div class="flex items-center gap-2 text-center sm:text-left">
               <span class="text-base">🔓</span>
               <p class="text-[10px] sm:text-[11px] text-black/85 leading-tight">
-                <strong>Dự án Mã nguồn mở:</strong> Toàn bộ mã nguồn được công khai minh bạch tại 
+                <strong>Dự án Mã nguồn mở:</strong> Toàn bộ mã nguồn được công khai minh bạch tại
                 <a
                   href="https://github.com/nongtiensonpro/lovelyyellowcat"
                   target="_blank"
@@ -171,7 +257,10 @@ try {
                 >
                   nongtiensonpro/lovelyyellowcat ↗
                 </a>
-                với điều khoản sử dụng là giấy phép <span class="bg-win-dark/10 px-1 py-0.5 border border-win-dark font-mono font-bold text-[10px]">MIT LICENSE</span>
+                với điều khoản sử dụng là giấy phép <span
+                  class="bg-win-dark/10 px-1 py-0.5 border border-win-dark font-mono font-bold text-[10px]"
+                  >MIT LICENSE</span
+                >
               </p>
             </div>
             <a
@@ -187,13 +276,18 @@ try {
 
           <!-- Bottom Footer Bar: Copyright & Contact -->
           <div class="flex flex-col md:flex-row justify-between items-center gap-2 p-2">
-            <span class="text-center md:text-left text-black/80 font-mono text-[10px] sm:text-[10px]">
+            <span
+              class="text-center md:text-left text-black/80 font-mono text-[10px] sm:text-[10px]"
+            >
               📼 LOVELY YELLOW CAT &copy; 1995-2026 // DỰ ÁN NGHỆ THUẬT SỐ PHI THƯƠNG MẠI (MIT)
             </span>
             <div class="flex items-center gap-2">
               <span class="text-win-dark font-mono text-[10px]">BEST VIEWED AT 1024x768</span>
               <span class="text-win-dark">|</span>
-              <a href="mailto:nongtiensonpro@gmail.com" class="text-black font-bold no-underline hover:underline text-[10px]">
+              <a
+                href="mailto:nongtiensonpro@gmail.com"
+                class="text-black font-bold no-underline hover:underline text-[10px]"
+              >
                 ✉️ nongtiensonpro@gmail.com
               </a>
             </div>
@@ -245,8 +339,16 @@ try {
     <script>
       (function () {
         const SEQUENCE = [
-          "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown",
-          "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a",
+          "ArrowUp",
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowLeft",
+          "ArrowRight",
+          "b",
+          "a",
         ];
         let progress = 0;
 
@@ -259,7 +361,9 @@ try {
             "font-weight:bold;color:#000;box-shadow:4px 4px 0 rgba(0,0,0,.6)";
           el.textContent = text;
           document.body.appendChild(el);
-          setTimeout(function () { el.remove(); }, 2600);
+          setTimeout(function () {
+            el.remove();
+          }, 2600);
         }
 
         document.addEventListener("keydown", function (e) {
@@ -274,6 +378,32 @@ try {
           } else {
             progress = key === SEQUENCE[0] ? 1 : 0;
           }
+        });
+      })();
+    </script>
+    <script>
+      // Banner dismiss: sessionStorage theo id announcement (một lần mỗi session).
+      (function () {
+        document.querySelectorAll<HTMLElement>("[data-ann-banner-close]").forEach(function (btn) {
+          const banner = btn.closest<HTMLElement>("[data-dismiss-key]");
+          if (!banner) return;
+          const key = banner.getAttribute("data-dismiss-key") || "";
+          try {
+            if (key && sessionStorage.getItem(key) === "1") {
+              banner.remove();
+              return;
+            }
+          } catch {
+            /* storage bị chặn — vẫn hiện */
+          }
+          btn.addEventListener("click", function () {
+            banner.remove();
+            try {
+              if (key) sessionStorage.setItem(key, "1");
+            } catch {
+              /* ignore */
+            }
+          });
         });
       })();
     </script>
