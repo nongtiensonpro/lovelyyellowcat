@@ -10,7 +10,7 @@ const USERS_PER_PAGE = 10;
  */
 type SupabaseClientAU = ReturnType<typeof import("../../lib/supabase").createSupabaseServerClient>;
 type AdminAuthResult = { error: Response } | { supabase: SupabaseClientAU; admin: { id: string; role?: string } };
-async function authenticateAdmin(context: any): Promise<AdminAuthResult> {
+async function authenticateAdmin(context: { request: Request; cookies: import("astro").AstroCookies }): Promise<AdminAuthResult> {
   const supabase = createSupabaseServerClient({
     request: context.request,
     cookies: context.cookies,
@@ -180,9 +180,9 @@ export const PUT: APIRoute = async (context) => {
         contactEmail: "nongtiensonpro@gmail.com",
       }, getWorkerEnv());
       emailNote = emailResult.success ? " Email thông báo đã được gửi." : ` (${emailResult.message})`;
-    } catch (emailErr: any) {
+    } catch (emailErr) {
       emailNote = " (Không gửi được email thông báo)";
-      console.error("[ADMIN] Email role change error:", emailErr.message);
+      console.error("[ADMIN] Email role change error:", emailErr instanceof Error ? emailErr.message : String(emailErr));
     }
   }
 

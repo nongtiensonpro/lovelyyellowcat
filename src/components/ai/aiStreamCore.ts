@@ -3,8 +3,9 @@
 // Fetch/stream IO nằm ở caller — module này chỉ xử lý text/state → test 100% không network.
 
 // Gemini REST response shape (tối thiểu những gì stream parser dùng) — Batch 11.1
-interface GeminiPart { text?: string }
-interface GeminiCandidate { content?: { parts?: GeminiPart[] } }
+export interface GeminiPart { text?: string }
+export interface GeminiCandidate { content?: { parts?: GeminiPart[] } }
+export interface GeminiListResponse { candidates?: GeminiCandidate[] }
 
 export const CLIENT_MAX_OUTPUT_TOKENS = 4096;
 export const CLIENT_INITIAL_RESPONSE_TIMEOUT_MS = 180_000;

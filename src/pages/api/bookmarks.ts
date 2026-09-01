@@ -97,8 +97,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       JSON.stringify({ success: true, bookmarked: true }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
-    console.error("[BOOKMARKS] toggle failed:", err.message);
+  } catch (err) {
+    console.error("[BOOKMARKS] toggle failed:", err instanceof Error ? err.message : String(err));
     return new Response(
       JSON.stringify({ success: false, error: "Sự cố hệ thống khi lưu bài viết." }),
       { status: 500, headers: { "Content-Type": "application/json" } }

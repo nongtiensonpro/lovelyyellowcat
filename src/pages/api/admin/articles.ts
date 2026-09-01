@@ -11,7 +11,7 @@ type SupabaseClientAA = ReturnType<typeof import("../../../lib/supabase").create
 type StaffAuthResult =
   | { error: Response }
   | { supabase: SupabaseClientAA; userId: string; role: "editor" | "admin"; isAdmin: boolean };
-async function authenticateStaff(context: any): Promise<StaffAuthResult> {
+async function authenticateStaff(context: { request: Request; cookies: import("astro").AstroCookies }): Promise<StaffAuthResult> {
   const supabase = createSupabaseServerClient({
     request: context.request,
     cookies: context.cookies,
@@ -77,8 +77,8 @@ export const GET: APIRoute = async (context) => {
       data,
       pagination: { page, limit, total: count ?? 0, totalPages: Math.max(1, Math.ceil((count ?? 0) / limit)) },
     });
-  } catch (err: any) {
-    console.error("[API articles] GET failed:", err.message);
+  } catch (err) {
+    console.error("[API articles] GET failed:", err instanceof Error ? err.message : String(err));
     return jsonResponse({ success: false, error: "Lỗi khi tải danh sách bài viết." }, 500);
   }
 };
@@ -138,8 +138,8 @@ export const PATCH: APIRoute = async (context) => {
     }
 
     return jsonResponse({ success: done > 0, updated: done, skipped });
-  } catch (err: any) {
-    console.error("[API articles] PATCH failed:", err.message);
+  } catch (err) {
+    console.error("[API articles] PATCH failed:", err instanceof Error ? err.message : String(err));
     return jsonResponse({ success: false, error: "Lỗi khi cập nhật bài viết." }, 500);
   }
 };
@@ -173,8 +173,8 @@ export const DELETE: APIRoute = async (context) => {
     });
 
     return jsonResponse(result, result.success ? 200 : 422);
-  } catch (err: any) {
-    console.error("[API articles] DELETE failed:", err.message);
+  } catch (err) {
+    console.error("[API articles] DELETE failed:", err instanceof Error ? err.message : String(err));
     return jsonResponse({ success: false, message: "Sự cố hệ thống khi xóa bài viết." }, 500);
   }
 };

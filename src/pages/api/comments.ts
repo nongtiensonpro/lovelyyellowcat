@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     return new Response(JSON.stringify({ success: true, data }), { status: 200 });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500 });
   }
 };

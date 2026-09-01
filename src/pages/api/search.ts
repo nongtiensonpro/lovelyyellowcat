@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
   try {
     // ── 1. Bài viết: Full-Text Search với fallback ILIKE ──
-    let articles: any[] | null = null;
+    let articles: Array<Record<string, unknown>> | null = null;
 
     const fts = await supabase
       .from("articles")
@@ -69,8 +69,8 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       }),
       { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }
     );
-  } catch (error: any) {
-    console.error("Lỗi unified search:", error.message);
+  } catch (error) {
+    console.error("Lỗi unified search:", error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify(emptyResult), {
       status: 200,
       headers: { "Content-Type": "application/json" },

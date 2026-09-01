@@ -9,7 +9,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
   return handleProfileUpdate({ request, cookies });
 };
 
-async function handleProfileUpdate({ request, cookies }: { request: Request; cookies: any }) {
+async function handleProfileUpdate({ request, cookies }: { request: Request; cookies: import("astro").AstroCookies }) {
   const supabase = createSupabaseServerClient({ request, cookies });
 
   // 1. Kiểm tra session người dùng
@@ -26,7 +26,7 @@ async function handleProfileUpdate({ request, cookies }: { request: Request; coo
     const { bio, banner_url, social_links } = body;
 
     // Validate inputs
-    const updatedFields: any = {};
+    const updatedFields: Record<string, unknown> = {};
     
     if (typeof bio !== "undefined") {
       updatedFields.bio = bio ? bio.trim() : null;
@@ -62,7 +62,7 @@ async function handleProfileUpdate({ request, cookies }: { request: Request; coo
     }
 
     return new Response(JSON.stringify({ success: true, data }), { status: 200 });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500 });
   }
 }

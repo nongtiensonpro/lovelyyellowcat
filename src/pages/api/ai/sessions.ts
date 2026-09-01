@@ -1,16 +1,16 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, AstroCookies } from "astro";
 import { createSupabaseServerClient } from "../../../lib/supabase";
 
 type SupabaseClient = ReturnType<typeof import("../../../lib/supabase").createSupabaseServerClient>;
 type AuthResult = { error: Response } | { supabase: SupabaseClient; user: { id: string } };
-async function requireActiveUser(context: { request: Request; cookies: any }): Promise<AuthResult> {
-  const supabase = createSupabaseServerClient(context as any);
+async function requireActiveUser(context: { request: Request; cookies: AstroCookies }): Promise<AuthResult> {
+  const supabase = createSupabaseServerClient(context);
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return { error: new Response(JSON.stringify({ error: "Chưa đăng nhập." }), { status: 401 }) } as const;
   }
   const { data: profile } = await supabase.from("profiles").select("is_banned").eq("id", user.id).maybeSingle();
-  if ((profile as any)?.is_banned) {
+  if ((profile as { is_banned?: boolean } | null)?.is_banned) {
     return { error: new Response(JSON.stringify({ error: "Tài khoản bị chặn." }), { status: 403 }) } as const;
   }
   return { supabase, user } as const;
@@ -59,8 +59,8 @@ export const POST: APIRoute = async (context) => {
 
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     return new Response(JSON.stringify({ session: data }), { status: 201 });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500 });
   }
 };
 
@@ -86,8 +86,8 @@ export const PATCH: APIRoute = async (context) => {
 
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     return new Response(JSON.stringify({ session: data }), { status: 200 });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500 });
   }
 };
 

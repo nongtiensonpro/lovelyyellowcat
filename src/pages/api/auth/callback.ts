@@ -54,11 +54,11 @@ export const GET: APIRoute = async ({ request, cookies, redirect, url }) => {
             .maybeSingle();
 
           // Nếu tài khoản đã bị chặn → đăng xuất ngay và chuyển tới trang BANNED rõ ràng
-          if ((profile as any)?.is_banned) {
+          if ((profile as { is_banned?: boolean } | null)?.is_banned) {
             await supabase.auth.signOut();
             const bannedUrl = new URL("/banned", url.origin);
-            if ((profile as any).ban_reason) bannedUrl.searchParams.set("reason", (profile as any).ban_reason);
-            if ((profile as any).banned_at) bannedUrl.searchParams.set("at", (profile as any).banned_at);
+            if ((profile as { ban_reason?: string }).ban_reason) bannedUrl.searchParams.set("reason", (profile as { ban_reason?: string }).ban_reason || "");
+            if ((profile as { banned_at?: string }).banned_at) bannedUrl.searchParams.set("at", (profile as { banned_at?: string }).banned_at || "");
             return redirect(bannedUrl.pathname + bannedUrl.search, 307);
           }
 
@@ -73,14 +73,14 @@ export const GET: APIRoute = async ({ request, cookies, redirect, url }) => {
                 recipientEmail: profile.email || user.email!,
                 recipientName: profile.full_name || user.user_metadata?.full_name || "Thành viên mới",
                 contactEmail: "nongtiensonpro@gmail.com",
-              } , getWorkerEnv()).catch((err: any) => {
-                console.error("[AUTH] Lỗi gửi welcome email:", err.message);
+              } , getWorkerEnv()).catch(() => {
+                console.error("[AUTH] Lỗi gửi welcome email (bỏ qua):");
               });
             }
           }
         }
-      } catch (welcomeErr: any) {
-        console.error("[AUTH] Welcome email check error:", welcomeErr.message);
+      } catch (welcomeErr) {
+        console.error("[AUTH] Welcome email check error:", welcomeErr instanceof Error ? welcomeErr.message : String(welcomeErr));
       }
 
       // Astro APIRoute tự động gộp tất cả cookies được tạo bởi cookies.set() vào Response redirect
@@ -88,8 +88,8 @@ export const GET: APIRoute = async ({ request, cookies, redirect, url }) => {
     }
 
     // Xử lý duplicate request / replay flow nếu đã có phiên
-    const errorCode = (error as any)?.code || "";
-    const errorMessage = (error as any)?.message || "";
+    const errorCode = (error as { code?: string })?.code || "";
+    const errorMessage = (error as { message?: string })?.message || "";
     const isReplayedFlow =
       errorCode === "flow_state_already_used" ||
       errorMessage.includes("flow_state_already_used") ||

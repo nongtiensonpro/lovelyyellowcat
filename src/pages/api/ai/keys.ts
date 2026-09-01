@@ -1,4 +1,4 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, AstroCookies } from "astro";
 import { createSupabaseServerClient } from "../../../lib/supabase";
 
 /**
@@ -7,8 +7,8 @@ import { createSupabaseServerClient } from "../../../lib/supabase";
  */
 type SupabaseServerClient = ReturnType<typeof import("../../../lib/supabase").createSupabaseServerClient>;
 type AuthResult = { error: Response } | { supabase: SupabaseServerClient; user: { id: string; email?: string } };
-async function requireActiveUser(context: { request: Request; cookies: any }): Promise<AuthResult> {
-  const supabase = createSupabaseServerClient(context as any);
+async function requireActiveUser(context: { request: Request; cookies: AstroCookies }): Promise<AuthResult> {
+  const supabase = createSupabaseServerClient(context);
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return { error: new Response(JSON.stringify({ error: "Chưa đăng nhập. Vui lòng đăng nhập để sử dụng AI." }), { status: 401 }) } as const;
@@ -22,7 +22,7 @@ async function requireActiveUser(context: { request: Request; cookies: any }): P
   if (profileError) {
     return { error: new Response(JSON.stringify({ error: "Lỗi kiểm tra tài khoản." }), { status: 500 }) } as const;
   }
-  if (profile && (profile as any).is_banned) {
+  if (profile && (profile as { is_banned?: boolean }).is_banned) {
     return { error: new Response(JSON.stringify({ error: "Tài khoản đã bị chặn, không thể sử dụng AI." }), { status: 403 }) } as const;
   }
   // Nếu profile chưa tồn tại (user mới) -> coi như hoạt động (sẽ tạo sau)
@@ -83,8 +83,8 @@ export const PUT: APIRoute = async (context) => {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
     return new Response(JSON.stringify({ success: true }), { status: 200 });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message || "Lỗi server" }), { status: 500 });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Lỗi server" }), { status: 500 });
   }
 };
 

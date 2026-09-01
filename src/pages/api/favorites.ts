@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
       .select("submission_id")
       .eq("profile_id", user.id);
 
-    const favoriteIds = (data || []).map((f: any) => f.submission_id);
+    const favoriteIds = (data || []).map((f: { submission_id: string }) => f.submission_id);
     return new Response(
       JSON.stringify({ favoriteIds }), 
       { status: 200, headers: { "Content-Type": "application/json" } }
@@ -65,8 +65,8 @@ export const GET: APIRoute = async ({ request, cookies, url }) => {
   }
 
   const submissions = (dbFavorites || [])
-    .map((f: any) => f.submissions)
-    .filter((s: any) => s !== null && s.status === "approved");
+    .map((f: { submissions: unknown }) => f.submissions)
+    .filter((s) => s !== null && (s as { status?: string }).status === "approved");
 
   return new Response(
     JSON.stringify({ success: true, submissions }), 
@@ -97,7 +97,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .single();
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+        return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500 });
       }
 
       return new Response(JSON.stringify({ success: true, data }), { status: 200 });
@@ -109,14 +109,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .eq("submission_id", submission_id);
 
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+        return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500 });
       }
 
       return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
 
     return new Response(JSON.stringify({ error: "Action không hợp lệ." }), { status: 400 });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500 });
   }
 };

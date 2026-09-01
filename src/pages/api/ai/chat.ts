@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { buildSiteKnowledgePrompt } from "../../../lib/siteKnowledge";
 import { env } from "cloudflare:workers";
+import type { GeminiListResponse, GeminiCandidate, GeminiPart } from "../../../components/ai/aiStreamCore";
 
 type AttemptLog = {
   model: string;
@@ -24,7 +25,9 @@ const LOCATION_BLOCKED_REPLY =
 type GeminiRouteKind = "google-ai-studio" | "cloudflare-ai-gateway" | "vertex-express";
 
 function getStringEnv(name: string): string {
-  return String((env as any)?.[name] || (import.meta.env as any)?.[name] || (process.env as any)?.[name] || "").trim();
+    const wEnv = env as unknown as Record<string, string | undefined>;
+  const iEnv = import.meta.env as unknown as Record<string, string | undefined>;
+  return String(wEnv?.[name] || iEnv?.[name] || process.env?.[name] || "").trim();
 }
 
 function getGeminiBaseUrls(): string[] {
@@ -148,10 +151,10 @@ async function readResponseError(response: Response): Promise<string> {
   }
 }
 
-function extractCandidateText(data: any): string {
+function extractCandidateText(data: GeminiListResponse): string {
   return (data?.candidates || [])
-    .flatMap((candidate: any) => candidate?.content?.parts || [])
-    .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
+    .flatMap((candidate: GeminiCandidate) => candidate?.content?.parts || [])
+    .map((part: GeminiPart) => (typeof part?.text === "string" ? part.text : ""))
     .join("");
 }
 
@@ -412,10 +415,12 @@ export const POST: APIRoute = async ({ request }) => {
                   const message = streamResult.error || "Stream kết thúc không có nội dung.";
                   attemptLogs.push({ model, status: 200, error: message, endpoint: safeEndpointLabel(baseUrl) });
                   if (isLocationBlocked(message)) break;
-                } catch (err: any) {
-                  const message = err?.name === "AbortError"
+                } catch (err) {
+                  const errName = err instanceof Error ? err.name : "";
+                  const errMsg = err instanceof Error ? err.message : String(err);
+                  const message = errName === "AbortError"
                     ? `Timeout sau ${Math.round(getUpstreamTimeoutMs() / 1000)} giây.`
-                    : err?.message || String(err);
+                    : errMsg;
                   attemptLogs.push({ model, status: 0, error: message, endpoint: safeEndpointLabel(baseUrl) });
                   // Preserve a usable partial answer when the upstream cuts out.
                   if (partialText) {
@@ -441,9 +446,9 @@ export const POST: APIRoute = async ({ request }) => {
                 `Routes Worker đã nhận: ${configuredRouteLabels.join(", ")}\n` +
                 attemptLogs.map((a, i) => `${i + 1}. [${a.model}] (HTTP ${a.status})${a.endpoint ? ` [${a.endpoint}]` : ""}: ${a.error}`).join("\n"),
             });
-          } catch (err: any) {
+          } catch (err) {
             console.error("[AI STREAM ERROR]:", err);
-            send({ error: err?.message || "Lỗi stream nội bộ.", done: true });
+            send({ error: err instanceof Error ? err.message : "Lỗi stream nội bộ.", done: true });
           } finally {
             clearInterval(heartbeat);
             close();
@@ -515,10 +520,12 @@ export const POST: APIRoute = async ({ request }) => {
             // trying the remaining models on this same route.
             if (isLocationBlocked(error) || isAuthenticationError(response.status)) break;
           }
-        } catch (err: any) {
-          const error = err?.name === "AbortError"
+        } catch (err) {
+          const errName = err instanceof Error ? err.name : "";
+          const errMsg = err instanceof Error ? err.message : String(err);
+          const error = errName === "AbortError"
             ? `Timeout sau ${Math.round(getUpstreamTimeoutMs() / 1000)} giây.`
-            : err?.message || String(err);
+            : errMsg;
           attemptLogs.push({ model, status: 0, error, endpoint: safeEndpointLabel(baseUrl) });
         } finally {
           clearTimeout(timeout);
@@ -574,15 +581,17 @@ export const POST: APIRoute = async ({ request }) => {
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("[AI CHAT API ERROR]:", error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : undefined;
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || "Lỗi máy chủ nội bộ khi xử lý hội thoại.",
+        error: errMsg || "Lỗi máy chủ nội bộ khi xử lý hội thoại.",
         reply:
           "Meow~! Mạng nơ-ron truyền dẫn Cybernet đang gặp sự cố nội bộ. Bạn hãy mở chi tiết lỗi bên dưới để xem nhé! 🐱💾",
-        errorDetail: `[INTERNAL_SERVER_ERROR]: ${error.stack || error.message || error}`,
+        errorDetail: `[INTERNAL_SERVER_ERROR]: ${errStack || errMsg}`,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

@@ -42,7 +42,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // 1.5 Xác thực Google reCAPTCHA v2 chống bot spam
-    const recaptchaSecret = (env as any)?.RECAPTCHA_SECRET_KEY || import.meta.env.RECAPTCHA_SECRET_KEY;
+    const recaptchaSecret = (env as unknown as Record<string, string | undefined>)?.RECAPTCHA_SECRET_KEY || import.meta.env.RECAPTCHA_SECRET_KEY;
     if (recaptchaSecret) {
       if (!recaptcha_token) {
         return new Response(JSON.stringify({ error: "Yêu cầu xác minh danh tính qua Google reCAPTCHA." }), { status: 400 });
@@ -58,8 +58,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         })
       });
 
-      const verifyData: any = await verifyRes.json();
-      if (!verifyData.success || verifyData.score < 0.5) {
+      const verifyData = (await verifyRes.json()) as { success?: boolean; score?: number };
+      if (!verifyData.success || (verifyData.score ?? 0) < 0.5) {
         console.log("[reCAPTCHA v3] Bot detected. Score:", verifyData.score);
         return new Response(JSON.stringify({ error: "Hệ thống chống bot từ chối yêu cầu của bạn (Điểm bảo mật quá thấp)." }), { status: 400 });
       }
@@ -81,11 +81,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .single();
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500 });
     }
 
     return new Response(JSON.stringify({ success: true, data }), { status: 200 });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500 });
   }
 };

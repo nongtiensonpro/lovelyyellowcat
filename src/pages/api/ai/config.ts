@@ -2,7 +2,9 @@ import type { APIRoute } from "astro";
 import { env } from "cloudflare:workers";
 
 function getStringEnv(name: string): string {
-  return String((env as any)?.[name] || (import.meta.env as any)?.[name] || (process.env as any)?.[name] || "").trim();
+    const wEnv = env as unknown as Record<string, string | undefined>;
+  const iEnv = import.meta.env as unknown as Record<string, string | undefined>;
+  return String(wEnv?.[name] || iEnv?.[name] || process.env?.[name] || "").trim();
 }
 
 export const GET: APIRoute = async () => {

@@ -5,7 +5,7 @@ import { env } from "cloudflare:workers";
 export const GET: APIRoute = async ({ request, cookies, url, redirect }) => {  
   const supabase = createSupabaseServerClient({ request, cookies });  
   const configuredSiteUrl = (
-    (env as any)?.PUBLIC_SITE_URL || import.meta.env.PUBLIC_SITE_URL
+    (env as unknown as Record<string, string | undefined>)?.PUBLIC_SITE_URL || import.meta.env.PUBLIC_SITE_URL
   )?.trim().replace(/\/+$/, "");
   const redirectOrigin = configuredSiteUrl || url.origin;
   const redirectUrl = `${redirectOrigin}/api/auth/callback`;
