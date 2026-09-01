@@ -8,7 +8,7 @@ const supabase = createSupabaseServerClient({
 });
 
 const { data: { user } } = await supabase.auth.getUser();
-let userProfile: any = null;
+let userProfile: { role?: string } | null = null;
 if (user) {
   const { data } = await supabase
     .from("profiles")
@@ -35,7 +35,7 @@ if (exportKind === "top_articles") {
 
   const csvEscape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = ["title,slug,status,view_count,created_at"];
-  (rows || []).forEach((r: any) => {
+  (rows || []).forEach((r: { slug: string; views?: number }) => {
     lines.push([csvEscape(r.title), csvEscape(r.slug), csvEscape(r.status), r.view_count || 0, r.created_at].join(","));
   });
 
@@ -104,6 +104,8 @@ const seriesMeta = [
 ];
 
 const hasDailyData = dailyStats.length > 0;
+type Row = { [key: string]: unknown };
+
 ---
 
 <AdminLayout title="VAPORWAVE MAGAZINE // TRUNG TÂM PHÂN TÍCH" userProfile={userProfile} activePath="/admin/analytics">
@@ -162,7 +164,7 @@ const hasDailyData = dailyStats.length > 0;
             {!topArticles || topArticles.length === 0 ? (
               <tr><td colspan="3" class="text-center p-6 text-win-dark font-bold">CHƯA CÓ DỮ LIỆU.</td></tr>
             ) : (
-              topArticles.map((a: any, i: number) => (
+              topArticles.map((a: Row, i: number) => (
                 <tr>
                   <td class={`font-mono ${i < 3 ? "font-black" : ""}`}>{["🥇", "🥈", "🥉"][i] || i + 1}</td>
                   <td>
@@ -185,7 +187,7 @@ const hasDailyData = dailyStats.length > 0;
         {!artistBoard || artistBoard.length === 0 ? (
           <p class="text-center p-6 text-win-dark font-bold text-xs">CHƯA CÓ NGHỆ SĨ NÀO ĐÓNG GÓP.</p>
         ) : (
-          artistBoard.map((a: any, i: number) => (
+          artistBoard.map((a: Row, i: number) => (
             <div class="flex items-center gap-2.5 px-2 py-2 hover:bg-web-gray-input">
               <span class="font-mono w-7 text-center shrink-0">{["🥇", "🥈", "🥉"][i] || i + 1}</span>
               <img src={a.avatar_url || "/images/default-avatar.png"} alt="" loading="lazy"

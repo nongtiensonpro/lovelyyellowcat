@@ -69,7 +69,7 @@ const activeArtists = artists || [];
       </div>
     ) : (
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {activeArtists.map((artist: any, idx: number) => {
+        {activeArtists.map((artist: { username: string; last_active: string; works?: number }, idx: number) => {
           const formattedLastActive = new Date(artist.last_active).toLocaleDateString("vi-VN", {
             month: "short",
             day: "numeric"

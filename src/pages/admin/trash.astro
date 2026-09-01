@@ -5,7 +5,7 @@ import { deleteArticleWithRelations, deleteSubmissionWithRelations } from "../..
 import { logAdminAction } from "../../lib/adminAudit";
 import { env } from "cloudflare:workers";
 
-const runtimeEnv: any = env;
+const runtimeEnv = env as unknown as Record<string, string | undefined>;
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -13,7 +13,7 @@ const supabase = createSupabaseServerClient({
 });
 
 const { data: { user } } = await supabase.auth.getUser();
-let userProfile: any = null;
+let userProfile: { role?: string } | null = null;
 if (user) {
   const { data } = await supabase
     .from("profiles")
@@ -96,8 +96,8 @@ if (Astro.request.method === "POST" && user) {
       await logAdminAction(supabase, { adminId: user.id, action: "trash_purge_old", targetType: "profile", targetId: user.id, details: { purged: purgedCount, failed: failCount } });
       actionResult = { success: failCount === 0, message: `Đã dọn vĩnh viễn ${purgedCount} mục${failCount > 0 ? `, ${failCount} mục lỗi` : ""}.` };
     }
-  } catch (err: any) {
-    console.error("[TRASH] Mutation failed:", err.message);
+  } catch (err) {
+    console.error("[TRASH] Mutation failed:", err instanceof Error ? err.message : String(err));
     actionResult = { success: false, message: "Sự cố hệ thống khi xử lý Thùng Rác." };
   }
 }
@@ -118,6 +118,8 @@ const { data: trashedSubmissions } = await supabase
 function daysLeft(deletedAt: string): number {
   return Math.max(0, 30 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000));
 }
+type Row = { [key: string]: unknown };
+
 ---
 
 <AdminLayout title="VAPORWAVE MAGAZINE // THÙNG RÁC HỆ THỐNG" userProfile={userProfile} activePath="/admin/trash">
@@ -160,7 +162,7 @@ function daysLeft(deletedAt: string): number {
         {!trashedArticles || trashedArticles.length === 0 ? (
           <p class="p-8 text-center text-win-dark font-bold text-xs">Thùng rác bài viết đang trống. ✨</p>
         ) : (
-          trashedArticles.map((a: any) => (
+          trashedArticles.map((a: Row) => (
             <div class="flex items-center gap-3 px-2 py-2 hover:bg-web-gray-input">
               <span aria-hidden="true">📄</span>
               <div class="min-w-0 flex-1">
@@ -189,7 +191,7 @@ function daysLeft(deletedAt: string): number {
         {!trashedSubmissions || trashedSubmissions.length === 0 ? (
           <p class="p-8 text-center text-win-dark font-bold text-xs">Thùng rác tranh đang trống. ✨</p>
         ) : (
-          trashedSubmissions.map((s: any) => (
+          trashedSubmissions.map((s: Row) => (
             <div class="flex items-center gap-3 px-2 py-2 hover:bg-web-gray-input">
               <img src={s.image_url} alt="" loading="lazy" class="w-10 h-8 object-cover border border-win-dark shrink-0" />
               <div class="min-w-0 flex-1">

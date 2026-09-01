@@ -13,8 +13,8 @@ interface Props {
   description?: string;
   ogImage?: string;
   canonicalUrl?: string;
-  articleJsonLd?: any;
-  userProfile?: any;
+  articleJsonLd?: Record<string, unknown>;
+  userProfile?: { role?: string } | null;
   showMarquee?: boolean;
 }
 
@@ -31,7 +31,7 @@ const {
 const currentUrl = canonicalUrl || Astro.url.href;
 
 // Thông báo toàn站 đang hoạt động (ưu tiên banner > marquee). Bỏ qua lỗi nếu chưa có bảng.
-let siteAnnouncement: any = null;
+let siteAnnouncement: { type?: string; title?: string; body?: string } | null = null;
 try {
   const annSupabase = createSupabaseServerClient({ request: Astro.request, cookies: Astro.cookies });
   const { data } = await annSupabase

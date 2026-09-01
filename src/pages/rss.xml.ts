@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     const itemsXml = (articles || [])
       .map(
-        (art: any) => `    <item>
+        (art: { slug: string; title: string; excerpt: string | null; cover_url: string | null; created_at: string; published_at: string | null }) => `    <item>
       <title>${escapeXml(art.title)}</title>
       <link>${baseUrl}/articles/${escapeXml(art.slug)}</link>
       <guid isPermaLink="true">${baseUrl}/articles/${escapeXml(art.slug)}</guid>
@@ -52,7 +52,7 @@ ${itemsXml}
         "Cache-Control": "public, max-age=1800",
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Lỗi RSS generation:", error);
     return new Response("RSS feed temporarily unavailable", {
       status: 503,

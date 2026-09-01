@@ -57,8 +57,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
         .maybeSingle();
 
       if (profile?.is_banned) {
-        const reason = (profile as any).ban_reason || "";
-        const at = (profile as any).banned_at || "";
+        const reason = (profile as { ban_reason?: string }).ban_reason || "";
+        const at = (profile as { banned_at?: string }).banned_at || "";
         await supabase.auth.signOut();
         const bannedUrl = new URL("/banned", url.origin);
         if (reason) bannedUrl.searchParams.set("reason", reason);
@@ -189,8 +189,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
           .maybeSingle();
 
         if (profile?.is_banned) {
-          const reason = (profile as any).ban_reason || "";
-          const at = (profile as any).banned_at || "";
+          const reason = (profile as { ban_reason?: string }).ban_reason || "";
+          const at = (profile as { banned_at?: string }).banned_at || "";
           await supabase.auth.signOut();
           const bannedUrl = new URL("/banned", url.origin);
           if (reason) bannedUrl.searchParams.set("reason", reason);
@@ -223,10 +223,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // ────────────────────────────────────────────────
   try {
     return await next();
-  } catch (err: any) {
+  } catch (err) {
     console.error(`[SSR ERROR] ${context.request.method} ${pathname}:`, err);
 
-    const rawDetail = err?.stack || err?.message || String(err);
+    const rawDetail = (err instanceof Error && (err.stack || err.message)) || String(err);
     const detail = rawDetail.slice(0, 4000).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
     if (pathname.startsWith("/admin")) {

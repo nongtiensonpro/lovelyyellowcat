@@ -3,8 +3,8 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
 
 let hasServerError = false;
-let userProfile: any = null;
-let recentArticles: any[] | null = null;
+let userProfile: { role?: string } | null = null;
+let recentArticles: Array<Record<string, unknown>> | null = null;
 let commentsCount: number | null = 0;
 let pendingSubmissionsCount: number | null = 0;
 let totalSubmissionsCount: number | null = 0;

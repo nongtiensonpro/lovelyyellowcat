@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     const articleXml = (articles || [])
       .map(
-        (art: any) => `  <url>
+        (art: { slug: string; created_at: string; published_at: string | null }) => `  <url>
     <loc>${baseUrl}/articles/${escapeXml(art.slug)}</loc>
     <lastmod>${new Date(art.published_at || art.created_at).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     const artworkXml = (artworks || [])
       .map(
-        (sub: any) => `  <url>
+        (sub: { id: string; reviewed_at: string | null; created_at: string }) => `  <url>
     <loc>${baseUrl}/gallery/${sub.id}</loc>
     <lastmod>${new Date(sub.reviewed_at || sub.created_at).toISOString()}</lastmod>
     <changefreq>monthly</changefreq>
@@ -73,7 +73,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     const artistXml = (artists || [])
       .map(
-        (a: any) => `  <url>
+        (a: { artist_id: string }) => `  <url>
     <loc>${baseUrl}/profile/${a.artist_id}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -94,7 +94,7 @@ ${[staticXml, articleXml, artworkXml, artistXml].filter(Boolean).join("\n")}
         "X-Content-Type-Options": "nosniff"
       }
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Lỗi sitemap generation:", error);
     return new Response(
       `<?xml version="1.0" encoding="UTF-8"?>

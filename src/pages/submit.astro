@@ -13,7 +13,7 @@ const currentUser = await getCurrentUserProfile(supabase);
 
 // Nạp khóa Site Key động tại thời điểm chạy (Runtime) tránh phụ thuộc vào GitHub build
 import { env } from "cloudflare:workers";
-const recaptchaSitekey = (env as any)?.PUBLIC_RECAPTCHA_SITEKEY || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY || "";
+const recaptchaSitekey = (env as unknown as Record<string, string | undefined>)?.PUBLIC_RECAPTCHA_SITEKEY || import.meta.env.PUBLIC_RECAPTCHA_SITEKEY || "";
 ---
 
 <BaseLayout title="VAPORWAVE MAGAZINE // GỬI TRANH NGHỆ THUẬT CỘNG ĐỒNG" userProfile={currentUser}>

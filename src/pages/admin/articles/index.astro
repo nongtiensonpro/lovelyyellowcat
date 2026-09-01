@@ -13,7 +13,7 @@ const supabase = createSupabaseServerClient({
 
 // ── Xác thực & phân quyền ──
 const { data: { user } } = await supabase.auth.getUser();
-let userProfile: any = null;
+let userProfile: { role?: string } | null = null;
 if (user) {
   const { data } = await supabase
     .from("profiles")
@@ -62,7 +62,7 @@ const loadArticle = async (id: string) => {
     .select("id, title, slug, status, author_id")
     .eq("id", id)
     .maybeSingle();
-  return data as any;
+  return data as { id: string; title: string; status: string; slug: string; updated_at?: string }[];
 };
 
 // ── Xử lý các mutation (PRG pattern) ──
@@ -278,8 +278,8 @@ if (Astro.request.method === "POST") {
     }
 
     return redirectWithResult(false, "Hành động không hợp lệ.");
-  } catch (err: any) {
-    console.error("[ARTICLES] Mutation failed:", err.message);
+  } catch (err) {
+    console.error("[ARTICLES] Mutation failed:", err instanceof Error ? err.message : String(err));
     return redirectWithResult(false, "Sự cố hệ thống khi xử lý hành động. Vui lòng thử lại.");
   }
 }
@@ -311,9 +311,11 @@ const { data: allStatuses } = await supabase
   .from("articles")
   .select("status")
   .is("deleted_at", null);
-(allStatuses || []).forEach((a: any) => {
-  if (a.status in statusCounts) (statusCounts as any)[a.status]++;
+(allStatuses || []).forEach((a: { status: string }) => {
+  if (a.status in statusCounts) statusCounts[a.status as keyof typeof statusCounts]++;
 });
+type Row = { [key: string]: unknown };
+
 ---
 
 <AdminLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ BÀI VIẾT" userProfile={userProfile} activePath="/admin/articles">
@@ -425,7 +427,7 @@ const { data: allStatuses } = await supabase
               </td>
             </tr>
           ) : (
-            articles.map((article: any) => {
+            articles.map((article: Row) => {
               const own = article.author_id === currentUserId;
               const editable = isAdmin || own;
               return (

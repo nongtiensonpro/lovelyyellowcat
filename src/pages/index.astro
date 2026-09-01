@@ -95,6 +95,8 @@ const { data: featuredArtworks } = await supabase
   .eq("is_featured", true)
   .order("created_at", { ascending: false })
   .limit(4);
+type Row = { [key: string]: unknown };
+
 ---
 
 <BaseLayout title="VAPORWAVE ART JOURNAL // A CYBERNETIC OASIS" userProfile={userProfile}>
@@ -363,7 +365,7 @@ const { data: featuredArtworks } = await supabase
 
         {dbSpotlights && dbSpotlights.length > 0 ? (
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            {dbSpotlights.map((item: any) => (
+            {dbSpotlights.map((item: Row) => (
               <CrtMonitorFrame title={item.title}>
                 <a href={`/gallery`} class="block relative aspect-video bg-black group overflow-hidden">
                   <img
@@ -433,7 +435,7 @@ const { data: featuredArtworks } = await supabase
     });
 
     // Save-Data: không bao giờ giữ chế độ video nặng
-    const connection = (navigator as any).connection;
+    const connection = (navigator as { connection?: { effectiveType?: string; saveData?: boolean } }).connection;
     if (connection?.saveData && mode() === "video") {
       localStorage.setItem("hero-video-paused", "canvas");
     }

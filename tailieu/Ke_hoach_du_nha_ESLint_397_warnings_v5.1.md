@@ -71,3 +71,16 @@ Kỹ thuật chuẩn: `const body = (await request.json()) as SomeType;` — KH�
 - [x] Batch 10 unused-expressions (5→0) + exhaustive-deps sót (1→0) — DONE: ternary/guard statement → if/else; WindowFrame w vào deps + comment an toàn drag
 [x] Batch 11.3 (components/ 32→0) — DONE: webkitAudioContext cast hẹp ×4, catch instanceof Error ×13, Gemini result tự infer + signature thêm error?, CommentRow shape RPC flat, clipboard/ClipboardItem types, HeaderNav userProfile props typed, PixelText cleanup prop, UMA role union, FavoriteButton realtime payload — lộ 2 bug type bị any che (signature thiếu error?, err?.message unknown) — DONE: GeminiPart/Candidate interfaces, EmailRuntimeEnv (8 call sites), CloudinaryListResponse hợp nhất, getWorkerEnv() helper export thay (env as any); admin-users/callback call sites sửa theo
 - **Đích: 0 warnings → bỏ rule khỏi override warn, nâng về error thật**
+
+
+## KẾT LUẬN — v5.1 HOÀN THÀNH (2026)
+
+**ESLint debt: 472 → 0 problems (0 errors, 0 warnings)** — eslint rc=0, baseline ratchet = 0.
+
+Journey: 472 (config ban đầu) → 397 (lint gate + ratchet) → 392 (B4 deps) → 338 (B5 unused-vars) → 280 (B6 no-console) → 234 (B7 labels) → 202 (B8+9 a11y) → 196 (B10 expressions) → Batch 11 no-explicit-any theo 6 sub-batch: ui 3 → lib 17 → components 32 → api 61 → pages 87 → **0**.
+
+Tổng Batch 11: ~200 chỗ any → 0 bằng type thật (không cast mù): EmailRuntimeEnv, CloudinaryListResponse, Gemini types (tái dùng 1 nguồn), CommentRow (shape RPC flat), AstroCookies, WorkerEnv helper, instanceof guards ×50+, map callbacks typed theo select Supabase thật.
+
+Bài học lớn nhất: **generic `Record<string, unknown>` trong template .astro VỠ parser** (dấu `<` `>` bị coi là thẻ) — tsc không check template .astro nên chỉ eslint bắt được; thay bằng type alias `Row` khai báo ở frontmatter.
+
+Giá trị thực: ~8 bug type thật bị any che đã lộ ra và sửa (clampTemperature, verifyData.score undefined, signature stream thiếu error?, ban_reason undefined → URL, err?.message trên unknown...).

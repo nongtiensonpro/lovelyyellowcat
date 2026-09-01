@@ -9,7 +9,7 @@ const supabase = createSupabaseServerClient({
 });
 
 const { data: { user } } = await supabase.auth.getUser();
-let userProfile: any = null;
+let userProfile: { role?: string } | null = null;
 if (user) {
   const { data } = await supabase
     .from("profiles")
@@ -95,8 +95,8 @@ if (Astro.request.method === "POST" && user) {
       });
       actionResult = { success: true, message: "Đã xóa vĩnh viễn thông báo." };
     }
-  } catch (err: any) {
-    console.error("[ANNOUNCEMENTS] Mutation failed:", err.message);
+  } catch (err) {
+    console.error("[ANNOUNCEMENTS] Mutation failed:", err instanceof Error ? err.message : String(err));
     actionResult = { success: false, message: "Sự cố hệ thống khi xử lý thông báo. Kiểm tra migration upgrade_v3 đã chạy chưa." };
   }
 }
@@ -111,6 +111,8 @@ const { data: announcements } = await supabase
 function formatAnnouncementDate(d: string | null) {
   return d ? new Date(d).toLocaleString("vi-VN") : "—";
 }
+type Row = { [key: string]: unknown };
+
 ---
 
 <AdminLayout title="VAPORWAVE MAGAZINE // TRẠM PHÁT THÔNG BÁO" userProfile={userProfile} activePath="/admin/announcements">
@@ -177,7 +179,7 @@ function formatAnnouncementDate(d: string | null) {
         {!announcements || announcements.length === 0 ? (
           <p class="p-8 text-center text-win-dark font-bold text-xs">CHƯA CÓ THÔNG BÁO NÀO. SOẠN TIN ĐẦU TIÊN NGAY!</p>
         ) : (
-          announcements.map((a: any) => {
+          announcements.map((a: Row) => {
             const expired = a.end_at && new Date(a.end_at) < new Date();
             return (
               <div class={`p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 ${!a.is_active || expired ? "opacity-60" : ""}`}>

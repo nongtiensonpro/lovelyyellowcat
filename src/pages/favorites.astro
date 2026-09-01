@@ -10,7 +10,7 @@ const supabase = createSupabaseServerClient({
 
 // Lấy thông tin người dùng đăng nhập hiện tại
 const userProfile = await getCurrentUserProfile(supabase);
-let initialSubmissions: any[] = [];
+let initialSubmissions: Array<Record<string, unknown> & { status?: string }> = [];
 
 if (userProfile) {
   // Lấy các tác phẩm đã lưu trong mục yêu thích
@@ -28,7 +28,7 @@ if (userProfile) {
 
   if (dbFavorites) {
     initialSubmissions = dbFavorites
-      .map((f: any) => f.submissions)
+      .map((f: { submissions: Record<string, unknown> | null }) => f.submissions)
       .filter((s) => s !== null && s.status === "approved");
   }
 }

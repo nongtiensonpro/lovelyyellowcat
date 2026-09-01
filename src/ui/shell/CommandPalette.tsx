@@ -95,7 +95,6 @@ export function CommandPalette({ role = "public" }: { role?: "public" | "auth" |
           {filtered.map((cmd, i) => (
             <li
               // li role=option: Enter/Arrows điều khiển từ input onKeyDown — li là target hiển thị
-              // eslint-disable-next-line jsx-a11y/click-events-have-key-events
               key={cmd.id}
               role="option"
               aria-selected={i === selected}

@@ -33,7 +33,7 @@ const [commentsRes, relatedRes] = await Promise.all([
     : Promise.resolve({ data: [] })
 ]);
 
-const initialComments = (commentsRes.data || []).map((c: any) => ({
+const initialComments = (commentsRes.data || []).map((c: { id: string; article_id: string; content: string; created_at: string; profiles?: { full_name?: string | null; avatar_url?: string | null } | null }) => ({
   id: c.id,
   article_id: c.article_id,
   content: c.content,
@@ -48,7 +48,7 @@ const initialComments = (commentsRes.data || []).map((c: any) => ({
 }));
 const relatedData = relatedRes.data || [];
 
-let article: any = null;
+let article: Record<string, unknown> | null = null;
 
 if (dbArticle) {
   article = {
@@ -129,7 +129,7 @@ const articleJsonLd = {
 // 3. Logic bài viết liên quan
 let relatedArticles = [];
 if (dbArticle && relatedData && relatedData.length > 0) {
-  relatedArticles = relatedData.map((art: any) => ({
+  relatedArticles = relatedData.map((art: { slug: string; title: string; excerpt: string | null; cover_url: string | null }) => ({
     slug: art.slug,
     title: art.title,
     excerpt: art.excerpt || "Khám phá nghệ thuật Vaporwave...",
@@ -485,7 +485,7 @@ if (dbArticle && relatedData && relatedData.length > 0) {
       </div>
       <div class="p-4 bg-win-gray">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {relatedArticles.map((related: any, i: number) => (
+          {relatedArticles.map((related: { slug: string; title: string; excerpt: string; cover: string }, i: number) => (
             <RibbonCard
               title={related.title}
               tint={i === 0 ? "salmon" : i === 1 ? "sage" : "periwinkle"}
@@ -567,8 +567,8 @@ if (dbArticle && relatedData && relatedData.length > 0) {
           title: document.title,
           url: window.location.href,
         });
-      } catch (err: any) {
-        if (err?.name !== "AbortError") {
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === "AbortError")) {
           try {
             await navigator.clipboard.writeText(window.location.href);
             nativeShareBtn.textContent = "✅ ĐÃ COPY!";

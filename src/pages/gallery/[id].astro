@@ -32,7 +32,7 @@ const { data: initialCommentsData } = await supabase.rpc("get_comment_tree", {
   p_article_id: id
 });
 
-const initialComments = (initialCommentsData || []).map((c: any) => ({
+const initialComments = (initialCommentsData || []).map((c: { id: string; article_id: string; content: string; created_at: string; parent_id: string | null; profiles?: { full_name?: string | null; avatar_url?: string | null } | null }) => ({
   id: c.id,
   article_id: c.article_id,
   content: c.content,

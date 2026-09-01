@@ -1,5 +1,15 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.1] — Dọn nợ ESLint hoàn thành
+
+### Xóa bỏ
+- **ESLint debt 472 → 0 problems** (0 errors + 0 warnings) qua 11 batch có kế hoạch (`tailieu/Ke_hoach_du_nha_ESLint_397_warnings_v5.1.md`): unused-vars 50→0, no-console policy 58→0, form labels 46→0, keyboard a11y 28→0, no-explicit-any ~200→0 (6 sub-batch).
+- Ratchet `artifacts/lint-baseline.json` về **0** — mọi warning mới sẽ fail CI ngay từ đây.
+
+### Fixed
+- ~8 bug type thật bị `any` che: `clampTemperature(0)`→0.7, `verifyData.score` undefined so NaN, stream signature thiếu `error?`, `ban_reason` undefined vào URL, `.message` trên unknown ×30+, WindowFrame hooks thứ tự, SearchModal `sectionHeaderClass`, `setIsE2EELoading` typo.
+
+
 Toàn bộ nâng cấp giao diện theo kế hoạch `tailieu/Ke_hoach_nang_cap_Giao_dien_v5_ULTIMATE_OVERENGINEER.md`.
 Mỗi phase đều qua 5 gates: test · tokens:check · stylelint · build · policy:ui.
 

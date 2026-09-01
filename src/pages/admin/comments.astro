@@ -44,7 +44,7 @@ if (Astro.request.method === "POST") {
 
   if (action === "delete" && commentId) {
     // Lấy thông tin bình luận + tác giả TRƯỚC khi xóa (để gửi email)
-    let commentData: any = null;
+    let commentData: { profiles?: { full_name?: string; avatar_url?: string } | null } | null = null;
     try {
       const { data } = await supabase
         .from("comments")
@@ -56,8 +56,8 @@ if (Astro.request.method === "POST") {
 
     try {
       actionResult = await deleteCommentThread(supabase, commentId);
-    } catch (err: any) {
-      actionResult = { success: false, message: `Sự cố hệ thống: ${err.message}` };
+    } catch (err) {
+      actionResult = { success: false, message: `Sự cố hệ thống: ${err instanceof Error ? err.message : String(err)}` };
     }
 
     // Ghi audit log cho thao tác xóa bình luận
@@ -73,7 +73,7 @@ if (Astro.request.method === "POST") {
 
     // Gửi email thông báo nếu xóa thành công
     if (actionResult?.success && commentData?.profiles) {
-      const profile = commentData.profiles as any;
+      const profile = commentData.profiles;
       if (profile?.email) {
         try {
           await sendCommentDeletedEmail({
@@ -83,8 +83,8 @@ if (Astro.request.method === "POST") {
             reason: deleteReason || "Vi phạm quy tắc cộng đồng.",
             contactEmail: "nongtiensonpro@gmail.com",
           }, env);
-        } catch (emailErr: any) {
-          console.error("[COMMENTS] Email error:", emailErr.message);
+        } catch (emailErr) {
+          console.error("[COMMENTS] Email error:", emailErr instanceof Error ? emailErr.message : String(emailErr));
         }
       }
     }
@@ -126,20 +126,22 @@ const totalPages = pageCalc.totalPages;
 // (comments.article_id là TEXT — có thể là uuid hoặc slug cũ)
 const articleLookup = new Map<string, { title: string; slug: string }>();
 if (comments && comments.length > 0) {
-  const rawIds = Array.from(new Set(comments.map((c: any) => String(c.article_id)).filter(Boolean)));
+  const rawIds = Array.from(new Set(comments.map((c: { article_id: string }) => String(c.article_id)).filter(Boolean)));
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const uuidIds = rawIds.filter((id) => UUID_RE.test(id));
   const slugIds = rawIds.filter((id) => !UUID_RE.test(id));
 
   if (uuidIds.length > 0) {
     const { data } = await supabase.from("articles").select("id, title, slug").in("id", uuidIds);
-    (data || []).forEach((a: any) => articleLookup.set(a.id, a));
+    (data || []).forEach((a: { id: string }) => articleLookup.set(a.id, a));
   }
   if (slugIds.length > 0) {
     const { data } = await supabase.from("articles").select("id, title, slug").in("slug", slugIds);
-    (data || []).forEach((a: any) => articleLookup.set(a.slug, a));
+    (data || []).forEach((a: { slug: string }) => articleLookup.set(a.slug, a));
   }
 }
+type Row = { [key: string]: unknown };
+
 ---
 
 <AdminLayout title="VAPORWAVE MAGAZINE // QUẢN LÝ BÌNH LUẬN" userProfile={userProfile} activePath="/admin/comments">
@@ -224,7 +226,7 @@ if (comments && comments.length > 0) {
               </td>
             </tr>
           ) : (
-            comments.map((comment: any) => (
+            comments.map((comment: Row) => (
               <tr class="border-b border-web-gray-panel hover:bg-paper-soft">
                 <td class="p-2 border-r border-web-gray-panel font-bold text-black">
                   <div class="flex items-center gap-2">

@@ -43,9 +43,10 @@ const { data: bookmarks } = await supabase
   .order("saved_at", { ascending: false });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const articleIds = (bookmarks || []).map((b: any) => b.article_id).filter((id: string) => UUID_RE.test(id));
+const articleIds = (bookmarks || []).map((b: { article_id: string }) => b.article_id).filter((id) => UUID_RE.test(id));
 
-let savedArticles: any[] = [];
+type SavedArticle = { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; tags: string[] | null; published_at: string | null; created_at: string; saved_at: string };
+let savedArticles: SavedArticle[] = [];
 if (articleIds.length > 0) {
   const { data } = await supabase
     .from("articles")
@@ -54,10 +55,10 @@ if (articleIds.length > 0) {
     .eq("status", "published");
 
   // Giữ đúng thứ tự đã lưu gần nhất
-  const byId = new Map((data || []).map((a: any) => [a.id, a]));
+  const byId = new Map((data || []).map((a) => [a.id, a]));
   savedArticles = (bookmarks || [])
-    .map((b: any) => ({ ...byId.get(b.article_id), saved_at: b.saved_at }))
-    .filter((a: any) => a && a.id);
+    .map((b) => ({ ...byId.get(b.article_id), saved_at: b.saved_at }))
+    .filter((a) => a && a.id);
 }
 ---
 
@@ -93,7 +94,7 @@ if (articleIds.length > 0) {
       </div>
 
       <ul class="divide-y divide-web-gray-panel bg-white m-1 border-2 border-win-dark">
-        {savedArticles.map((art: any) => (
+        {savedArticles.map((art: SavedArticle) => (
           <li class="flex flex-wrap sm:flex-nowrap items-center gap-3 px-3 py-3 hover:bg-web-gray-input">
             {art.cover_url && (
               <img src={art.cover_url} alt="" class="w-16 h-12 object-cover border border-win-dark shrink-0" loading="lazy" />

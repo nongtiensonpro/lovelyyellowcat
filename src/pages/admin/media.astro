@@ -5,7 +5,7 @@ import { searchCloudinaryImages, deleteCloudinaryImages, getCloudinaryPublicIdFr
 import { logAdminAction } from "../../lib/adminAudit";
 import { env } from "cloudflare:workers";
 
-const runtimeEnv: any = env;
+const runtimeEnv = env as unknown as Record<string, string | undefined>;
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -13,7 +13,7 @@ const supabase = createSupabaseServerClient({
 });
 
 const { data: { user } } = await supabase.auth.getUser();
-let userProfile: any = null;
+let userProfile: { role?: string } | null = null;
 if (user) {
   const { data } = await supabase
     .from("profiles")
@@ -91,22 +91,22 @@ const usedProfile = new Set<string>();
 
 try {
   const { data: subs } = await supabase.from("submissions").select("image_pid, image_url");
-  (subs || []).forEach((s: any) => {
+  (subs || []).forEach((s: { public_id?: string }) => {
     if (s.image_pid && typeof s.image_pid === "string") usedGallery.add(s.image_pid.trim());
     const fromUrl = getCloudinaryPublicIdFromUrl(s.image_url, runtimeEnv);
     if (fromUrl) usedGallery.add(fromUrl);
   });
 
   const { data: arts } = await supabase.from("articles").select("cover_url, body_md");
-  (arts || []).forEach((a: any) => {
+  (arts || []).forEach((a: { featured_img?: string }) => {
     const coverPid = getCloudinaryPublicIdFromUrl(a.cover_url, runtimeEnv);
     if (coverPid) usedArticle.add(coverPid);
     getCloudinaryPublicIdsFromText(a.body_md, runtimeEnv).forEach((pid: string) => usedArticle.add(pid));
   });
 
   const { data: profs } = await supabase.from("profiles").select("avatar_url, banner_url");
-  (profs || []).forEach((p: any) => {
-    [p.avatar_url, p.banner_url].forEach((u: any) => {
+  (profs || []).forEach((p: { avatar_url?: string | null; banner_url?: string | null }) => {
+    [p.avatar_url, p.banner_url].forEach((u: string | null | undefined) => {
       const pid = getCloudinaryPublicIdFromUrl(u, runtimeEnv);
       if (pid) usedProfile.add(pid);
     });
@@ -138,7 +138,7 @@ const searchOpts = {
   nextCursor: cur || undefined,
 };
 
-let resources: Array<any> = [];
+let resources: Array<{ public_id: string; secure_url?: string; bytes?: number; format?: string; created_at?: string; usageTag: string }> = [];
 let nextCursor: string | null = null;
 let totalCount: number | undefined = undefined;
 let scanNote = "";
@@ -151,14 +151,14 @@ if (!usageFilter) {
     resources = [];
     resultError = result.error;
   } else {
-    resources = result.resources.map((r: any) => ({ ...r, usageTag: usageOf(r.public_id) }));
+    resources = result.resources.map((r) => ({ ...r, usageTag: usageOf(r.public_id) }));
     totalCount = result.totalCount;
     nextCursor = result.nextCursor;
   }
 } else {
   // Quét gộp tối đa 8 trang × 100 ảnh để lấp đầy trang hiện tại theo usage
   let cursorVar: string | undefined = cur || undefined;
-  const collected: any[] = [];
+  const collected: Array<{ public_id: string }> = [];
   let scannedTotal = 0;
   let searchError: string | null = null;
 
@@ -225,7 +225,7 @@ const prevUrl = hist.length > 0
   : null;
 
 // Thống kê mồ côi trên trang hiện tại (cho statusbar)
-const pageOrphans = resources.filter((r: any) => r.usageTag === "orphan").length;
+const pageOrphans = resources.filter((r) => r.usageTag === "orphan").length;
 const pageUsed = resources.length - pageOrphans;
 ---
 

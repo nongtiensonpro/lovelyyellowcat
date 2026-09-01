@@ -62,8 +62,8 @@ const { data: userBadgesData } = await supabase
 
 // Lọc bỏ null từ join
 const earnedBadges = userBadgesData
-  ?.map((ub: any) => ub.badges)
-  .filter((b: any) => b !== null) || [];
+  ?.map((ub: { badges: { id: string; name: string; icon?: string; description?: string } | null }) => ub.badges)
+  .filter((b) => b !== null) || [];
 
 // 5. Tải danh sách bài báo đã xuất bản của tác giả
 const { data: dbArticles } = await supabase
@@ -276,7 +276,7 @@ const joinedDate = new Date(profile.created_at || new Date()).toLocaleDateString
               </div>
             ) : (
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {earnedBadges.map((badge: any) => (
+                {earnedBadges.map((badge: { id: string; name: string; icon?: string; description?: string }) => (
                   <div 
                     key={badge.id} 
                     class="badge-card border-2 border-white p-1.5 bg-win-gray flex items-center gap-2 select-none shadow-[1px_1px_0px_#808080]"

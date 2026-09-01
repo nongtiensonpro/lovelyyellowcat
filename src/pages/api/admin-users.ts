@@ -103,7 +103,7 @@ export const PUT: APIRoute = async (context) => {
   if ("error" in auth) return auth.error;
   const { supabase, admin } = auth;
 
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await context.request.json();
   } catch {
@@ -112,7 +112,7 @@ export const PUT: APIRoute = async (context) => {
 
   const { userId, newRole } = body;
 
-  if (!userId || !newRole) {
+  if (typeof userId !== "string" || typeof newRole !== "string") {
     return new Response(JSON.stringify({ error: "Thiếu userId hoặc newRole." }), { status: 400 });
   }
 
@@ -204,7 +204,7 @@ export const POST: APIRoute = async (context) => {
   if ("error" in auth) return auth.error;
   const { supabase, admin } = auth;
 
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await context.request.json();
   } catch {
@@ -213,7 +213,7 @@ export const POST: APIRoute = async (context) => {
 
   const { userId, action, reason } = body;
 
-  if (!userId || !action) {
+  if (typeof userId !== "string" || typeof action !== "string") {
     return new Response(JSON.stringify({ error: "Thiếu userId hoặc action." }), { status: 400 });
   }
 
@@ -266,7 +266,7 @@ export const POST: APIRoute = async (context) => {
       target_id: userId,
       details: {
         target_name: targetProfile.full_name,
-        reason: reason || "Vi phạm quy tắc cộng đồng.",
+        reason: typeof reason === "string" ? reason : "Vi phạm quy tắc cộng đồng.",
       },
     });
 
@@ -275,7 +275,7 @@ export const POST: APIRoute = async (context) => {
       {
         recipientEmail: targetProfile.email,
         recipientName: targetProfile.full_name || targetProfile.email,
-        reason: reason || "Vi phạm quy tắc cộng đồng.",
+        reason: typeof reason === "string" ? reason : "Vi phạm quy tắc cộng đồng.",
         contactEmail: "nongtiensonpro@gmail.com",
       },
       getWorkerEnv()
