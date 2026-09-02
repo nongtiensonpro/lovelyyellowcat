@@ -1306,3 +1306,146 @@ select:focus-visible {
     animation: none;
   }
 }
+
+
+/* ══════════════════════════════════════════
+   FOOTER.SYS — băng nghệ thuật hoàng hôn vaporwave
+   CSS-only, 0 hex mới (token + rgba), tôn trọng reduced-motion.
+   ══════════════════════════════════════════ */
+
+.footer-art {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(11, 0, 26, 0) 0%, rgba(26, 0, 58, 0.85) 34%, rgba(11, 0, 26, 1) 100%);
+  border-bottom: 1px solid var(--color-win-dark);
+}
+
+/* Mặt trời sọc — lặn sau đường chân trời */
+.footer-art-sun {
+  position: absolute;
+  left: 50%;
+  bottom: -66px;
+  width: 150px;
+  height: 150px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 7px, rgba(11, 0, 26, 0.9) 7px 12px),
+    linear-gradient(180deg, var(--color-vapor-yellow), var(--color-vapor-pink) 55%, var(--color-vapor-purple));
+  box-shadow: 0 0 46px rgba(255, 113, 206, 0.35);
+  animation: footer-sun-set 26s linear infinite alternate;
+}
+
+@keyframes footer-sun-set {
+  from { transform: translateX(-50%) translateY(14px); }
+  to   { transform: translateX(-50%) translateY(-6px); }
+}
+
+/* Lưới phối cảnh chạy về phía người xem */
+.footer-art-grid {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  bottom: -6px;
+  height: 84px;
+  background-image:
+    linear-gradient(rgba(1, 205, 254, 0.38) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(1, 205, 254, 0.38) 1px, transparent 1px);
+  background-size: 34px 30px;
+  transform: perspective(220px) rotateX(58deg);
+  transform-origin: bottom;
+  animation: footer-grid-run 3.2s linear infinite;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), #000 45%);
+}
+
+@keyframes footer-grid-run {
+  from { background-position-y: 0; }
+  to   { background-position-y: 30px; }
+}
+
+/* Dải sao lấp lánh (3 lớp box-shadow) */
+.footer-art-stars {
+  position: absolute;
+  inset: 0 0 38% 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 30%, rgba(255, 251, 150, 0.95) 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 34% 62%, rgba(255, 255, 255, 0.9) 50%, transparent 51%),
+    radial-gradient(1.6px 1.6px at 57% 22%, rgba(1, 205, 254, 0.95) 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 74% 48%, rgba(255, 113, 206, 0.95) 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 88% 26%, rgba(255, 251, 150, 0.9) 50%, transparent 51%),
+    radial-gradient(1.1px 1.1px at 22% 78%, rgba(255, 255, 255, 0.85) 50%, transparent 51%),
+    radial-gradient(1.3px 1.3px at 66% 70%, rgba(185, 103, 255, 0.95) 50%, transparent 51%);
+  animation: footer-twinkle 3.4s ease-in-out infinite alternate;
+}
+
+@keyframes footer-twinkle {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
+/* ChữArt trung tâm — CHROME kiểu 80s */
+.footer-art-wordmark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--font-retro, var(--font-mono));
+  font-weight: 900;
+  font-size: clamp(1.35rem, 4.4vw, 2.6rem);
+  letter-spacing: 0.16em;
+  color: var(--color-text-primary);
+  background: linear-gradient(180deg, #fff 8%, var(--color-vapor-blue) 34%, var(--color-vapor-purple) 62%, var(--color-vapor-pink) 86%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 12px rgba(185, 103, 255, 0.5));
+}
+
+/* Dòng terminal neon cuối băng */
+.footer-art-terminal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-vapor-green);
+  text-shadow: 0 0 6px rgba(5, 255, 161, 0.65);
+  background: rgba(11, 0, 26, 0.82);
+  border-top: 1px solid rgba(5, 255, 161, 0.28);
+}
+
+.footer-art-terminal::after {
+  content: "▮";
+  margin-left: 2px;
+  animation: footer-cursor 1.1s steps(2, jump-none) infinite;
+}
+
+@keyframes footer-cursor {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Biến thể ADMIN: thấp hơn, không wordmark */
+.footer-art--admin { height: 96px; border-radius: 0; }
+.footer-art--admin .footer-art-sun { width: 104px; height: 104px; bottom: -46px; }
+.footer-art--admin .footer-art-grid { height: 58px; }
+
+/* Reduced-motion: băng tĩnh vẫn đẹp */
+@media (prefers-reduced-motion: reduce) {
+  .footer-art-sun,
+  .footer-art-grid,
+  .footer-art-stars,
+  .footer-art-terminal::after {
+    animation: none;
+  }
+}

@@ -180,8 +180,20 @@ const crumbSection = activeItem?.section || "MISSION_CONTROL";
 
           <slot />
 
-          <footer class="mt-8 mb-2 text-center font-mono text-[10px] text-text-muted">
-            📼 LOVELY YELLOW CAT CONTROL PANEL · MIT LICENSE · BEST VIEWED AT 1024x768
+          <!-- FOOTER.SYS admin — băng hoàng hôn compact + chips trạng thái -->
+          <footer class="mt-8 mb-2 overflow-hidden win95-container">
+            <div class="footer-art footer-art--admin" aria-hidden="true">
+              <div class="footer-art-stars"></div>
+              <div class="footer-art-sun"></div>
+              <div class="footer-art-grid"></div>
+              <div class="footer-art-terminal">&gt; FOOTER.SYS LOADED — CONTROL PANEL READY</div>
+            </div>
+            <div class="flex flex-wrap justify-center items-center gap-2 p-2 bg-win-gray font-mono text-[10px] text-text-muted">
+              <span class="win95-sunken px-1.5 py-0.5">📼 LOVELY YELLOW CAT CONTROL PANEL</span>
+              <span class="win95-sunken px-1.5 py-0.5 text-vapor-purple font-bold">MIT LICENSE</span>
+              <span class="win95-sunken px-1.5 py-0.5">BEST VIEWED AT 1024x768</span>
+              <span id="admin-net" class="win95-sunken px-1.5 py-0.5 font-bold">▲ ONLINE</span>
+            </div>
           </footer>
         </main>
       </div>

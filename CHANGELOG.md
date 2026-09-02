@@ -1,5 +1,18 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.6] — FOOTER.SYS: footer nghệ thuật hoàng hôn (public + admin)
+
+### Added
+- Băng nghệ thuật vaporwave cuối trang (CSS-only, 0 hex mới): **mặt trời sọc lặn** + **lưới phối cảnh chạy** + **sao lấp lánh** + **wordmark chrome gradient** + **dòng terminal neon** `> FOOTER.SYS LOADED` với con trỏ nháy.
+- Public (BaseLayout): băng 150px trên 3 dải Win95 cũ — cấu trúc links/usability giữ nguyên.
+- Admin (AdminLayout): variant compact 96px + chips trạng thái (CONTROL PANEL / MIT / 1024x768 / NET).
+- `prefers-reduced-motion` tắt mọi animation.
+
+### Notes
+- CSS budget 187,000 → 189,000 bytes (+2KB chủ đích cho art CSS, lý do trong commit).
+- Sự cố quy trình: 1 lần BaseLayout bị truncate 0-byte do lỗi encoding param trong tool write (anchor-assert đã chặn ghi rác; khôi phục từ HEAD, SHA verify khớp 100%).
+
+
 ## [5.5] — ANNOUNCE.FX v2: thông báo nâng cao (màu + ký hiệu + hiệu ứng)
 
 ### Added
