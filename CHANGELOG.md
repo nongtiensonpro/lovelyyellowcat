@@ -1,5 +1,19 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.5] — ANNOUNCE.FX v2: thông báo nâng cao (màu + ký hiệu + hiệu ứng)
+
+### Added
+- Admin chọn cho mỗi thông báo: **accent** (6 màu token vapor: pink/blue/purple/green/yellow/orange), **icon** (12 ký hiệu + Auto theo kênh), **hiệu ứng chữ** (neon glow / chromatic CRT / rainbow / blink).
+- 3 cột mới `accent/icon/fx` (nullable — `supabase_sql/announcements_fx.sql`); NULL = hành vi mặc định cũ, backward compatible.
+- PREVIEW.ALL 3 khung phản ứng live theo accent/fx/icon ngay khi chỉnh form.
+- Banner/popup: khi có FX, title thành "màn hình CRT mini" nền tối — giữ tương phản trên nền Win95 sáng.
+- 16 test mới (9 utils + 7 jsdom preview wiring) — 282/282.
+
+### Notes
+- CSS budget 185,000 → 187,000 bytes (+2KB chủ đích cho fx CSS, ghi lý do trong commit).
+- Mọi hiệu ứng động tôn trọng `prefers-reduced-motion`; màu 100% token (không hex mới).
+
+
 ## [5.2] — Tích hợp ESLint đầy đủ (hardening)
 
 ### Changed

@@ -37,6 +37,9 @@ import {
   partitionByType,
   dismissKey,
   safeIdToken,
+  accentClassFor,
+  fxClassFor,
+  iconFor,
   type AnnouncementLike,
 } from "../lib/announcementUtils";
 import AnnouncementPopup from "../components/AnnouncementPopup.astro";
@@ -59,6 +62,11 @@ try {
   // Chưa chạy migration upgrade_v3 → bỏ qua
 }
 const { marquee: marqueeAnn, banner: siteAnnouncement, popup: popupAnn } = annPartition;
+// ANNOUNCE.FX v2 — class màu/hiệu ứng cho banner (null → hành vi cũ).
+const bannerAccentClass = siteAnnouncement ? accentClassFor(siteAnnouncement.accent) : "";
+const bannerFxClass = siteAnnouncement ? fxClassFor(siteAnnouncement.fx) : "";
+const bannerHasFx = Boolean(bannerAccentClass || bannerFxClass);
+const bannerIcon = siteAnnouncement ? iconFor(siteAnnouncement) : "🚩";
 const bannerDismissKey = siteAnnouncement ? dismissKey(siteAnnouncement.id) : "";
 const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
 ---
@@ -157,23 +165,45 @@ const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
               data-dismiss-key={bannerDismissKey}
             >
               <div class="flex items-stretch">
-                <div class="win95-header bg-gradient-to-r from-vapor-orange to-vapor-pink px-3 py-2 flex items-center gap-2 shrink-0">
-                  <span aria-hidden="true">🚩</span>
+                <div
+                  class="win95-header bg-gradient-to-r from-vapor-orange to-vapor-pink px-3 py-2 flex items-center gap-2 shrink-0"
+                >
+                  <span aria-hidden="true">{bannerIcon}</span>
                   <span class="font-bold">THÔNG BÁO</span>
                 </div>
                 <div class="flex-1 bg-win-gray px-3 py-2 min-w-0 flex items-center gap-2">
-                  <p
-                    class="text-xs font-bold truncate sm:whitespace-normal flex-1"
-                    title={siteAnnouncement.body || siteAnnouncement.title}
-                  >
-                    {siteAnnouncement.title}
-                    {siteAnnouncement.body && (
-                      <span class="hidden md:inline font-normal text-[10px] text-black/70">
-                        {" "}
-                        — {siteAnnouncement.body}
-                      </span>
-                    )}
-                  </p>
+                  <!-- Có FX: title thành "màn hình CRT mini" nền tối, chữ accent + hiệu ứng -->
+                  {
+                    bannerHasFx ? (
+                      <p
+                        class:list={[
+                          "win95-sunken bg-cosmic-black px-2 py-0.5 text-xs font-bold truncate sm:whitespace-normal flex-1",
+                          bannerAccentClass,
+                          bannerFxClass,
+                        ]}
+                        title={siteAnnouncement.body || siteAnnouncement.title}
+                      >
+                        {siteAnnouncement.title}
+                        {siteAnnouncement.body && (
+                          <span class="hidden md:inline font-normal text-[10px] text-win-light/70">
+                            {" "}— {siteAnnouncement.body}
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p
+                        class="text-xs font-bold truncate sm:whitespace-normal flex-1"
+                        title={siteAnnouncement.body || siteAnnouncement.title}
+                      >
+                        {siteAnnouncement.title}
+                        {siteAnnouncement.body && (
+                          <span class="hidden md:inline font-normal text-[10px] text-black/70">
+                            {" "}— {siteAnnouncement.body}
+                          </span>
+                        )}
+                      </p>
+                    )
+                  }
                   <button
                     type="button"
                     class="win95-btn px-1.5 py-0 text-[10px] font-bold shrink-0"
@@ -192,9 +222,7 @@ const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
         <!-- Popup thông báo type=popup — một lần mỗi session -->
         {
           popupAnn && (
-            <AnnouncementPopup
-              announcement={{ id: popupAnn.id, title: popupAnn.title, body: popupAnn.body }}
-            />
+            <AnnouncementPopup announcement={popupAnn} />
           )
         }
 

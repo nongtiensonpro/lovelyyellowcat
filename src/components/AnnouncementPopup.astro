@@ -3,17 +3,24 @@
 // MỖI SESSION MỘT LẦN (sessionStorage). SSR-safe: markup render sẵn với
 // hidden, script inline kiểm tra dismiss-key rồi mới hiện — không flash,
 // không phụ thuộc framework. Focus vào nút OK khi mở (a11y).
-import { dismissKey, safeIdToken } from "../lib/announcementUtils";
+import {
+  dismissKey,
+  safeIdToken,
+  accentClassFor,
+  fxClassFor,
+  iconFor,
+  type AnnouncementLike,
+} from "../lib/announcementUtils";
 
 interface Props {
-  announcement: {
-    id: string;
-    title: string;
-    body?: string | null;
-  };
+  announcement: AnnouncementLike;
 }
 
 const { announcement } = Astro.props;
+// ANNOUNCE.FX v2 — accent/icon/fx (null → hành vi mặc định cũ).
+const fxAccentClass = accentClassFor(announcement.accent);
+const fxFxClass = fxClassFor(announcement.fx);
+const fxIcon = iconFor(announcement);
 const key = dismissKey(announcement.id);
 const idToken = safeIdToken(announcement.id);
 ---
@@ -35,7 +42,7 @@ const idToken = safeIdToken(announcement.id);
   >
     <div class="win95-header py-1 px-2 bg-gradient-to-r from-vapor-orange to-vapor-pink">
       <div class="flex items-center gap-1.5 font-bold text-xs">
-        <span aria-hidden="true">📣</span>
+        <span aria-hidden="true">{fxIcon}</span>
         <span id={`ann-popup-title-${idToken}`}>THÔNG BÁO HỆ THỐNG</span>
       </div>
       <button
@@ -48,9 +55,24 @@ const idToken = safeIdToken(announcement.id);
 
     <div class="p-4 bg-win-gray space-y-3">
       <div class="flex items-start gap-3">
-        <span aria-hidden="true" class="text-3xl shrink-0">📢</span>
+        <span aria-hidden="true" class="text-3xl shrink-0">{fxIcon}</span>
         <div class="min-w-0">
-          <p class="font-extrabold text-sm leading-snug">{announcement.title}</p>
+          <!-- Có cấu hình FX: title thành "màn hình CRT mini" nền tối, chữ accent + hiệu ứng -->
+          {
+            (fxAccentClass || fxFxClass) ? (
+              <p
+                class:list={[
+                  "win95-sunken bg-cosmic-black px-2 py-1 font-extrabold text-sm leading-snug",
+                  fxAccentClass,
+                  fxFxClass,
+                ]}
+              >
+                {announcement.title}
+              </p>
+            ) : (
+              <p class="font-extrabold text-sm leading-snug">{announcement.title}</p>
+            )
+          }
           {
             announcement.body && (
               <p class="text-xs mt-1.5 leading-relaxed text-black/80 whitespace-pre-line">

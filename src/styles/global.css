@@ -1245,3 +1245,64 @@ select:focus-visible {
     animation: none;
   }
 }
+
+/* ══════════════════════════════════════════
+   ANNOUNCE.FX v2 — hiệu ứng chữ thông báo
+   Màu glow dùng currentColor (theo accent class), không hex mới.
+   ══════════════════════════════════════════ */
+
+/* neon: quầng sáng theo chính màu chữ */
+.ann-fx-neon {
+  text-shadow:
+    0 0 5px currentColor,
+    0 0 14px currentColor;
+}
+
+/* chromatic: tách kênh CRT đỏ / xanh lục */
+.ann-fx-chromatic {
+  text-shadow:
+    2px 0 rgba(255, 0, 80, 0.75),
+    -2px 0 rgba(0, 255, 200, 0.75);
+}
+
+/* rainbow: xoay sắc độ liên tục */
+.ann-fx-rainbow {
+  animation: ann-rainbow 6s linear infinite;
+}
+
+@keyframes ann-rainbow {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* blink: nhấp nháy Win95 dịu bằng opacity steps */
+.ann-fx-blink {
+  animation: ann-blink 1.2s steps(2, jump-none) infinite;
+}
+
+@keyframes ann-blink {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+/* Admin: tile chọn icon — input ẩn, khi checked tô nền accent */
+.ann-icon-tile:has(input:checked) {
+  background: var(--color-vapor-yellow);
+  box-shadow: inset 1px 1px 0 var(--color-win-darkest);
+}
+
+/* Tôn trọng người dùng giảm chuyển động: tắt fx động, giữ glow tĩnh */
+@media (prefers-reduced-motion: reduce) {
+  .ann-fx-rainbow,
+  .ann-fx-blink {
+    animation: none;
+  }
+}

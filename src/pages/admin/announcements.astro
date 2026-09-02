@@ -2,6 +2,7 @@
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { createSupabaseServerClient } from "../../lib/supabase";
 import { logAdminAction } from "../../lib/adminAudit";
+import { ANNOUNCE_ACCENTS, ANNOUNCE_FX, ANNOUNCE_ICONS, normalizeAccent, normalizeFx, normalizeIcon, iconFor } from "../../lib/announcementUtils";
 
 const supabase = createSupabaseServerClient({
   request: Astro.request,
@@ -33,6 +34,10 @@ if (Astro.request.method === "POST" && user) {
     if (action === "create") {
       const title = String(formData.get("title") || "").trim();
       const body = String(formData.get("body") || "").trim();
+      // ANNOUNCE.FX v2 — accent/icon/fx (rỗng/auto → null = hành vi mặc định).
+      const accent = normalizeAccent(String(formData.get("accent") || ""));
+      const fx = normalizeFx(String(formData.get("fx") || ""));
+      const icon = normalizeIcon(String(formData.get("icon") || ""));
       const type = ["banner", "marquee", "popup"].includes(String(formData.get("type")))
         ? String(formData.get("type"))
         : "marquee";
@@ -47,6 +52,9 @@ if (Astro.request.method === "POST" && user) {
           body,
           type,
           end_at: endAt,
+          accent,
+          icon: icon ? icon.value : null,
+          fx,
           created_by: user.id,
         });
         if (error) throw new Error(error.message);
@@ -241,7 +249,7 @@ type Row = { [key: string]: unknown };
             <div
               class="win95-header bg-gradient-to-r from-vapor-orange to-vapor-pink px-3 py-2 flex items-center gap-2 shrink-0"
             >
-              <span aria-hidden="true">🚩</span>
+              <span aria-hidden="true" data-fx-icon>🚩</span>
               <span class="font-bold text-[10px]">THÔNG BÁO</span>
             </div>
             <div class="flex-1 bg-win-gray px-3 py-2 min-w-0 flex items-center gap-2">
@@ -353,6 +361,7 @@ type Row = { [key: string]: unknown };
             <select
               id="ann-type"
               name="type"
+                data-icon-default="📣"
               class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro"
               style="border-color: #808080 #fff #fff #808080;"
             >
@@ -375,6 +384,55 @@ type Row = { [key: string]: unknown };
             />
           </div>
         </div>
+        <!-- ANNOUNCE.FX v2 — màu chữ + hiệu ứng + ký hiệu -->
+        <fieldset class="border-2 win95-sunken p-2 space-y-2">
+          <legend class="text-[9px] font-bold uppercase px-1">🎨 Hiệu ứng (tuỳ chọn)</legend>
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <label for="ann-accent" class="block text-[10px] font-bold uppercase mb-1">Màu chữ</label>
+              <select
+                id="ann-accent"
+                name="accent"
+                class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro"
+                style="border-color: #808080 #fff #fff #808080;"
+              >
+                <option value="">Mặc định theo kênh</option>
+                {ANNOUNCE_ACCENTS.map((a) => (
+                  <option value={a}>● {a}</option>
+                ))}
+              </select>
+            </div>
+            <div class="flex-1">
+              <label for="ann-fx" class="block text-[10px] font-bold uppercase mb-1">Hiệu ứng</label>
+              <select
+                id="ann-fx"
+                name="fx"
+                class="w-full px-2 py-1.5 border-2 bg-white text-xs font-retro"
+                style="border-color: #808080 #fff #fff #808080;"
+              >
+                <option value="none">Tắt</option>
+                {ANNOUNCE_FX.filter((f) => f !== "none").map((f) => (
+                  <option value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <span class="block text-[10px] font-bold uppercase mb-1">Ký hiệu đầu thông báo</span>
+            <div class="flex flex-wrap gap-1">
+              <label class="ann-icon-tile win95-sunken bg-white">
+                <input type="radio" name="icon" value="auto" checked class="hidden" />
+                <span class="text-base leading-none px-1.5 py-1 block cursor-pointer" title="Tự động theo kênh">🤖</span>
+              </label>
+              {ANNOUNCE_ICONS.map((ic) => (
+                <label class="ann-icon-tile win95-sunken bg-white">
+                  <input type="radio" name="icon" value={ic.value} class="hidden" />
+                  <span class="text-base leading-none px-1.5 py-1 block cursor-pointer" title={ic.label}>{ic.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </fieldset>
         <button type="submit" class="win95-btn w-full font-bold text-xs py-2 bg-vapor-orange/25">
           📢 PHÁT THÔNG BÁO
         </button>
@@ -398,10 +456,20 @@ type Row = { [key: string]: unknown };
                   class={`p-3 flex flex-wrap sm:flex-nowrap items-center gap-3 ${!a.is_active || expired ? "opacity-60" : ""}`}
                 >
                   <span aria-hidden="true">
-                    {a.type === "popup" ? "🪟" : a.type === "banner" ? "🚩" : "🎞️"}
+                    {iconFor({ id: a.id, title: a.title, type: a.type, icon: a.icon })}
                   </span>
                   <div class="min-w-0 flex-1">
-                    <p class="font-bold text-xs truncate">{a.title}</p>
+                    <p class="font-bold text-xs truncate">
+                      {a.title}
+                      {a.accent && (
+                        <span class="ml-1 text-[9px] font-mono" title="Màu chữ tuỳ chỉnh">●</span>
+                      )}
+                      {a.fx && a.fx !== "none" && (
+                        <span class="ml-0.5 text-[9px] font-mono" title="Hiệu ứng chữ">
+                          ✨{a.fx}
+                        </span>
+                      )}
+                    </p>
                     <p class="text-[10px] text-win-dark">
                       Hết hạn: {formatAnnouncementDate(a.end_at)} ·{" "}
                       {expired ? "⚠️ CŨ" : a.is_active ? "🟢 ĐANG CHẠY" : "⏸ TẠM DỪNG"}

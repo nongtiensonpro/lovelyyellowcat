@@ -10,6 +10,10 @@ export interface AnnouncementLike {
   is_active?: boolean | null;
   end_at?: string | null;
   created_at?: string | null;
+  /** ANNOUNCE.FX v2 — màu nhấn/icon/hiệu ứng (nullable, null = hành vi mặc định cũ). */
+  accent?: string | null;
+  icon?: string | null;
+  fx?: string | null;
 }
 
 export type AnnouncementType = "banner" | "marquee" | "popup";
@@ -66,4 +70,79 @@ export function dismissKey(id: string): string {
 /** Token cho data-attribute: chỉ cho phép ký tự an toàn. */
 export function safeIdToken(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, "");
+}
+// ─────────────────────────────────────────────────────────────
+// ANNOUNCE.FX v2 — accent (màu chữ) + icon (ký hiệu) + fx (hiệu ứng)
+// Màu chỉ dùng token Tailwind vapor-* có sẵn — không hex mới (ratchet policy:ui).
+// ─────────────────────────────────────────────────────────────
+
+/** Palette accent hợp lệ — khớp token --color-vapor-*. */
+export const ANNOUNCE_ACCENTS = ["pink", "blue", "purple", "green", "yellow", "orange"] as const;
+export type AnnouncementAccent = (typeof ANNOUNCE_ACCENTS)[number];
+
+/** Hiệu ứng chữ hợp lệ. */
+export const ANNOUNCE_FX = ["none", "neon", "chromatic", "rainbow", "blink"] as const;
+export type AnnouncementFx = (typeof ANNOUNCE_FX)[number];
+
+/** Bộ ký hiệu đặc biệt admin chọn được (Auto = để trống, dùng icon mặc định theo type). */
+export const ANNOUNCE_ICONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "megaphone", label: "📣" },
+  { value: "bullhorn", label: "📢" },
+  { value: "warning", label: "⚠️" },
+  { value: "party", label: "🎉" },
+  { value: "wrench", label: "🔧" },
+  { value: "bulb", label: "💡" },
+  { value: "pin", label: "📌" },
+  { value: "heart", label: "❤️" },
+  { value: "star", label: "⭐" },
+  { value: "dot", label: "🔴" },
+  { value: "frame", label: "🖼️" },
+  { value: "window", label: "🪟" },
+];
+
+/** Chuẩn hoá accent; giá trị lạ → null (fallback hành vi cũ). */
+export function normalizeAccent(v: string | null | undefined): AnnouncementAccent | null {
+  return ANNOUNCE_ACCENTS.includes(v as AnnouncementAccent) ? (v as AnnouncementAccent) : null;
+}
+
+/** Chuẩn hoá fx; giá trị lạ → null. */
+export function normalizeFx(v: string | null | undefined): AnnouncementFx | null {
+  return ANNOUNCE_FX.includes(v as AnnouncementFx) ? (v as AnnouncementFx) : null;
+}
+
+/** Chuẩn hoá icon theo value ("auto"/"" → null → icon mặc định theo type). */
+export function normalizeIcon(v: string | null | undefined): { value: string; label: string } | null {
+  const x = v?.trim();
+  if (!x || x === "auto") return null;
+  return ANNOUNCE_ICONS.find((i) => i.value === x) ?? null;
+}
+
+/** Class màu Tailwind theo accent (token vapor-*). */
+export function accentClassFor(accent: string | null | undefined): string {
+  const a = normalizeAccent(accent);
+  return a ? `text-vapor-${a}` : "";
+}
+
+/** Class hiệu ứng CSS (định nghĩa trong global.css, tôn trọng reduced-motion). */
+export function fxClassFor(fx: string | null | undefined): string {
+  const f = normalizeFx(fx);
+  if (!f || f === "none") return "";
+  return `ann-fx-${f}`;
+}
+
+/** Icon hiển thị cho thông báo: icon chọn thủ công > icon mặc định theo type. */
+export function iconFor(a: AnnouncementLike): string {
+  const manual = normalizeIcon(a.icon);
+  if (manual) return manual.label;
+  const t = normalizeType(a.type);
+  if (t === "popup") return "📢";
+  if (t === "banner") return "🚩";
+  return "📣";
+}
+
+/** Text chạy marquee có icon đầu dòng khi announcement có icon/accent tuỳ chỉnh. */
+export function marqueeFxTextFrom(a: AnnouncementLike): string {
+  const icon = normalizeIcon(a.icon);
+  const prefix = icon ? `${icon.label} ` : "";
+  return `${prefix}${marqueeTextFrom(a)}`;
 }
