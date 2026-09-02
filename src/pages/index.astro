@@ -6,6 +6,7 @@ import CrtMonitorFrame from "../components/CrtMonitorFrame.astro";
 import ServerStatusWidget from "../components/ServerStatusWidget.astro";
 import CatAiGreetingBanner from "../components/CatAiGreetingBanner.astro";
 import PixelText from "../components/PixelText.astro";
+  import GameDock from "../components/games/GameDock.astro";
 import VaporCanvasHero from "../components/VaporCanvasHero.astro";
 import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
 
@@ -126,9 +127,6 @@ type Row = { [key: string]: unknown };
 
     <!-- Nội dung Hero phía trên video -->
     <div class="relative z-10 flex flex-col items-center max-w-3xl mx-auto">
-      <!-- Vaporwave Sliced Sun -->
-      <div class="vapor-sun mb-3"></div>
-
       <!-- Pixel Reveal Typography Title (Canvas) -->
       <PixelText
         text="Vapor Journal"
@@ -162,6 +160,9 @@ type Row = { [key: string]: unknown };
       ⏸ VHS
     </button>
   </section>
+
+  <!-- ARCADE.SYS — dock 2 game retro, click chơi toàn màn hình -->
+  <GameDock />
 
   <!-- ══════════════════════════════════════════
      FEATURED STRIP: ★ Bài chọn lọc + 🏆 Tranh nổi bật

@@ -1,0 +1,368 @@
+---
+// GameDock.astro — ARCADE.SYS: dock 2 game retro + overlay toàn màn hình.
+// Pure logic nằm ở src/lib/games/{pongCore,snakeCore}.ts (test riêng); file này
+// chỉ markup + wiring (open/close/focus/input/rAF). CSS-only animation, token colors.
+const GAMES = [
+  {
+    id: "pong",
+    file: "PONG.SYS",
+    icon: "🏓",
+    title: "VAPOR PONG",
+    desc: "Máy 1972 gọi lại — paddle chống bóng, hoàng hôn synthwave. BEST lưu máy bạn.",
+    hud: "P1 vs CPU · ESC THOÁT",
+  },
+  {
+    id: "snake",
+    file: "SNAKE.EXE",
+    icon: "🐍",
+    title: "NEON SNAKE",
+    desc: "Rắn neon ăn ⭐ trên lưới phát sáng. Chạm tường = game over. BEST lưu máy bạn.",
+    hud: "MŨI TÊN / WASD · ESC THOÁT",
+  },
+] as const;
+---
+<div class="arcade-dock" id="arcade-dock">
+  {
+    GAMES.map((g) => (
+      <button type="button" class="win95-btn arcade-card" data-game={g.id} aria-haspopup="dialog">
+        <span class="arcade-card-art" aria-hidden="true">{g.icon}</span>
+        <span class="block p-2.5 space-y-1">
+          <span class="arcade-card-title text-vapor-purple">
+            <span aria-hidden="true">{g.icon}</span> {g.title}
+          </span>
+          <span class="arcade-card-desc block">{g.desc}</span>
+          <span class="arcade-card-desc block text-vapor-blue">▶ CHƠI NGAY — {g.file}</span>
+        </span>
+      </button>
+    ))
+  }
+</div>
+
+{
+  GAMES.map((g) => (
+    <div
+      class="arcade-overlay"
+      id={`arcade-overlay-${g.id}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${g.title} — ${g.file}`}
+      data-opener-token="arcade"
+      hidden
+    >
+      <div class={`win95-window arcade-window arcade-window-${g.id}`}>
+        <div class="win95-header bg-gradient-to-r from-vapor-purple to-vapor-blue">
+          <span class="font-bold text-[11px] flex items-center gap-1.5">
+            <span aria-hidden="true">{g.icon}</span> {g.file} — {g.hud}
+          </span>
+          <button
+            type="button"
+            class="win95-btn py-0 px-1.5 text-[10px] font-bold"
+            data-arcade-close
+            aria-label="Đóng game">✕</button
+          >
+        </div>
+        <div class="arcade-canvas-wrap">
+          <canvas
+            class="arcade-canvas"
+            width="640"
+            height="480"
+            data-arcade-canvas={g.id}
+            aria-label={`Bàn chơi ${g.title}`}
+          ></canvas>
+        </div>
+        <div class="arcade-hud">
+          <span data-arcade-status={`score-${g.id}`}>SCORE 0</span>
+          <span data-arcade-status={`best-${g.id}`}>BEST 0</span>
+          <span class="text-vapor-yellow hidden sm:inline">ĐIỂM: BÓNG VƯỢT CPU / ⭐ ĂN ĐƯỢC</span>
+          <button type="button" class="win95-btn text-[10px] font-bold py-0.5 px-2" data-arcade-close>
+            ESC — THOÁT
+          </button>
+        </div>
+      </div>
+    </div>
+  ))
+}
+
+<script>
+  // Wiring overlay + input; physics import từ pure cores (tách test).
+  import { init as pongInit, step as pongStep, type PongState } from "../../lib/games/pongCore";
+  import { init as snakeInit, step as snakeStep, queueDir as snakeQueueDir, type SnakeState } from "../../lib/games/snakeCore";
+
+  type Cleanup = () => void;
+  const cleanups: Record<string, Cleanup | null> = { pong: null, snake: null };
+  let lastOpener: HTMLElement | null = null;
+
+  function bestKey(id: string): string {
+    return `lyc_arcade_best_${id}`;
+  }
+  function readBest(id: string): number {
+    try {
+      return parseInt(localStorage.getItem(bestKey(id)) || "0", 10) || 0;
+    } catch {
+      return 0;
+    }
+  }
+  function writeBest(id: string, v: number): void {
+    try {
+      localStorage.setItem(bestKey(id), String(v));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function setStatus(id: string, key: string, text: string): void {
+    const el = document.querySelector<HTMLElement>(`[data-arcade-status="${key}"]`);
+    if (el) el.textContent = text;
+  }
+
+  function openGame(id: string, opener: HTMLElement): void {
+    const overlay = document.getElementById(`arcade-overlay-${id}`);
+    if (!overlay) return;
+    lastOpener = opener;
+    overlay.removeAttribute("hidden");
+    overlay.classList.add("is-open");
+    const canvas = overlay.querySelector<HTMLCanvasElement>(`[data-arcade-canvas="${id}"]`);
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    // ✕ button trong header là nút đầu; nút footer ESC — cả hai đóng.
+    const closeBtns = overlay.querySelectorAll<HTMLElement>("[data-arcade-close]");
+    closeBtns[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeGame(id);
+    };
+    document.addEventListener("keydown", onKey);
+    closeBtns.forEach((b) => b.addEventListener("click", () => closeGame(id)));
+    let raf = 0;
+    let disposed = false;
+    let visibilityHandler: (() => void) | null = null;
+    let lastScore = -1;
+    let best = readBest(id);
+
+    function loop(): void {
+      if (disposed) return;
+      // step + render theo game
+      if (id === "pong") {
+        tickPong();
+      } else {
+        tickSnake();
+      }
+      raf = requestAnimationFrame(loop);
+    }
+    // ── PONG wiring ──
+    let pong: PongState | null = null;
+    let pongUp = false;
+    let pongDown = false;
+    let pongMouseY: number | null = null;
+    // ── SNAKE wiring ──
+    let snake: SnakeState | null = null;
+    let snakeAcc = 0;
+    let lastTs = 0;
+
+    function tickPong(): void {
+      if (!pong) return;
+      const input = { up: pongUp, down: pongDown, mouseY: pongMouseY };
+      pongStep(pong, input);
+      if (pong.score > best) {
+        best = pong.score;
+        writeBest("pong", best);
+      }
+      if (pong.score !== lastScore) {
+        lastScore = pong.score;
+        setStatus("pong", "score-pong", `SCORE ${pong.score}`);
+        setStatus("pong", "best-pong", `BEST ${best}`);
+      }
+      renderPong(ctx!, pong);
+    }
+    function tickSnake(): void {
+      if (!snake) return;
+      const now = performance.now();
+      const dt = Math.min(120, now - (lastTs || now));
+      lastTs = now;
+      snakeAcc += dt;
+      const cellMs = 110;
+      while (snakeAcc >= cellMs) {
+        snakeAcc -= cellMs;
+        snakeStep(snake);
+      }
+      if (snake.score > best) {
+        best = snake.score;
+        writeBest("snake", best);
+      }
+      if (snake.score !== lastScore) {
+        lastScore = snake.score;
+        setStatus("snake", "score-snake", `SCORE ${snake.score}`);
+        setStatus("snake", "best-snake", `BEST ${best}`);
+      }
+      renderSnake(ctx!, snake);
+    }
+    function renderPong(c: CanvasRenderingContext2D, s: PongState): void {
+      c.fillStyle = "#0b001a";
+      c.fillRect(0, 0, 640, 480);
+      // hoàng hôn sọc
+      const grad = c.createLinearGradient(0, 0, 0, 300);
+      grad.addColorStop(0, "#fffb96");
+      grad.addColorStop(0.5, "#ff71ce");
+      grad.addColorStop(1, "#b967ff");
+      c.fillStyle = grad;
+      c.fillRect(0, 0, 640, 300);
+      c.fillStyle = "#0b001a";
+      for (let y = 200; y < 300; y += 16) c.fillRect(0, y, 640, 7);
+      // mặt trời
+      c.save();
+      c.beginPath();
+      c.arc(320, 210, 90, 0, Math.PI * 2);
+      c.clip();
+      c.fillStyle = grad;
+      c.fillRect(230, 120, 180, 180);
+      c.fillStyle = "#0b001a";
+      for (let y = 190; y < 300; y += 14) c.fillRect(230, y, 180, 6);
+      c.restore();
+      // lưới synthwave
+      c.strokeStyle = "rgba(1, 205, 254, 0.4)";
+      c.lineWidth = 1;
+      for (let i = 0; i < 12; i++) {
+        c.beginPath();
+        c.moveTo(320, 300);
+        c.lineTo(i * 128 - 320, 480);
+        c.stroke();
+      }
+      for (let y = 304; y < 480; y += 12) {
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(640, y);
+        c.stroke();
+      }
+      // net + paddle + bóng
+      c.setLineDash([8, 10]);
+      c.strokeStyle = "#e8d5ff";
+      c.beginPath();
+      c.moveTo(320, 300);
+      c.lineTo(320, 480);
+      c.stroke();
+      c.setLineDash([]);
+      c.fillStyle = "#05ffa1";
+      c.fillRect(24, s.playerY, 12, 80);
+      c.fillStyle = "#ff71ce";
+      c.fillRect(604, s.cpuY, 12, 80);
+      c.fillStyle = "#fffb96";
+      c.fillRect(s.ballX - 6, s.ballY - 6, 12, 12);
+      c.fillStyle = "#e8d5ff";
+      c.font = "bold 40px monospace";
+      c.fillText(String(s.score), 280, 60);
+    }
+    function renderSnake(c: CanvasRenderingContext2D, s: SnakeState): void {
+      c.fillStyle = "#0b001a";
+      c.fillRect(0, 0, 640, 480);
+      // lưới mờ
+      c.strokeStyle = "rgba(185, 103, 255, 0.16)";
+      for (let x = 0; x <= 640; x += 32) {
+        c.beginPath();
+        c.moveTo(x, 0);
+        c.lineTo(x, 480);
+        c.stroke();
+      }
+      for (let y = 0; y <= 480; y += 32) {
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(640, y);
+        c.stroke();
+      }
+      // rắn neon
+      s.body.forEach((seg, i) => {
+        const glow = i === 0 ? "#05ffa1" : i % 2 ? "#01cdfe" : "#05ffa1";
+        c.fillStyle = glow;
+        c.shadowColor = glow;
+        c.shadowBlur = 12;
+        c.fillRect(seg.x * 32 + 2, seg.y * 32 + 2, 28, 28);
+      });
+      c.shadowBlur = 0;
+      // mồi ⭐
+      c.font = "26px serif";
+      c.fillText("⭐", s.food.x * 32 + 4, s.food.y * 32 + 26);
+      if (s.over) {
+        c.fillStyle = "#ff4444";
+        c.font = "bold 34px monospace";
+        c.fillText("GAME OVER — NHẤN SPACE", 120, 240);
+      }
+    }
+    function onKeyDown(e: KeyboardEvent): void {
+      if (id === "pong") {
+        if (e.key === "ArrowUp") pongUp = true;
+        if (e.key === "ArrowDown") pongDown = true;
+      } else {
+        const map: Record<string, string> = {
+          ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+          w: "up", s: "down", a: "left", d: "right",
+        };
+        const dir = map[e.key];
+        if (dir && snake) snakeQueueDir(snake, dir);
+        if (e.key === " " && snake?.over) snake = snakeInit();
+      }
+    }
+    function onKeyUp(e: KeyboardEvent): void {
+      if (id === "pong") {
+        if (e.key === "ArrowUp") pongUp = false;
+        if (e.key === "ArrowDown") pongDown = false;
+      }
+    }
+    function onMouseMove(e: MouseEvent): void {
+      if (id !== "pong") return;
+      const rect = canvas!.getBoundingClientRect();
+      pongMouseY = ((e.clientY - rect.top) / rect.height) * 480;
+    }
+
+    if (id === "pong") {
+      pong = pongInit();
+      pongMouseY = 240;
+      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keyup", onKeyUp);
+      canvas.addEventListener("mousemove", onMouseMove);
+    } else {
+      snake = snakeInit();
+      document.addEventListener("keydown", onKeyDown);
+    }
+    visibilityHandler = () => {
+      if (document.hidden && !disposed) {
+        // pause: hủy rAF, resume khi visible lại
+        cancelAnimationFrame(raf);
+        lastTs = 0;
+      } else if (!document.hidden && !disposed) {
+        lastTs = 0;
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(loop);
+      }
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+    raf = requestAnimationFrame(loop);
+
+    cleanups[id] = () => {
+      disposed = true;
+      cancelAnimationFrame(raf);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+      canvas.removeEventListener("mousemove", onMouseMove);
+      if (visibilityHandler) document.removeEventListener("visibilitychange", visibilityHandler);
+      closeBtns.forEach((b) => (b.onclick = null));
+    };
+  }
+
+  function closeGame(id: string): void {
+    const overlay = document.getElementById(`arcade-overlay-${id}`);
+    if (!overlay || !overlay.classList.contains("is-open")) return;
+    cleanups[id]?.();
+    cleanups[id] = null;
+    overlay.classList.remove("is-open");
+    overlay.setAttribute("hidden", "");
+    lastOpener?.focus();
+    lastOpener = null;
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-game]").forEach((card) => {
+    card.addEventListener("click", () => {
+      const id = card.getAttribute("data-game") || "";
+      openGame(id, card);
+    });
+  });
+</script>

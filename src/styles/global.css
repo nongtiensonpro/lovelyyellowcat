@@ -688,28 +688,6 @@ body {
   );
 }
 
-.vapor-sun {
-  width: clamp(110px, 28vw, 190px);
-  height: clamp(55px, 14vw, 95px);
-  border-radius: 190px 190px 0 0;
-  background: linear-gradient(
-    to bottom,
-    var(--color-vapor-yellow) 0%,
-    var(--color-vapor-orange) 30%,
-    var(--color-vapor-pink) 60%,
-    var(--color-vapor-purple) 100%
-  );
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 0 35px rgba(255, 113, 206, 0.5);
-  mask-image: repeating-linear-gradient(
-    to bottom,
-    black 0px,
-    black calc(8% - 1.8px),
-    transparent calc(8% - 1.8px),
-    transparent 8%
-  );
-}
 
 /* ══════════════════════════════════════════
    RIBBON CARD SYSTEM (DESIGN-dell-1996 Enterprise)
@@ -1337,10 +1315,7 @@ select:focus-visible {
   animation: footer-sun-set 26s linear infinite alternate;
 }
 
-@keyframes footer-sun-set {
-  from { transform: translateX(-50%) translateY(14px); }
-  to   { transform: translateX(-50%) translateY(-6px); }
-}
+
 
 /* Lưới phối cảnh chạy về phía người xem */
 .footer-art-grid {
@@ -1448,4 +1423,88 @@ select:focus-visible {
   .footer-art-terminal::after {
     animation: none;
   }
+}
+
+/* ══════════════════════════════════════════
+   ARCADE.SYS — dock game retro + overlay toàn màn hình
+   ══════════════════════════════════════════ */
+
+.arcade-dock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto 34px;
+}
+
+.arcade-card {
+  width: 260px;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-retro, monospace);
+}
+
+.arcade-card:hover .arcade-card-art { transform: translateY(-2px); }
+.arcade-card:focus-visible { outline: 2px dashed var(--color-vapor-green); outline-offset: 2px; }
+
+.arcade-card-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  font-size: 44px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(11, 0, 26, 0.55) 0 6px, transparent 6px 11px),
+    linear-gradient(180deg, var(--color-cosmic-deep), var(--color-cosmic-black));
+  border-bottom: 2px solid var(--color-win-darkest);
+  transition: transform 0.15s ease;
+}
+
+.arcade-card-title { display: flex; align-items: center; gap: 6px; font-weight: 900; letter-spacing: 0.08em; }
+.arcade-card-desc { font-family: var(--font-mono); font-size: 9.5px; line-height: 1.5; color: var(--color-win-darkest); }
+
+/* Overlay toàn màn hình */
+.arcade-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 0, 26, 0.9);
+  backdrop-filter: blur(3px);
+}
+.arcade-overlay.is-open { display: flex; }
+
+.arcade-window { width: min(92vw, 860px); }
+.arcade-canvas-wrap {
+  background: var(--color-cosmic-black);
+  padding: 8px;
+}
+.arcade-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  image-rendering: pixelated;
+}
+.arcade-hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--color-vapor-green);
+  background: rgba(11, 0, 26, 0.92);
+  border-top: 1px solid var(--color-win-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-card-art { transition: none; }
 }

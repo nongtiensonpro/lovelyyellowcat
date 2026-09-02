@@ -1,5 +1,21 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.7] — ARCADE.SYS: 2 game retro toàn màn hình + dọn Sliced Sun
+
+### Added
+- **ARCADE.SYS DOCK** trên trang chủ: 2 "đĩa game" Win95 — click mở **overlay toàn màn hình** (Esc/✕ đóng, focus trả về nút mở, pause khi tab ẩn).
+  - 🏓 **PONG.SYS — Vapor Pong**: paddle chuột/mũi tên, CPU bám bóng, mỗi cú chặn bóng nhanh hơn 4.5%; nền hoàng hôn sọc + mặt trời sọc + lưới synthwave + net đứt đoạn; điểm = số lần bóng qua CPU, BEST lưu localStorage.
+  - 🐍 **SNAKE.EXE — Neon Snake**: lưới 20×15 phát sáng, mồi ⭐, chặn quay đầu 180°, chạm tường/thân = game over (Space chơi lại); rắn gradient xanh lục/xanh dương neon.
+- Pure cores `src/lib/games/{pongCore,snakeCore}.ts` + **22 test** (304/304 tổng) — physics test 100% không DOM.
+- Canvas màu hex **trùng giá trị token** vapor (policy hex vẫn xanh).
+
+### Removed
+- `<!-- Vaporwave Sliced Sun -->` trên hero + `.vapor-sun` CSS (Pixel Reveal Title đã đủ — yêu cầu user).
+
+### Notes
+- CSS budget 189k→191k (+1.2KB arcade CSS, lý do trong commit).
+
+
 ## [5.6] — FOOTER.SYS: footer nghệ thuật hoàng hôn (public + admin)
 
 ### Added
