@@ -62,7 +62,8 @@ export function serve(s: PongState, towardCpu: boolean): void {
   s.ballX = PONG_W / 2;
   s.ballY = PONG_H / 2;
   s.velX = towardCpu ? START_SPEED : -START_SPEED;
-  s.velY = 0;
+  // Góc serve ngẫu nhiên (±) — không còn bóng thẳng giữa dễ đoán
+  s.velY = (Math.random() - 0.5) * 3.2;
   s.cool = 0;
 }
 
@@ -80,9 +81,16 @@ export function step(s: PongState, input: PongInput): PongState {
     const v = (input.down ? PLAYER_SPEED : 0) - (input.up ? PLAYER_SPEED : 0);
     s.playerY = clamp(s.playerY + v, 0, PONG_H - PAD_H);
   }
-  // ── CPU bám bóng (giới hạn tốc độ — thắng được nhưng không bender)
-  const target = s.ballY - PAD_H / 2;
-  s.cpuY = clamp(s.cpuY + clampSym((target - s.cpuY) * 0.09, CPU_MAX), 0, PONG_H - PAD_H);
+  // ── CPU bám bóng như người chơi thật: chỉ track khi bóng bay về phía mình,
+  // bóng đi xa thì drift về giữa chuẩn bị. Skill tăng nhẹ theo điểm (rubber-band arcade).
+  const skill = Math.min(0.085 + s.score * 0.004, 0.13);
+  if (s.velX > 0) {
+    const target = s.ballY - PAD_H / 2;
+    s.cpuY = clamp(s.cpuY + clampSym((target - s.cpuY) * skill, CPU_MAX), 0, PONG_H - PAD_H);
+  } else {
+    const mid = (PONG_H - PAD_H) / 2;
+    s.cpuY = clamp(s.cpuY + clampSym((mid - s.cpuY) * 0.03, 1.6), 0, PONG_H - PAD_H);
+  }
   // ── cooldown giữa các cú ghi điểm
   if (s.cool > 0) {
     s.cool -= 1;
@@ -130,10 +138,10 @@ export function step(s: PongState, input: PongInput): PongState {
     s.velY = clampSym(s.velY, VEL_Y_MAX);
     s.flash = 1;
   }
-  // ── bóng qua CPU → ĐIỂM + serve về CPU lại (bóng quay lại phía người chơi nhanh)
+  // ── bóng qua CPU → P1 ĐIỂM; serve về phía thua (P1 giao lại — chuẩn Pong)
   if (s.ballX > PONG_W + BALL) {
     s.score += 1;
-    serve(s, false);
+    serve(s, true);
     s.cool = 45;
   }
   // ── bóng qua P1 → thua mạng: reset điểm

@@ -1,5 +1,18 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.10.1] — fix PONG: "đứng im vẫn thắng" (CPU difficulty overhaul)
+
+### Fixed
+- **Root cause**: CPU bám bóng MỖI frame kể cả khi bóng bay về phía người chơi → đoán trước vị trí + score thấp chặn được hầu hết bóng; serve luôn velY=0 thẳng giữa dễ chặn; vòng lặp: velY tích luỹ mỗi cú chặn → CPU miss → P1 điểm đều đặn mà không cần di chuột.
+- CPU giờ **chỉ track khi bóng bay về phía mình** (`velX > 0`), bóng đi xa thì **drift về giữa** chuẩn bị — hành vi người chơi thật.
+- **Serve góc ngẫu nhiên** (velY ±1.6) — hết bóng thẳng đoán được.
+- **Rubber-band skill**: hệ số bám `0.085 + score×0.004` (cap 0.13) — càng ghi điểm CPU càng khó.
+- 4 test mới chặn class bug: CPU không track khi bóng đi xa, track khi bóng đến, skill tăng theo điểm, serve luôn có góc. 15 Pong tests (308 tổng).
+
+### Changed
+- Hướng serve sau khi P1 ghi điểm: về phía thua (P1 giao lại — chuẩn Pong).
+
+
 ## [5.10] — ARCADE v3: attract-mode minh hoạ sống động + dock full-width
 
 ### Added

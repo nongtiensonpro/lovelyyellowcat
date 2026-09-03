@@ -95,3 +95,45 @@ describe("PONG.SYS core", () => {
     expect(s.ballX).toBe(PONG_W / 2);
   });
 });
+
+describe("PONG difficulty (chặn bug đứng-im-vẫn-thắng)", () => {
+  it("CPU không bám bóng khi bóng hướng về P1 — drift về giữa (khoảng cách nhỏ, không cap)", () => {
+    const s = init();
+    s.velX = -6.3; // bóng về phía P1
+    s.ballY = 240; // xa giữa (230) một chút về phía dưới
+    s.cpuY = 200; // trên giữa — drift phải đưa cpuY LÊN (xa ballY)
+    const before = s.cpuY;
+    step(s, IN);
+    expect(s.cpuY).toBeGreaterThan(before); // về giữa (230) = tăng từ 200
+  });
+
+  it("CPU bám bóng khi bóng hướng về mình (velX > 0)", () => {
+    const s = init();
+    s.velX = 6.3;
+    s.ballY = 460;
+    s.cpuY = 100;
+    step(s, IN);
+    expect(s.cpuY).toBeGreaterThan(100); // đã tiến về bóng
+  });
+
+  it("skill tăng theo điểm (rubber-band): score cao → CPU tiến nhanh hơn (khoảng cách nhỏ, không cap)", () => {
+    const s0 = init();
+    s0.velX = 6.3; s0.ballY = 210; s0.cpuY = 200; s0.score = 0;
+    step(s0, IN);
+    const d0 = Math.abs(s0.cpuY - 200);
+    const s1 = init();
+    s1.velX = 6.3; s1.ballY = 210; s1.cpuY = 200; s1.score = 8;
+    step(s1, IN);
+    const d1 = Math.abs(s1.cpuY - 200);
+    expect(d1).toBeGreaterThan(d0);
+    expect(d1).toBeLessThan(4.6); // chưa chạm cap — đo đúng hệ số
+  });
+
+  it("serve luôn có velY khác 0 (góc ngẫu nhiên, không bóng thẳng)", () => {
+    for (let i = 0; i < 20; i++) {
+      const s = init();
+      serve(s, true);
+      expect(Math.abs(s.velY)).toBeGreaterThan(0);
+    }
+  });
+});
