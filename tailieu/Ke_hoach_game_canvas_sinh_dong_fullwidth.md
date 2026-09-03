@@ -29,3 +29,8 @@
 | V2 | snakeCore 32×18 | vitest (test cũ pass nhờ hằng số) |
 | V3 | GameDock render overhaul + canvas/CSS full-width | build + eslint 0 + policy (hex phải trùng token!) |
 | V4 | 7 gates + CHANGELOG + tick plan | full |
+
+
+## Phần 2 (2026): ATTRACT MODE + FULL-WIDTH DOCK — HOÀN THÀNH
+Card minh hoạ canvas tự chơi (Pong AI×AI, Snake AI greedy né thân/tường, tự hồi sinh);
+dock grid 2 cột full container width; IO viewport-pause + hidden-pause; 7 gates xanh 304/304.

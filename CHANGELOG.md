@@ -1,5 +1,19 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.10] — ARCADE v3: attract-mode minh hoạ sống động + dock full-width
+
+### Added
+- **Attract-mode Canvas2D** trên mỗi card game (như màn attract máy arcade thật):
+  - 🏓 PONG.SYS: 2 AI đối đánh thật (bám bóng giới hạn tốc độ, tăng tốc 3%/cú, serve lại) trên nền hoàng hôn + lưới synthwave + net đứt + glow + scanline.
+  - 🐍 SNAKE.EXE: AI tham lam tự lái đi ăn ⭐ (né tường/thân, tự hồi sinh sau khi thua), rắn neon có mắt, lưới tím pulse.
+  - Hiệu năng: **IntersectionObserver chỉ render card đang trong viewport** + pause khi tab ẩn — 0 CPU khi không nhìn thấy.
+- Card: icon lớn glow ở giữa canvas demo + title/desc bên dưới.
+
+### Changed
+- **Dock full-width**: `max-width 900px flex` → **grid 2 cột chiếm trọn chiều ngang container** — hết hụt hai bên.
+- Mobile ≤640px: 2 cột giữ nguyên, icon thu 26px, ẩn mô tả.
+
+
 ## [5.9] — ARCADE v2: Canvas2D sinh động + full-width widescreen
 
 ### Changed

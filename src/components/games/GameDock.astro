@@ -25,7 +25,10 @@ const GAMES = [
   {
     GAMES.map((g) => (
       <button type="button" class="win95-btn arcade-card" data-game={g.id} aria-haspopup="dialog">
-        <span class="arcade-card-art" aria-hidden="true">{g.icon}</span>
+        <span class="arcade-card-art" aria-hidden="true">
+          <canvas class="arcade-attract" width="480" height="160" data-attract={g.id} aria-hidden="true"></canvas>
+          <span class="arcade-card-icon">{g.icon}</span>
+        </span>
         <span class="block p-2.5 space-y-1">
           <span class="arcade-card-title text-vapor-purple">
             <span aria-hidden="true">{g.icon}</span> {g.title}
@@ -471,4 +474,291 @@ const GAMES = [
       openGame(id, card);
     });
   });
+
+  // ── ATTRACT MODE: canvas demo tự chơi trên card (như màn attract máy arcade) ──
+  // Pong: 2 AI đối đánh. Snake: AI tham lam đi về ⭐. Pause khi tab ẩn hoặc card ngoài viewport.
+  const AW = 480;
+  const AH = 160;
+  const attractState: Record<string, { raf: number; tick: number; visible: boolean; io: IntersectionObserver | null; pong?: Record<string, number>; snake?: { body: Array<{ x: number; y: number }>; dir: string; food: { x: number; y: number }; acc: number; dead: number } }> = {};
+
+  function attractRenderPong(c: CanvasRenderingContext2D, s: Record<string, number>): void {
+    const HZ = 112;
+    c.fillStyle = "#0b001a";
+    c.fillRect(0, 0, AW, AH);
+    const grad = c.createLinearGradient(0, 0, 0, HZ);
+    grad.addColorStop(0, "#fffb96");
+    grad.addColorStop(0.5, "#ff71ce");
+    grad.addColorStop(1, "#b967ff");
+    c.fillStyle = grad;
+    c.fillRect(0, 0, AW, HZ);
+    // sọc trời
+    c.fillStyle = "#0b001a";
+    for (let y = 88; y < HZ; y += 12) c.fillRect(0, y, AW, 4);
+    // lưới
+    c.strokeStyle = "rgba(1, 205, 254, 0.4)";
+    c.lineWidth = 1;
+    for (let i = -8; i <= 8; i++) {
+      c.beginPath();
+      c.moveTo(AW / 2, HZ);
+      c.lineTo(AW / 2 + i * 46, AH);
+      c.stroke();
+    }
+    for (let y = HZ + 5; y < AH; y += 11) {
+      c.beginPath();
+      c.moveTo(0, y);
+      c.lineTo(AW, y);
+      c.stroke();
+    }
+    // net + paddle + ball glow
+    c.setLineDash([5, 6]);
+    c.strokeStyle = "#e8d5ff";
+    c.beginPath();
+    c.moveTo(AW / 2, HZ);
+    c.lineTo(AW / 2, AH);
+    c.stroke();
+    c.setLineDash([]);
+    c.save();
+    c.shadowColor = "#05ffa1";
+    c.shadowBlur = 10;
+    c.fillStyle = "#05ffa1";
+    c.fillRect(10, s.y1, 7, 30);
+    c.restore();
+    c.save();
+    c.shadowColor = "#ff71ce";
+    c.shadowBlur = 10;
+    c.fillStyle = "#ff71ce";
+    c.fillRect(AW - 17, s.y2, 7, 30);
+    c.restore();
+    c.save();
+    c.shadowColor = "#fffb96";
+    c.shadowBlur = 12;
+    c.fillStyle = "#fffb96";
+    c.fillRect(s.bx - 4, s.by - 4, 8, 8);
+    c.restore();
+    // scanline
+    c.fillStyle = "rgba(11, 0, 26, 0.15)";
+    for (let y = 0; y < AH; y += 3) c.fillRect(0, y, AW, 1);
+  }
+
+  function attractTickPong(s: Record<string, number>): void {
+    s.t += 1;
+    if (s.cool > 0) {
+      s.cool -= 1;
+      return;
+    }
+    // AI bám bóng với tốc độ giới hạn + delay nhẹ (đánh thật, không perfect)
+    const tgt1 = s.by - 15;
+    const tgt2 = s.by - 15;
+    s.y1 += Math.max(-2.3, Math.min(2.3, (tgt1 - s.y1) * 0.12));
+    s.y2 += Math.max(-2.1, Math.min(2.1, (tgt2 - s.y2) * 0.1));
+    s.y1 = Math.max(0, Math.min(AH - 30, s.y1));
+    s.y2 = Math.max(0, Math.min(AH - 30, s.y2));
+    s.bx += s.vx;
+    s.by += s.vy;
+    if (s.by < 4) { s.by = 4; s.vy = Math.abs(s.vy); }
+    if (s.by > AH - 4) { s.by = AH - 4; s.vy = -Math.abs(s.vy); }
+    // paddle trái
+    if (s.vx < 0 && s.bx - 4 <= 17 && s.bx - 4 >= 10 && s.by >= s.y1 - 4 && s.by <= s.y1 + 34) {
+      s.bx = 21;
+      s.vx = Math.abs(s.vx) * 1.03;
+      s.vy += ((s.by - (s.y1 + 15)) / 15) * 1.1;
+    }
+    // paddle phải
+    if (s.vx > 0 && s.bx + 4 >= AW - 17 && s.bx + 4 <= AW - 10 && s.by >= s.y2 - 4 && s.by <= s.y2 + 34) {
+      s.bx = AW - 21;
+      s.vx = -Math.abs(s.vx) * 1.03;
+      s.vy += ((s.by - (s.y2 + 15)) / 15) * 1.1;
+    }
+    s.vy = Math.max(-3.4, Math.min(3.4, s.vy));
+    // ghi điểm → serve
+    if (s.bx > AW + 6 || s.bx < -6) {
+      s.score += 1;
+      s.bx = AW / 2;
+      s.by = AH / 2;
+      s.vx = s.bx > 0 ? 3.4 : -3.4;
+      s.vy = (Math.random() - 0.5) * 2.2;
+      s.cool = 30;
+    }
+  }
+
+  function attractRenderSnake(c: CanvasRenderingContext2D, s: { body: Array<{ x: number; y: number }>; dir: string; food: { x: number; y: number }; dead: number }): void {
+    const CELL = 16;
+    c.fillStyle = "#0b001a";
+    c.fillRect(0, 0, AW, AH);
+    c.strokeStyle = "rgba(185, 103, 255, 0.18)";
+    for (let x = 0; x <= AW; x += CELL) {
+      c.beginPath();
+      c.moveTo(x, 0);
+      c.lineTo(x, AH);
+      c.stroke();
+    }
+    for (let y = 0; y <= AH; y += CELL) {
+      c.beginPath();
+      c.moveTo(0, y);
+      c.lineTo(AW, y);
+      c.stroke();
+    }
+    s.body.forEach((seg, i) => {
+      const glow = i === 0 ? "#05ffa1" : i % 2 ? "#01cdfe" : "#05ffa1";
+      c.save();
+      c.shadowColor = glow;
+      c.shadowBlur = 8;
+      c.fillStyle = glow;
+      c.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+      c.restore();
+    });
+    // mắt đầu
+    const head = s.body[0];
+    c.fillStyle = "#0b001a";
+    c.fillRect(head.x * CELL + 4, head.y * CELL + 5, 3, 4);
+    c.fillRect(head.x * CELL + 9, head.y * CELL + 5, 3, 4);
+    c.save();
+    c.shadowColor = "#fffb96";
+    c.shadowBlur = 10;
+    c.font = "13px serif";
+    c.fillText("⭐", s.food.x * CELL + 2, s.food.y * CELL + 13);
+    c.restore();
+    c.fillStyle = "rgba(11, 0, 26, 0.15)";
+    for (let y = 0; y < AH; y += 3) c.fillRect(0, y, AW, 1);
+  }
+
+  function attractTickSnake(s: { body: Array<{ x: number; y: number }>; dir: string; food: { x: number; y: number }; dead: number }): void {
+    const CW = AW / 16; // 30 cols
+    const CH = AH / 16; // 10 rows
+    if (s.dead > 0) {
+      s.dead -= 1;
+      if (s.dead === 0) {
+        s.body = [{ x: 15, y: 5 }, { x: 14, y: 5 }, { x: 13, y: 5 }];
+        s.dir = "right";
+        s.food = { x: 22, y: 4 };
+      }
+      return;
+    }
+    const head = s.body[0];
+    // AI tham lam: ưu tiên trục xa food, né tường/thân
+    const dx = s.food.x - head.x;
+    const dy = s.food.y - head.y;
+    const prefs: string[] = [];
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      if (dx > 0) prefs.push("right"); else if (dx < 0) prefs.push("left");
+      if (dy > 0) prefs.push("down"); else if (dy < 0) prefs.push("up");
+    } else {
+      if (dy > 0) prefs.push("down"); else if (dy < 0) prefs.push("up");
+      if (dx > 0) prefs.push("right"); else if (dx < 0) prefs.push("left");
+    }
+    const opp: Record<string, string> = { right: "left", left: "right", up: "down", down: "up" };
+    let dir = s.dir;
+    for (const d of prefs) {
+      if (d === opp[s.dir]) continue;
+      dir = d;
+      break;
+    }
+    const delta: Record<string, [number, number]> = { right: [1, 0], left: [-1, 0], up: [0, -1], down: [0, 1] };
+    const [ddx, ddy] = delta[dir];
+    let nx = head.x + ddx;
+    let ny = head.y + ddy;
+    // né: nếu đụng tường/thân → thử hướng khác
+    const blocked = (x: number, y: number): boolean =>
+      x < 0 || y < 0 || x >= CW || y >= CH || s.body.some((b) => b.x === x && b.y === y);
+    if (blocked(nx, ny)) {
+      for (const [d2, [ex, ey]] of Object.entries(delta)) {
+        if (d2 === opp[s.dir]) continue;
+        const tx = head.x + ex;
+        const ty = head.y + ey;
+        if (!blocked(tx, ty)) {
+          nx = tx;
+          ny = ty;
+          dir = d2;
+          break;
+        }
+      }
+    }
+    if (blocked(nx, ny)) {
+      s.dead = 40;
+      return;
+    }
+    s.dir = dir;
+    s.body.unshift({ x: nx, y: ny });
+    if (nx === s.food.x && ny === s.food.y) {
+      // spawn food mới không trúng thân
+      for (let tries = 0; tries < 200; tries++) {
+        const fx = Math.floor(Math.random() * CW);
+        const fy = Math.floor(Math.random() * CH);
+        if (!s.body.some((b) => b.x === fx && b.y === fy)) {
+          s.food = { x: fx, y: fy };
+          break;
+        }
+      }
+    } else {
+      s.body.pop();
+      if (s.body.length > 14) s.body.pop(); // giữ chiều dài demo vừa phải
+    }
+  }
+
+  function startAttract(): void {
+    const canvases = document.querySelectorAll<HTMLCanvasElement>("[data-attract]");
+    if (!canvases.length) return;
+    function frame(): void {
+      raf = requestAnimationFrame(frame);
+      if (!anyVisible || document.hidden) return;
+      for (const cv of canvases) {
+        const id = cv.getAttribute("data-attract") || "";
+        const st = attractState[id];
+        if (!st || !st.visible) continue;
+        const ctx = cv.getContext("2d");
+        if (!ctx) continue;
+        if (id === "pong") {
+          const p = st.pong!;
+          attractTickPong(p);
+          attractRenderPong(ctx, p);
+        } else {
+          const sn = st.snake!;
+          sn.acc += 1;
+          if (sn.acc >= 6) {
+            sn.acc = 0;
+            attractTickSnake(sn);
+          }
+          attractRenderSnake(ctx, sn);
+        }
+      }
+    }
+    let raf = 0;
+    let anyVisible = false;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const cv = e.target as HTMLCanvasElement;
+          const id = cv.getAttribute("data-attract") || "";
+          const st = attractState[id];
+          if (st) {
+            st.visible = e.isIntersecting;
+          }
+        }
+        anyVisible = Array.from(attractState.values()).some((s) => s.visible);
+      },
+      { threshold: 0.05 },
+    );
+    for (const cv of canvases) {
+      const id = cv.getAttribute("data-attract") || "";
+      if (id === "pong") {
+        attractState[id] = {
+          raf: 0, tick: 0, visible: true, io: null,
+          pong: { y1: 65, y2: 65, bx: AW / 2, by: AH / 2, vx: 3.4, vy: 1.4, score: 0, cool: 0, t: 0 },
+        };
+      } else {
+        attractState[id] = {
+          raf: 0, tick: 0, visible: true, io: null,
+          snake: { body: [{ x: 15, y: 5 }, { x: 14, y: 5 }, { x: 13, y: 5 }], dir: "right", food: { x: 22, y: 4 }, acc: 0, dead: 0 },
+        };
+      }
+      io.observe(cv);
+    }
+    raf = requestAnimationFrame(frame);
+    attractState.__raf = { raf: 0, tick: 0, visible: false, io } as never; // lưu io để debug — không dùng raf riêng
+    // hủy đúng cách: lưu io + raf qua biến module-scope
+    (attractState as unknown as { _raf?: number; _io?: IntersectionObserver })._raf = raf;
+    (attractState as unknown as { _io?: IntersectionObserver })._io = io;
+  }
+
+  startAttract();
 </script>

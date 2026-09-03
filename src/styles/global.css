@@ -1430,16 +1430,16 @@ select:focus-visible {
    ══════════════════════════════════════════ */
 
 .arcade-dock {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  justify-content: center;
-  max-width: 900px;
+  width: 100%;
   margin: 0 auto 34px;
+  padding: 0;
 }
 
 .arcade-card {
-  width: 260px;
+  width: 100%;
   padding: 0;
   text-align: left;
   cursor: pointer;
@@ -1450,16 +1450,30 @@ select:focus-visible {
 .arcade-card:focus-visible { outline: 2px dashed var(--color-vapor-green); outline-offset: 2px; }
 
 .arcade-card-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 92px;
-  font-size: 44px;
-  background:
-    repeating-linear-gradient(to bottom, rgba(11, 0, 26, 0.55) 0 6px, transparent 6px 11px),
-    linear-gradient(180deg, var(--color-cosmic-deep), var(--color-cosmic-black));
+  position: relative;
+  display: block;
+  height: auto;
+  background: var(--color-cosmic-black);
   border-bottom: 2px solid var(--color-win-darkest);
   transition: transform 0.15s ease;
+}
+
+.arcade-attract {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  image-rendering: pixelated;
+}
+
+.arcade-card-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 38px;
+  filter: drop-shadow(0 0 10px rgba(255, 113, 206, 0.75));
+  pointer-events: none;
 }
 
 .arcade-card-title { display: flex; align-items: center; gap: 6px; font-weight: 900; letter-spacing: 0.08em; }
@@ -1508,8 +1522,7 @@ select:focus-visible {
 /* Mobile: thẻ game compact — tiết kiệm chiều cao cuộn */
 @media (width <= 640px) {
   .arcade-dock { gap: 10px; margin-bottom: 22px; }
-  .arcade-card { width: calc(50% - 5px); display: flex; flex-direction: column; }
-  .arcade-card-art { height: 56px; font-size: 28px; }
+  .arcade-card-icon { font-size: 26px; }
   .arcade-card .arcade-card-desc { display: none; }
   .arcade-card-title { font-size: 0.7rem; letter-spacing: 0.04em; }
 }
