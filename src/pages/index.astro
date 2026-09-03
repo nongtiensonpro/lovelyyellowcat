@@ -1,7 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import RibbonCard from "../components/RibbonCard.astro";
-import RetroSticker from "../components/RetroSticker.astro";
 import CrtMonitorFrame from "../components/CrtMonitorFrame.astro";
 import ServerStatusWidget from "../components/ServerStatusWidget.astro";
 import CatAiGreetingBanner from "../components/CatAiGreetingBanner.astro";
@@ -68,34 +67,6 @@ if (dbArticles && dbArticles.length > 0) {
 const tints: Array<"sage" | "salmon" | "peach" | "lime" | "sky" | "steel" | "periwinkle" | "olive"> = [
   "periwinkle", "salmon", "sage", "peach", "sky", "lime"
 ];
-
-// ★ BÀI CHỌN LỌC — bài viết admin đánh dấu nổi bật (fallback: 3 bài mới nhất)
-const { data: featuredArticles } = await supabase
-  .from("articles")
-  .select("slug, title, excerpt, cover_url, tags, created_at, published_at")
-  .eq("status", "published")
-  .eq("is_featured", true)
-  .order("published_at", { ascending: false, nullsFirst: false })
-  .limit(3);
-
-const curatedArticles: Array<{ slug: string; title: string; excerpt: string; cover: string; date: string; category: string }> =
-  (featuredArticles || []).map(a => ({
-    slug: a.slug,
-    title: a.title,
-    excerpt: a.excerpt || "",
-    cover: a.cover_url || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop",
-    date: new Date(a.published_at || a.created_at).toLocaleDateString("vi-VN"),
-    category: a.tags?.[0] || "FEATURED"
-  }));
-
-// 🏆 TRANH NỔI BẬT — tranh cộng đồng admin gắn sao (fallback: spotlight đã có)
-const { data: featuredArtworks } = await supabase
-  .from("submissions")
-  .select("id, title, image_url, profiles:profiles!author_id(full_name)")
-  .eq("status", "approved")
-  .eq("is_featured", true)
-  .order("created_at", { ascending: false })
-  .limit(4);
 type Row = { [key: string]: unknown };
 
 ---
@@ -104,7 +75,7 @@ type Row = { [key: string]: unknown };
   <!-- ══════════════════════════════════════════
      HERO SECTION: Perspective Grid & Sun Aesthetic
      ══════════════════════════════════════════ -->
-  <section class="vapor-grid-bg win95-container bg-cosmic-deep py-8 px-4 sm:px-8 mb-8 text-center relative border-2 border-win-dark shadow-2xl overflow-hidden">
+  <section class="vapor-grid-bg win95-container bg-cosmic-deep py-5 sm:py-6 px-4 sm:px-8 mb-6 text-center relative border-2 border-win-dark shadow-2xl overflow-hidden">
     <!-- ═══ NỀN CANVAS2D ĐỘNG (mặc định — nhẹ hơn video, tự pause thông minh) ═══ -->
     <VaporCanvasHero />
 
@@ -143,12 +114,6 @@ type Row = { [key: string]: unknown };
         // A CYBERNETIC OASIS OF DIGITAL NOSTALGIA 1995-2026 //
       </p>
 
-      <!-- Sub-headline with Sticker Bursts -->
-      <div class="mt-4 flex flex-wrap justify-center items-center gap-2.5">
-        <RetroSticker text="RETRO 90S" variant="burst" />
-        <RetroSticker text="CYBERNETIC ART" variant="pill" />
-        <RetroSticker text="WINDOWS 95 UI" variant="cyber" />
-      </div>
     </div>
 
     <!-- Nút bật/tắt video (góc dưới phải, phong cách Win95) -->
@@ -165,114 +130,24 @@ type Row = { [key: string]: unknown };
   <GameDock />
 
   <!-- ══════════════════════════════════════════
-     FEATURED STRIP: ★ Bài chọn lọc + 🏆 Tranh nổi bật
-     (Chỉ render khi admin đã đánh dấu is_featured)
-     ══════════════════════════════════════════ -->
-  {(curatedArticles.length > 0 || (featuredArtworks || []).length > 0) && (
-    <section class="win95-container bg-win-gray mb-8 font-retro text-black">
-      <div class="win95-header">
-        <span>★ EDITORS_PICK.EXE — NỔI BẬT TUẦN NÀY</span>
-        <span class="text-[10px] text-vapor-yellow hidden sm:inline">CURATED BY STAFF</span>
-      </div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
-        {curatedArticles.length > 0 && (
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-win-titlebar mb-2">📰 Bài Chọn Lọc</p>
-            <ul class="divide-y divide-chrome-slate border-2 border-win-dark bg-white">
-              {curatedArticles.map((a) => (
-                <li class="flex items-center gap-3 px-3 py-2 hover:bg-web-gray-input">
-                  <img src={a.cover} alt="" loading="lazy" class="w-12 h-9 object-cover border border-win-dark shrink-0" />
-                  <div class="min-w-0 flex-1">
-                    <a href={`/articles/${a.slug}`} class="font-bold text-xs text-black no-underline hover:underline line-clamp-1">
-                      ★ {a.title}
-                    </a>
-                    <p class="text-[10px] text-win-dark">{a.category} · {a.date}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {(featuredArtworks || []).length > 0 && (
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-win-titlebar mb-2">🏆 Tranh Nổi Bật</p>
-            <div class="grid grid-cols-4 gap-2 border-2 border-win-dark bg-white p-2">
-              {featuredArtworks.map((w) => (
-                <a href={`/gallery/${w.id}`} class="group block relative border border-win-dark overflow-hidden aspect-square" title={`${w.title || "Tác phẩm"} — ${w.profiles?.full_name || "Anonymous"}`}>
-                  <img src={w.image_url} alt={w.title || "Tác phẩm nổi bật"} loading="lazy"
-                    class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                  <span class="absolute top-1 left-1 text-[10px]" aria-hidden="true">⭐</span>
-                </a>
-              ))}
-            </div>
-            {(featuredArtworks || [])[0] && (
-              <p class="mt-1.5 text-[10px] text-win-darkest truncate">
-                ⭐ Mới nhất: <strong>{featuredArtworks[0].title || "Tác phẩm không tên"}</strong> — {featuredArtworks[0].profiles?.full_name || "Anonymous"}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    </section>
-  )}
-
-  <!-- ══════════════════════════════════════════
      ENTERPRISE 2-COLUMN CATALOG LAYOUT (DESIGN-dell-1996)
      Left Rail: 28% Navigation & System Status
      Right Rail: 72% Content Feeds & Spotlight
      ══════════════════════════════════════════ -->
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-6 items-start">
     
     <!-- LEFT COLUMN (4 / 12 cols = ~33% desktop) -->
-    <aside class="lg:col-span-4 space-y-6">
+    <aside class="lg:col-span-4 xl:col-span-3 space-y-5 order-2 lg:order-1">
       
       <!-- Server Status Monitor Widget (Live API) -->
       <ServerStatusWidget />
 
-      <!-- Quick Catalog Categories (Dell 1996 Style Nav Rail) -->
-      <div class="win95-window">
-        <div class="win95-header py-1 px-2 bg-gradient-to-r from-win-titlebar to-vapor-blue-dark">
-          <div class="flex items-center gap-1.5">
-            <span>🗂️</span>
-            <span class="font-bold text-xs">DANH MỤC NGHỆ THUẬT</span>
-          </div>
-        </div>
-
-        <div class="p-2 bg-win-gray space-y-1.5 font-retro text-xs">
-          <a href="/gallery" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline" style="min-height: 32px;">
-            <span>🖼️ Phòng Triển Lãm Cộng Đồng</span>
-            <span class="text-[10px] font-mono text-win-darkest">&gt;&gt;</span>
-          </a>
-          <a href="/artists" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline" style="min-height: 32px;">
-            <span>👥 Danh Sách Nghệ Sĩ Kỹ Thuật Số</span>
-            <span class="text-[10px] font-mono text-win-darkest">&gt;&gt;</span>
-          </a>
-          <a href="/ai" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline bg-vapor-yellow/40 border-2 border-black" style="min-height: 32px;">
-            <span>🐱 Trạm Trí Tuệ Nhân Tạo AI (1995)</span>
-            <span class="text-[10px] font-mono text-vapor-purple font-bold">HOT!</span>
-          </a>
-          <a href="/submit" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline bg-vapor-green/20 border border-black" style="min-height: 32px;">
-            <span>🎨 Đăng Tải Tác Phẩm Của Bạn</span>
-            <span class="text-[10px] font-mono text-win-darkest font-bold">NEW!</span>
-          </a>
-          <a href="/terms" class="win95-btn w-full justify-between py-1.5 px-2 text-black no-underline" style="min-height: 32px;">
-            <span>📜 Điều Khoản & Bản Quyền Số</span>
-            <span class="text-[10px] font-mono text-win-darkest">&gt;&gt;</span>
-          </a>
-        </div>
-      </div>
-
       <!-- Call-To-Action Dell-Red Panel (Enterprise 1996 Inspired) -->
-      <div class="border-2 border-black bg-gradient-to-br from-sticker-red to-seal-red p-4 text-white font-retro shadow-lg relative overflow-hidden">
+      <div class="border-2 border-black bg-gradient-to-br from-sticker-red to-seal-red p-3 text-white font-retro shadow-lg relative overflow-hidden">
         <div class="absolute -bottom-4 -right-4 opacity-20 text-6xl select-none font-mono">
           📼
         </div>
-        <div class="relative z-10 space-y-3">
-          <div class="flex items-center gap-2">
-            <span class="bg-yellow-400 text-black px-1.5 py-0.5 text-[10px] font-bold uppercase font-mono">HOTLINE</span>
-            <span class="text-xs font-mono font-bold tracking-widest">1-800-VAPORWAVE</span>
-          </div>
+        <div class="relative z-10 space-y-2">
           <h3 class="text-sm sm:text-base font-extrabold uppercase leading-tight drop-shadow-md">
             Gia nhập cộng đồng sáng tạo nghệ thuật số
           </h3>
@@ -285,35 +160,10 @@ type Row = { [key: string]: unknown };
         </div>
       </div>
 
-      <!-- Open Source & GitHub Box -->
-      <div class="win95-container font-retro text-black">
-        <div class="win95-header bg-gradient-to-r from-vapor-purple to-vapor-blue">
-          <span class="flex items-center gap-1 font-bold text-white text-[10px]">
-            <span>🔓</span> OPEN_SOURCE.SYS
-          </span>
-          <span class="text-[10px] text-vapor-yellow font-bold">MIT</span>
-        </div>
-        <div class="p-3 bg-win-gray space-y-2 text-xs">
-          <p class="text-[11px] font-bold uppercase text-black leading-tight">
-            100% Mã Nguồn Mở Minh Bạch
-          </p>
-          <p class="text-[10px] text-win-dark leading-relaxed font-body">
-            Toàn bộ mã nguồn dự án được công khai tại GitHub theo điều khoản giấy phép <strong>MIT License</strong>.
-          </p>
-          <a
-            href="https://github.com/nongtiensonpro/lovelyyellowcat"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="win95-btn w-full py-1.5 text-center text-black font-bold block no-underline text-[10px] bg-white border border-black hover:bg-vapor-yellow/30"
-          >
-            🐙 GitHub / lovelyyellowcat ↗
-          </a>
-        </div>
-      </div>
     </aside>
 
     <!-- RIGHT COLUMN (8 / 12 cols = ~67% desktop) -->
-    <main class="lg:col-span-8 space-y-8">
+    <main class="lg:col-span-8 xl:col-span-9 space-y-6 order-1 lg:order-2">
       
       <!-- Top AI Greeting Message from Mèo Vàng Cybernetic -->
       <CatAiGreetingBanner />
@@ -352,7 +202,7 @@ type Row = { [key: string]: unknown };
       </div>
 
       <!-- Spotlight Artworks Section inside CRT Monitor Frame -->
-      <div class="mt-10">
+      <div class="mt-6">
         <div class="border-2 border-black bg-sticker-purple p-3 text-white font-retro shadow-[4px_4px_0_#000] mb-4">
           <div class="flex justify-between items-center">
             <h2 class="text-base sm:text-lg font-black uppercase tracking-wider drop-shadow-[1px_1px_0_#000]">

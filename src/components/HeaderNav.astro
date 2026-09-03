@@ -30,9 +30,6 @@ const currentPath = Astro.url.pathname;
           <span class="font-black text-xs text-black tracking-wider uppercase group-hover:text-vapor-pink transition-colors">
             YELLOW CAT
           </span>
-          <span class="text-[10px] font-mono text-win-darkest font-bold tracking-tighter">
-            VAPOR_JOURNAL
-          </span>
         </div>
       </a>
 
@@ -92,9 +89,6 @@ const currentPath = Astro.url.pathname;
       </nav>
       
       <div class="border-l border-win-darkest border-r border-r-win-light h-6 my-auto mx-0.5 hidden lg:block"></div>
-      <span class="text-[10px] text-win-darkest font-mono font-bold tracking-widest hidden lg:inline bg-win-light/50 px-1.5 py-0.5 border border-win-dark">
-        SYS_V2.0 // ONLINE
-      </span>
     </div>
 
     <!-- Right Controls (Desktop System Tray) -->
@@ -105,17 +99,6 @@ const currentPath = Astro.url.pathname;
       <!-- Notification Bell -->
       {userProfile && <NotificationBell client:load currentUser={userProfile} />}
 
-      <!-- Submit Artwork CTA -->
-      {userProfile && (
-        <a
-          href="/submit"
-          class={`win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-vapor-green/25 border-2 border-black ${currentPath === '/submit' ? 'win95-sunken bg-vapor-green/50' : ''}`}
-          style="min-height: 32px;"
-        >
-          <span>🎨</span> Gửi Tranh
-        </a>
-      )}
-
       <!-- Admin Panel CTA -->
       {userProfile && (userProfile.role === 'admin' || userProfile.role === 'editor') && (
         <a
@@ -124,17 +107,6 @@ const currentPath = Astro.url.pathname;
           style="min-height: 32px;"
         >
           <span>⚙️</span> Bảng Quản Trị
-        </a>
-      )}
-
-      <!-- User Management (Admin Only) -->
-      {userProfile && userProfile.role === 'admin' && (
-        <a
-          href="/admin/users"
-          class="win95-btn text-xs font-bold text-black no-underline py-1 px-3 bg-vapor-pink/25 border-2 border-black"
-          style="min-height: 32px;"
-        >
-          <span>👥</span> Người Dùng
         </a>
       )}
 

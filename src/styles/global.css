@@ -1505,6 +1505,15 @@ select:focus-visible {
   border-top: 1px solid var(--color-win-dark);
 }
 
+/* Mobile: thẻ game compact — tiết kiệm chiều cao cuộn */
+@media (width <= 640px) {
+  .arcade-dock { gap: 10px; margin-bottom: 22px; }
+  .arcade-card { width: calc(50% - 5px); display: flex; flex-direction: column; }
+  .arcade-card-art { height: 56px; font-size: 28px; }
+  .arcade-card .arcade-card-desc { display: none; }
+  .arcade-card-title { font-size: 0.7rem; letter-spacing: 0.04em; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arcade-card-art { transition: none; }
 }

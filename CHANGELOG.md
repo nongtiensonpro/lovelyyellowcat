@@ -1,5 +1,22 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.8] — VIEWPORT.SYS: tối ưu diện tích trang chủ (PC + Mobile)
+
+### PC
+- Navbar tray gọn: bỏ badge SYS_V2.0, nút Gửi Tranh/Người Dùng trùng lặp, brand còn 1 dòng.
+- Hero: bỏ 3 sticker trang trí, py-8→py-5/6 — nội dung chính lên sớm hơn.
+- Bỏ FEATURED STRIP + DANH MỤC + GitHub box (nhân bản journal/spotlight/navbar/footer) — index -7.8KB markup, bỏ 2 query Supabase thừa (2 round-trip ít hơn).
+- Grid 12 cột: màn ≥1280px (xl) content chiếm 9/12 (trước 8/12) — bài viết + tranh rộng hơn.
+- CTA đỏ bỏ hotline giả "1-800-VAPORWAVE", padding gọn.
+
+### Mobile
+- **Đảo thứ tự DOM**: nội dung chính (bài viết/spotlight) hiển thị TRƯỚC widget hệ thống + CTA (order-1/2, khôi phục lg).
+- ARCADE card compact ≤640px: art 92→56px, ẩn mô tả, card 2 cột ngang — tiết kiệm ~250px cuộn.
+
+### Kết quả
+Hero nét → ARCADE gọn → ngay nội dung bài viết/tranh (mobile), spacing thưa hơn (mb-8→mb-6, space-y-8→6), mọi thứ còn truy cập đủ (drawer + footer).
+
+
 ## [5.7] — ARCADE.SYS: 2 game retro toàn màn hình + dọn Sliced Sun
 
 ### Added
