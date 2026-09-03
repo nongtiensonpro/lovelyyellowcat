@@ -1,5 +1,16 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.11] — Admin Thư viện Ảnh: quick-filter + sửa nút đè (MEDIA.UI v2)
+
+### Added
+- **Quick-filter chips** đầu trang: 🌐 TẤT CẢ / 🟢 ĐANG DÙNG / 🔴 MỒ CÔI (n) — giữ nguyên mọi bộ lọc khác (từ khoá/thư mục/kích thước/ngày/sắp xếp), active ring tím, chip Mồ Côi hiện số lượng trang hiện tại. Filter cũ vẫn còn trong form nâng cao.
+
+### Fixed (nút đè lên nhau)
+- Card ảnh: checkbox chọn + nút ℹ️ + badge tình trạng chuyển từ absolute đè-ảnh → **header row in-flow** trên ảnh (không che mất góc ảnh nữa).
+- Modal chi tiết (FILE_PROPERTIES.EXE): `max-h-90vh + overflow-y-auto` — không tràn màn hình nhỏ; 4 nút copy chống tràn chữ (`whitespace-nowrap + ellipsis`), grid 1 cột trên mobile.
+- Bulk-bar: gap-y + shrink-0 — nút XÓA không bị bóp chữ khi wrap mobile.
+
+
 ## [5.10.1] — fix PONG: "đứng im vẫn thắng" (CPU difficulty overhaul)
 
 ### Fixed

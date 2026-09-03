@@ -255,6 +255,32 @@ const pageUsed = resources.length - pageOrphans;
     </p>
   </div>
 
+  <!-- Quick filter: tình trạng sử dụng — giữ nguyên các filter khác -->
+  <div class="flex flex-wrap items-center gap-2 mb-3 font-retro text-xs">
+    <span class="font-bold uppercase text-[10px] text-win-dark mr-1">Tình trạng:</span>
+    {[
+      { v: "", label: "🌐 TẤT CẢ" },
+      { v: "used", label: "🟢 ĐANG DÙNG" },
+      { v: "orphan", label: "🔴 MỒ CÔI" },
+    ].map((opt) => {
+      const params = new URLSearchParams(Astro.url.searchParams);
+      if (opt.v) params.set("usage", opt.v); else params.delete("usage");
+      params.delete("cur");
+      return (
+        <a
+          href={`/admin/media${params.toString() ? "?" + params.toString() : ""}`}
+          class={`win95-btn no-underline font-bold px-3 py-1.5 ${
+            usageFilter === opt.v ? "ring-2 ring-vapor-purple bg-vapor-purple/15" : ""
+          }`}
+          aria-current={usageFilter === opt.v ? "page" : undefined}
+        >
+          {opt.label}
+          {opt.v === "orphan" && usageFilter !== "orphan" && pageOrphans > 0 ? ` (${pageOrphans})` : ""}
+        </a>
+      );
+    })}
+  </div>
+
   <!-- Thanh lọc nâng cao -->
   <form method="GET" action="/admin/media" class="win95-container font-retro text-black mb-4">
     <div class="win95-header">
@@ -323,12 +349,12 @@ const pageUsed = resources.length - pageOrphans;
 
   <!-- Bulk bar + lưới ảnh -->
   <form method="POST" action={`/admin/media${url.search}`} id="media-form">
-    <div class="flex flex-wrap items-center gap-2 mb-3 font-retro text-[11px]">
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 mb-3 font-retro text-[11px]">
       <label class="flex items-center gap-1.5 win95-btn font-bold cursor-pointer no-underline">
         <input type="checkbox" id="check-all-media" class="checkbox-vapor" aria-label="Chọn tất cả" />
         Chọn hết
       </label>
-      <span>Đã chọn: <strong id="media-count">0</strong></span>
+      <span class="shrink-0">Đã chọn: <strong id="media-count">0</strong></span>
       <span class="hidden md:inline text-win-dark">
         · Trang {pageIndex}{nextCursor ? "+" : ""} · Hiển thị {resources.length}{totalCount !== undefined ? `/${totalCount}` : ""}
         {usageFilter === "orphan" && scanNote ? ` (${scanNote})` : ""}
@@ -345,7 +371,7 @@ const pageUsed = resources.length - pageOrphans;
         name="action"
         value="bulk_delete"
         disabled
-        class="win95-btn bulk-del font-bold text-[10px] py-1 px-2 btn-danger"
+        class="win95-btn bulk-del font-bold text-[10px] py-1 px-2 btn-danger shrink-0"
       >
         🗑 XÓA ẢNH ĐÃ CHỌN
       </button>
@@ -372,26 +398,26 @@ const pageUsed = resources.length - pageOrphans;
             data-fmt={img.format || ""}
             data-folder={img.folder || ""}
           >
-            <div class="absolute bottom-1 left-1 right-1 z-10 pointer-events-none">
-              <span class={`badge ${USAGE_LABELS[img.usageTag as UsageTag].cls} !text-[10px] px-1 py-0`}>
+            <div class="flex items-center justify-between gap-1 px-1.5 pt-1.5 pb-1">
+              <label class="cursor-pointer shrink-0" title="Chọn để xóa">
+                <input type="checkbox" name="selectedIds" value={img.public_id} class="checkbox-vapor media-check" />
+              </label>
+              <span class={`badge ${USAGE_LABELS[img.usageTag as UsageTag].cls} !text-[9px] px-1 py-0 truncate`}>
                 {USAGE_LABELS[img.usageTag as UsageTag].text}
               </span>
+              <button
+                type="button"
+                class="detail-btn win95-btn w-6 h-6 p-0 justify-center font-bold text-[11px] shrink-0"
+                title="Xem chi tiết & copy link các loại"
+                aria-label={`Chi tiết ${img.filename || img.public_id}`}
+              >ℹ️</button>
             </div>
-            <label class="absolute top-1 left-1 z-20 cursor-pointer" title="Chọn để xóa">
-              <input type="checkbox" name="selectedIds" value={img.public_id} class="checkbox-vapor media-check" />
-            </label>
-            <button
-              type="button"
-              class="detail-btn absolute top-1 right-1 z-20 win95-btn w-6 h-6 p-0 justify-center font-bold text-[11px]"
-              title="Xem chi tiết & copy link các loại"
-              aria-label={`Chi tiết ${img.filename || img.public_id}`}
-            >ℹ️</button>
 
             <a
               href={cdnUrl(img.public_id, "f_auto,q_auto,w_800")}
               target="_blank"
               rel="noopener"
-              class="block aspect-square overflow-hidden border-b border-win-dark bg-cosmic-black group mt-5"
+              class="block aspect-square overflow-hidden border-b border-win-dark bg-cosmic-black group"
               tabindex="-1"
             >
               <img
@@ -440,7 +466,7 @@ const pageUsed = resources.length - pageOrphans;
 
   <!-- Overlay chi tiết ảnh -->
   <div id="media-detail" hidden class="fixed inset-0 bg-black/80 z-[var(--z-modal)] flex items-center justify-center p-4 backdrop-blur-sm">
-    <div role="dialog" aria-modal="true" aria-label="Chi tiết ảnh" class="win95-container max-w-2xl w-full font-retro text-black max-h-[92vh] overflow-y-auto">
+    <div role="dialog" aria-modal="true" aria-label="Chi tiết ảnh" class="win95-container max-w-2xl w-full max-h-[90vh] overflow-y-auto font-retro text-black max-h-[92vh] overflow-y-auto">
       <div class="win95-header">
         <span>🖼️ FILE_PROPERTIES.EXE</span>
         <button type="button" id="media-detail-close" class="win95-btn py-0 px-1.5 font-bold" aria-label="Đóng chi tiết">✕</button>
@@ -456,11 +482,11 @@ const pageUsed = resources.length - pageOrphans;
           <dt class="font-bold uppercase text-[10px]">Ngày tải</dt><dd id="md-date"></dd>
           <dt class="font-bold uppercase text-[10px]">Thư mục</dt><dd id="md-folder"></dd>
         </dl>
-        <div class="grid grid-cols-2 gap-2">
-          <button type="button" data-copy="full" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">🔗 COPY URL GỐC (1600px)</button>
-          <button type="button" data-copy="thumb" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">🖼️ COPY URL THUMBNAIL</button>
-          <button type="button" data-copy="md" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">📝 COPY MARKDOWN</button>
-          <button type="button" data-copy="html" class="copy-variant win95-btn text-[10px] py-1.5 font-bold">🌐 COPY THẺ HTML</button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button type="button" data-copy="full" class="copy-variant win95-btn text-[10px] py-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis">🔗 COPY URL GỐC (1600px)</button>
+          <button type="button" data-copy="thumb" class="copy-variant win95-btn text-[10px] py-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis">🖼️ COPY URL THUMBNAIL</button>
+          <button type="button" data-copy="md" class="copy-variant win95-btn text-[10px] py-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis">📝 COPY MARKDOWN</button>
+          <button type="button" data-copy="html" class="copy-variant win95-btn text-[10px] py-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis">🌐 COPY THẺ HTML</button>
         </div>
       </div>
     </div>
