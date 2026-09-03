@@ -64,8 +64,8 @@ const GAMES = [
         <div class="arcade-canvas-wrap">
           <canvas
             class="arcade-canvas"
-            width="640"
-            height="480"
+            width="960"
+            height="540"
             data-arcade-canvas={g.id}
             aria-label={`Bàn chơi ${g.title}`}
           ></canvas>
@@ -197,95 +197,201 @@ const GAMES = [
       renderSnake(ctx!, snake);
     }
     function renderPong(c: CanvasRenderingContext2D, s: PongState): void {
+      const W = 960;
+      const H = 540;
+      const HORIZON = 330;
+      const t = s.t;
+      // ── nền trời + hoàng hôn gradient
       c.fillStyle = "#0b001a";
-      c.fillRect(0, 0, 640, 480);
-      // hoàng hôn sọc
-      const grad = c.createLinearGradient(0, 0, 0, 300);
+      c.fillRect(0, 0, W, H);
+      const grad = c.createLinearGradient(0, 0, 0, HORIZON);
       grad.addColorStop(0, "#fffb96");
       grad.addColorStop(0.5, "#ff71ce");
       grad.addColorStop(1, "#b967ff");
       c.fillStyle = grad;
-      c.fillRect(0, 0, 640, 300);
-      c.fillStyle = "#0b001a";
-      for (let y = 200; y < 300; y += 16) c.fillRect(0, y, 640, 7);
-      // mặt trời
+      c.fillRect(0, 0, W, HORIZON);
+      // ── SAO nhấp nháy (sin theo thời gian, 3 lớp màu)
+      const stars: Array<[number, number, number, string]> = [
+        [80, 50, 1.1, "#fffb96"], [220, 110, 0.7, "#01cdfe"], [360, 40, 1.3, "#fffb96"],
+        [500, 90, 0.9, "#b967ff"], [640, 55, 1.2, "#ff71ce"], [780, 120, 0.8, "#01cdfe"],
+        [880, 45, 1.4, "#fffb96"], [150, 160, 0.6, "#05ffa1"], [430, 150, 1.0, "#fffb96"],
+        [700, 170, 0.7, "#b967ff"], [920, 150, 0.9, "#05ffa1"], [300, 85, 0.5, "#ff71ce"],
+      ];
+      for (let k = 0; k < stars.length; k++) {
+        const [sx, sy, sz, col] = stars[k];
+        const tw = 0.45 + 0.55 * Math.abs(Math.sin(t * 0.04 + k * 1.7));
+        c.globalAlpha = tw;
+        c.fillStyle = col;
+        c.fillRect(sx, sy, sz * 2, sz * 2);
+      }
+      c.globalAlpha = 1;
+      // ── MẶT TRỜI glow "thở" + sọc cắt
+      const sunPulse = 1 + 0.03 * Math.sin(t * 0.03);
+      const sunR = 96 * sunPulse;
       c.save();
+      c.shadowColor = "#ff71ce";
+      c.shadowBlur = 44 + 14 * Math.sin(t * 0.05);
       c.beginPath();
-      c.arc(320, 210, 90, 0, Math.PI * 2);
+      c.arc(W / 2, 236, sunR, 0, Math.PI * 2);
       c.clip();
       c.fillStyle = grad;
-      c.fillRect(230, 120, 180, 180);
-      c.fillStyle = "#0b001a";
-      for (let y = 190; y < 300; y += 14) c.fillRect(230, y, 180, 6);
+      c.fillRect(W / 2 - sunR, 236 - sunR, sunR * 2, sunR * 2);
       c.restore();
-      // lưới synthwave
-      c.strokeStyle = "rgba(1, 205, 254, 0.4)";
-      c.lineWidth = 1;
-      for (let i = 0; i < 12; i++) {
-        c.beginPath();
-        c.moveTo(320, 300);
-        c.lineTo(i * 128 - 320, 480);
-        c.stroke();
-      }
-      for (let y = 304; y < 480; y += 12) {
-        c.beginPath();
-        c.moveTo(0, y);
-        c.lineTo(640, y);
-        c.stroke();
-      }
-      // net + paddle + bóng
-      c.setLineDash([8, 10]);
-      c.strokeStyle = "#e8d5ff";
+      c.save();
       c.beginPath();
-      c.moveTo(320, 300);
-      c.lineTo(320, 480);
+      c.arc(W / 2, 236, sunR + 2, 0, Math.PI * 2);
+      c.clip();
+      c.fillStyle = "#0b001a";
+      for (let y = 216; y < 236 + sunR; y += 13) c.fillRect(W / 2 - sunR, y, sunR * 2, 5);
+      c.restore();
+      // sọc cắt phần trời dưới mặt trời
+      c.fillStyle = "#0b001a";
+      for (let y = 236; y < HORIZON; y += 15) c.fillRect(0, y, W, 6);
+      // ── LƯỚI SYNTHWAVE chạy về phía người xem
+      const gridScroll = (t * 1.6) % 26;
+      c.strokeStyle = "rgba(1, 205, 254, 0.45)";
+      c.lineWidth = 1;
+      for (let i2 = -14; i2 <= 14; i2++) {
+        c.beginPath();
+        c.moveTo(W / 2, HORIZON);
+        c.lineTo(W / 2 + i2 * 90, H);
+        c.stroke();
+      }
+      for (let y = HORIZON + 8; y < H; y += 26) {
+        const yy = y + gridScroll;
+        if (yy < H) {
+          c.beginPath();
+          c.moveTo(0, yy);
+          c.lineTo(W, yy);
+          c.stroke();
+        }
+      }
+      // ── TRAIL bóng mờ dần
+      for (let k2 = 0; k2 < s.trail.length; k2++) {
+        const p2 = s.trail[k2];
+        const a = (k2 / s.trail.length) * 0.34;
+        c.globalAlpha = a;
+        c.fillStyle = "#fffb96";
+        c.fillRect(p2.x - 5, p2.y - 5, 10, 10);
+      }
+      c.globalAlpha = 1;
+      // ── NET đứt đoạn
+      c.setLineDash([10, 12]);
+      c.strokeStyle = "#e8d5ff";
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(W / 2, HORIZON);
+      c.lineTo(W / 2, H);
       c.stroke();
       c.setLineDash([]);
+      // ── PADDLE neon glow (+ flash khi chặn)
+      const flashStr = s.flash;
+      c.save();
+      c.shadowColor = "#05ffa1";
+      c.shadowBlur = 16 + flashStr * 26;
       c.fillStyle = "#05ffa1";
       c.fillRect(24, s.playerY, 12, 80);
+      c.restore();
+      c.save();
+      c.shadowColor = "#ff71ce";
+      c.shadowBlur = 16 + flashStr * 26;
       c.fillStyle = "#ff71ce";
-      c.fillRect(604, s.cpuY, 12, 80);
+      c.fillRect(W - 36, s.cpuY, 12, 80);
+      c.restore();
+      // ── BÓNG glow
+      c.save();
+      c.shadowColor = "#fffb96";
+      c.shadowBlur = 22;
       c.fillStyle = "#fffb96";
       c.fillRect(s.ballX - 6, s.ballY - 6, 12, 12);
+      c.restore();
+      // ── ĐIỂM lớn giữa trời
       c.fillStyle = "#e8d5ff";
-      c.font = "bold 40px monospace";
-      c.fillText(String(s.score), 280, 60);
+      c.font = "bold 44px monospace";
+      c.textAlign = "center";
+      c.fillText(String(s.score), W / 2, 64);
+      c.textAlign = "left";
+      // ── SCANLINE CRT
+      c.fillStyle = "rgba(11, 0, 26, 0.16)";
+      for (let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2);
     }
+
     function renderSnake(c: CanvasRenderingContext2D, s: SnakeState): void {
+      const W = 960;
+      const H = 540;
+      const CELL = 30; // 32×18 cell = 960×540
+      const t = s.score * 7 + performance.now() * 0.004;
       c.fillStyle = "#0b001a";
-      c.fillRect(0, 0, 640, 480);
-      // lưới mờ
-      c.strokeStyle = "rgba(185, 103, 255, 0.16)";
-      for (let x = 0; x <= 640; x += 32) {
+      c.fillRect(0, 0, W, H);
+      // ── LƯỚI pulse dịu
+      const gridA = 0.10 + 0.05 * Math.sin(t * 0.7);
+      c.strokeStyle = `rgba(185, 103, 255, ${gridA.toFixed(3)})`;
+      c.lineWidth = 1;
+      for (let x = 0; x <= W; x += CELL) {
         c.beginPath();
         c.moveTo(x, 0);
-        c.lineTo(x, 480);
+        c.lineTo(x, H);
         c.stroke();
       }
-      for (let y = 0; y <= 480; y += 32) {
+      for (let y = 0; y <= H; y += CELL) {
         c.beginPath();
         c.moveTo(0, y);
-        c.lineTo(640, y);
+        c.lineTo(W, y);
         c.stroke();
       }
-      // rắn neon
-      s.body.forEach((seg, i) => {
-        const glow = i === 0 ? "#05ffa1" : i % 2 ? "#01cdfe" : "#05ffa1";
-        c.fillStyle = glow;
+      // ── THÂN RẮN sóng sáng theo index + thời gian
+      s.body.forEach((seg, i3) => {
+        const wave = 0.55 + 0.45 * Math.sin(t * 1.6 - i3 * 0.55);
+        const glow = i3 === 0 ? "#05ffa1" : i3 % 2 ? "#01cdfe" : "#05ffa1";
+        c.save();
+        c.globalAlpha = 0.35 + 0.65 * wave;
         c.shadowColor = glow;
-        c.shadowBlur = 12;
-        c.fillRect(seg.x * 32 + 2, seg.y * 32 + 2, 28, 28);
+        c.shadowBlur = 10 + 10 * wave;
+        c.fillStyle = glow;
+        const inset = i3 === 0 ? 1 : 2 + (1 - wave) * 2;
+        c.fillRect(seg.x * CELL + inset, seg.y * CELL + inset, CELL - inset * 2, CELL - inset * 2);
+        c.restore();
       });
-      c.shadowBlur = 0;
-      // mồi ⭐
-      c.font = "26px serif";
-      c.fillText("⭐", s.food.x * 32 + 4, s.food.y * 32 + 26);
+      // ── ĐẦU RẮN có MẮT theo hướng
+      const head = s.body[0];
+      c.save();
+      c.translate(head.x * CELL + CELL / 2, head.y * CELL + CELL / 2);
+      const rot = s.dir === "right" ? 0 : s.dir === "down" ? Math.PI / 2 : s.dir === "left" ? Math.PI : -Math.PI / 2;
+      c.rotate(rot);
+      c.fillStyle = "#0b001a";
+      c.fillRect(-6, -9, 4.5, 5);
+      c.fillRect(-6, 4, 4.5, 5);
+      c.restore();
+      // ── MỒI ⭐ phồng/xẹp + tia sáng quay
+      const pulse = 1 + 0.16 * Math.sin(t * 3);
+      c.save();
+      c.translate(s.food.x * CELL + CELL / 2, s.food.y * CELL + CELL / 2);
+      c.rotate(Math.sin(t * 1.2) * 0.3);
+      c.scale(pulse, pulse);
+      c.shadowColor = "#fffb96";
+      c.shadowBlur = 18;
+      c.font = "24px serif";
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillStyle = "#fffb96";
+      c.fillText("⭐", 0, 1);
+      c.restore();
+      // ── GAME OVER nhấp đỏ dịu
       if (s.over) {
+        c.globalAlpha = 0.72 + 0.28 * Math.sin(t * 4);
         c.fillStyle = "#ff4444";
-        c.font = "bold 34px monospace";
-        c.fillText("GAME OVER — NHẤN SPACE", 120, 240);
+        c.font = "bold 40px monospace";
+        c.textAlign = "center";
+        c.fillText("GAME OVER — NHẤN SPACE", W / 2, H / 2 - 10);
+        c.globalAlpha = 1;
+        c.textAlign = "left";
+        c.textBaseline = "alphabetic";
       }
+      // ── SCANLINE CRT
+      c.fillStyle = "rgba(11, 0, 26, 0.16)";
+      for (let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2);
     }
+
     function onKeyDown(e: KeyboardEvent): void {
       if (id === "pong") {
         if (e.key === "ArrowUp") pongUp = true;
@@ -309,7 +415,7 @@ const GAMES = [
     function onMouseMove(e: MouseEvent): void {
       if (id !== "pong") return;
       const rect = canvas!.getBoundingClientRect();
-      pongMouseY = ((e.clientY - rect.top) / rect.height) * 480;
+      pongMouseY = ((e.clientY - rect.top) / rect.height) * 540;
     }
 
     if (id === "pong") {

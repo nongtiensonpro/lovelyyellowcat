@@ -24,7 +24,7 @@ describe("SNAKE.EXE core", () => {
   it("step theo hướng: đầu tiến 1 ô", () => {
     const s = init(seqRng([0.51, 0.51]));
     step(s);
-    expect(s.body[0]).toEqual({ x: 11, y: 7 });
+    expect(s.body[0]).toEqual({ x: 17, y: 9 });
     expect(s.body.length).toBe(3);
   });
 
@@ -60,12 +60,12 @@ describe("SNAKE.EXE core", () => {
 
   it("ăn mồi: score +1, mồi mới, dài +1 đốt", () => {
     const s = init(seqRng([0.51, 0.51, 0.13, 0.61]));
-    s.food = { x: 11, y: 7 }; // trước đầu
+    s.food = { x: 17, y: 9 }; // trước đầu
     const len0 = s.body.length;
     step(s);
     expect(s.score).toBe(1);
     expect(s.body.length).toBe(len0 + 1);
-    expect(s.food).not.toEqual({ x: 11, y: 7 });
+    expect(s.food).not.toEqual({ x: 17, y: 9 });
   });
 
   it("không ăn: đuôi rút — chiều dài không đổi", () => {
@@ -91,7 +91,7 @@ describe("SNAKE.EXE core", () => {
     step(s); // tiêu "up"
     expect(s.dir).toBe("up");
     step(s); // pending rỗng — vẫn up
-    expect(s.body[0]).toEqual({ x: 10, y: 5 });
+    expect(s.body[0]).toEqual({ x: 16, y: 7 });
   });
 
   it("over rồi: step không đổi gì (idempotent)", () => {

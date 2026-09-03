@@ -14,8 +14,8 @@ export interface SnakeState {
   rng: () => number; // inject để test deterministic
 }
 
-export const COLS = 20;
-export const ROWS = 15;
+export const COLS = 32; // 16:9 widescreen — cell 30px × 32×18 = 960×540 (khớp canvas)
+export const ROWS = 18;
 
 const DELTA: Record<Dir, Cell> = {
   up: { x: 0, y: -1 },
@@ -47,9 +47,9 @@ export function spawnFood(s: SnakeState): Cell {
 /** Trạng thái đầu: rắn 3 đốt giữa sân, hướng phải, mồi random. */
 export function init(rng: () => number = Math.random): SnakeState {
   const body: Cell[] = [
-    { x: 10, y: 7 },
-    { x: 9, y: 7 },
-    { x: 8, y: 7 },
+    { x: 16, y: 9 },
+    { x: 15, y: 9 },
+    { x: 14, y: 9 },
   ];
   const s: SnakeState = {
     body,

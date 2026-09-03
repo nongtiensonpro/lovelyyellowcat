@@ -1,5 +1,18 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.9] — ARCADE v2: Canvas2D sinh động + full-width widescreen
+
+### Changed
+- **Widescreen 16:9**: canvas 640×480 → **960×540**; cửa sổ overlay `min(92vw, 860px)` → `min(96vw, 1280px)`; PONG tốc độ scale (start 6.3, CPU_MAX 4.6, phím 9, velY-max 10.5); SNAKE lưới 20×15 → **32×18** (cell 30px). Core + test chuẩn hoá theo hằng số (PONG_W/2...) — hết hardcoded.
+- **PONG canvas sống động**: 12 sao nhấp nháy sin 3 màu, mặt trời glow "thở" + sọc cắt, lưới synthwave chạy vô hạn về phía người xem, **trail bóng** mờ dần 14 điểm, paddle + bóng **shadowBlur neon** (flash tăng đột biến khi chặn — `state.flash` decay 0.88/step), score to giữa trời, scanline CRT.
+- **SNAKE canvas sống động**: lưới pulse alpha, thân rắn **sóng sáng** chạy theo index+thời gian, đầu rắn có **mắt xoay theo hướng di chuyển**, ⭐ phồng/xẹp + nghiêng lắc, game-over nhấp đỏ dịu, scanline CRT.
+- mouseY scale theo chiều cao canvas mới (540).
+
+### Notes
+- Màu render hex đều trùng giá trị token vapor (policy hex xanh).
+- Gameplay unchanged — mọi thay đổi chỉ render/widescreen; 304/304 tests (cores test theo hằng số).
+
+
 ## [5.8] — VIEWPORT.SYS: tối ưu diện tích trang chủ (PC + Mobile)
 
 ### PC

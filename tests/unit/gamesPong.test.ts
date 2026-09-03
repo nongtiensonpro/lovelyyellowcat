@@ -1,6 +1,6 @@
 // gamesPong.test.ts — physics Vapor Pong pure (GM2).
 import { describe, it, expect } from "vitest";
-import { init, step, serve, reset, PONG_H, PAD_H } from "../../src/lib/games/pongCore";
+import { init, step, serve, reset, PONG_W, PONG_H, PAD_H } from "../../src/lib/games/pongCore";
 
 const IN = { up: false, down: false, mouseY: null as number | null };
 
@@ -9,8 +9,8 @@ describe("PONG.SYS core", () => {
     const s = init();
     expect(s.score).toBe(0);
     expect(s.cool).toBe(0);
-    expect(s.ballX).toBe(320);
-    expect(s.playerY).toBe(200);
+    expect(s.ballX).toBe(PONG_W / 2);
+    expect(s.playerY).toBe((PONG_H - PAD_H) / 2);
   });
 
   it("bóng di chuyển mỗi step", () => {
@@ -31,7 +31,7 @@ describe("PONG.SYS core", () => {
 
   it("paddle P1 chặn: velX đổi dấu dương + tăng tốc (SPEEDUP)", () => {
     const s = init();
-    s.ballX = 16; // sát paddle trái
+    s.ballX = 13; // sát paddle trái (PAD_W=12)
     s.ballY = s.playerY + PAD_H / 2; // trúng giữa paddle
     s.velX = -4;
     step(s, IN);
@@ -50,10 +50,10 @@ describe("PONG.SYS core", () => {
 
   it("bóng qua CPU: score +1, serve lại giữa sân, cool > 0", () => {
     const s = init();
-    s.ballX = 660;
+    s.ballX = PONG_W + 20;
     step(s, IN);
     expect(s.score).toBe(1);
-    expect(s.ballX).toBe(320);
+    expect(s.ballX).toBe(PONG_W / 2);
     expect(s.cool).toBeGreaterThan(0);
   });
 
@@ -92,6 +92,6 @@ describe("PONG.SYS core", () => {
   it("reset = init", () => {
     const s = reset();
     expect(s.score).toBe(0);
-    expect(s.ballX).toBe(320);
+    expect(s.ballX).toBe(PONG_W / 2);
   });
 });
