@@ -1,5 +1,10 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.11.1] — Fix Gate 7 UI budget sau mobile touch controls
+
+### Fixed
+- Ratcheted `css_total_bytes` from `191000` to `192000` after the mobile Pong/Snake UI added deliberate safe-area, touch-action, D-pad, pause/restart, and accessibility styles. JS and hydration ceilings remain unchanged; Gate 7 stays a hard deploy blocker.
+
 ## [5.11] — Admin Thư viện Ảnh: quick-filter + sửa nút đè (MEDIA.UI v2)
 
 ### Added

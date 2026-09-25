@@ -101,7 +101,7 @@ jobs:
 
       # ─── GATE 7: UI BUDGET ────────────────────────────────────────────────
       # artifacts/ui-budgets.json ratchet — tổng JS 660KB / chunk lớn nhất 210KB /
-      # CSS 185KB / hydration client:load <=4 idle <=6 visible <=16 / test files >=20.
+      # CSS 192KB / hydration client:load <=4 idle <=6 visible <=16 / test files >=20.
       # Chặn bundle phình — mỗi KB tăng phải là quyết định có chủ đích.
       - name: Gate 7 — UI budget (bundle/hydration ratchet)
         run: npm run budget:ui
