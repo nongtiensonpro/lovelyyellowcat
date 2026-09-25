@@ -9,7 +9,7 @@ const GAMES = [
     icon: "🏓",
     title: "VAPOR PONG",
     desc: "Máy 1972 gọi lại — paddle chống bóng, hoàng hôn synthwave. BEST lưu máy bạn.",
-    hud: "P1 vs CPU · ESC THOÁT",
+    hud: "P1 vs CPU · KÉO / ▲ ▼ / ESC THOÁT",
   },
   {
     id: "snake",
@@ -17,7 +17,7 @@ const GAMES = [
     icon: "🐍",
     title: "NEON SNAKE",
     desc: "Rắn neon ăn ⭐ trên lưới phát sáng. Chạm tường = game over. BEST lưu máy bạn.",
-    hud: "MŨI TÊN / WASD · ESC THOÁT",
+    hud: "D-PAD / MŨI TÊN / WASD · ESC THOÁT",
   },
 ] as const;
 ---
@@ -73,13 +73,49 @@ const GAMES = [
             aria-label={`Bàn chơi ${g.title}`}
           ></canvas>
         </div>
+        <p class="arcade-instructions" data-arcade-instructions={g.id}>
+          {g.id === "pong"
+            ? "KÉO VÙNG CHƠI ĐỂ DI CHUYỂN PADDLE · HOẶC DÙNG ▲ ▼"
+            : "CHẠM D-PAD ĐỂ ĐIỀU KHIỂN RẮN · DÙNG MŨI TÊN / WASD"}
+        </p>
+        {g.id === "pong" ? (
+          <div class="arcade-touch-controls arcade-pong-controls" role="group" aria-label="Điều khiển Vapor Pong">
+            <button
+              type="button"
+              class="win95-btn arcade-control-btn"
+              data-pong-control="up"
+              aria-label="Di chuyển paddle lên"
+            >▲</button>
+            <button
+              type="button"
+              class="win95-btn arcade-control-btn"
+              data-pong-control="down"
+              aria-label="Di chuyển paddle xuống"
+            >▼</button>
+          </div>
+        ) : (
+          <div class="arcade-touch-controls arcade-snake-controls" role="group" aria-label="Điều khiển Neon Snake">
+            <button type="button" class="win95-btn arcade-control-btn arcade-control-up" data-snake-dir="up" aria-label="Đi rắn lên">▲</button>
+            <button type="button" class="win95-btn arcade-control-btn arcade-control-left" data-snake-dir="left" aria-label="Đi rắn sang trái">◀</button>
+            <span class="arcade-control-center" aria-hidden="true">✦</span>
+            <button type="button" class="win95-btn arcade-control-btn arcade-control-right" data-snake-dir="right" aria-label="Đi rắn sang phải">▶</button>
+            <button type="button" class="win95-btn arcade-control-btn arcade-control-down" data-snake-dir="down" aria-label="Đi rắn xuống">▼</button>
+          </div>
+        )}
         <div class="arcade-hud">
-          <span data-arcade-status={`score-${g.id}`}>SCORE 0</span>
+          <span data-arcade-status={`score-${g.id}`} aria-live="polite">SCORE 0</span>
           <span data-arcade-status={`best-${g.id}`}>BEST 0</span>
-          <span class="text-vapor-yellow hidden sm:inline">ĐIỂM: BÓNG VƯỢT CPU / ⭐ ĂN ĐƯỢC</span>
-          <button type="button" class="win95-btn text-[10px] font-bold py-0.5 px-2" data-arcade-close>
-            ESC — THOÁT
-          </button>
+          <span class="arcade-score-help">ĐIỂM: BÓNG VƯỢT CPU / ⭐ ĂN ĐƯỢC</span>
+          <button
+            type="button"
+            class="win95-btn arcade-action-btn"
+            data-arcade-pause={g.id}
+            aria-pressed="false"
+          >⏸ TẠM DỪNG</button>
+          {g.id === "snake" && (
+            <button type="button" class="win95-btn arcade-action-btn" data-arcade-restart="snake">↻ CHƠI LẠI</button>
+          )}
+          <button type="button" class="win95-btn arcade-action-btn" data-arcade-close>✕ ĐÓNG</button>
         </div>
       </div>
     </div>
@@ -88,8 +124,9 @@ const GAMES = [
 
 <script>
   // Wiring overlay + input; physics import từ pure cores (tách test).
-  import { init as pongInit, step as pongStep, type PongState } from "../../lib/games/pongCore";
+  import { init as pongInit, step as pongStep, PONG_H, type PongState } from "../../lib/games/pongCore";
   import { init as snakeInit, step as snakeStep, queueDir as snakeQueueDir, type SnakeState } from "../../lib/games/snakeCore";
+  import { mapPointerYToPong } from "../../lib/games/mobileInput";
 
   type Cleanup = () => void;
   const cleanups: Record<string, Cleanup | null> = { pong: null, snake: null };
@@ -121,6 +158,7 @@ const GAMES = [
   function openGame(id: string, opener: HTMLElement): void {
     const overlay = document.getElementById(`arcade-overlay-${id}`);
     if (!overlay) return;
+    if (cleanups[id]) closeGame(id);
     lastOpener = opener;
     overlay.removeAttribute("hidden");
     overlay.classList.add("is-open");
@@ -128,27 +166,32 @@ const GAMES = [
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    // ✕ button trong header là nút đầu; nút footer ESC — cả hai đóng.
-    const closeBtns = overlay.querySelectorAll<HTMLElement>("[data-arcade-close]");
+    const closeBtns = overlay.querySelectorAll<HTMLButtonElement>("[data-arcade-close]");
+    const pauseBtn = overlay.querySelector<HTMLButtonElement>(`[data-arcade-pause="${id}"]`);
+    const restartBtn = overlay.querySelector<HTMLButtonElement>(`[data-arcade-restart="${id}"]`);
+    const onClose = () => closeGame(id);
     closeBtns[0]?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeGame(id);
     };
     document.addEventListener("keydown", onKey);
-    closeBtns.forEach((b) => b.addEventListener("click", () => closeGame(id)));
+    closeBtns.forEach((b) => b.addEventListener("click", onClose));
     let raf = 0;
     let disposed = false;
+    let paused = false;
     let visibilityHandler: (() => void) | null = null;
     let lastScore = -1;
     let best = readBest(id);
 
     function loop(): void {
       if (disposed) return;
-      // step + render theo game
-      if (id === "pong") {
-        tickPong();
-      } else {
-        tickSnake();
+      // Keep one rAF only; paused games render nothing and consume no simulation steps.
+      if (!paused) {
+        if (id === "pong") {
+          tickPong();
+        } else {
+          tickSnake();
+        }
       }
       raf = requestAnimationFrame(loop);
     }
@@ -156,7 +199,8 @@ const GAMES = [
     let pong: PongState | null = null;
     let pongUp = false;
     let pongDown = false;
-    let pongMouseY: number | null = null;
+    let pongPointerId: number | null = null;
+    let pongPointerY: number | null = null;
     // ── SNAKE wiring ──
     let snake: SnakeState | null = null;
     let snakeAcc = 0;
@@ -164,7 +208,7 @@ const GAMES = [
 
     function tickPong(): void {
       if (!pong) return;
-      const input = { up: pongUp, down: pongDown, mouseY: pongMouseY };
+      const input = { up: pongUp, down: pongDown, pointerY: pongPointerY };
       pongStep(pong, input);
       if (pong.score > best) {
         best = pong.score;
@@ -385,7 +429,7 @@ const GAMES = [
         c.fillStyle = "#ff4444";
         c.font = "bold 40px monospace";
         c.textAlign = "center";
-        c.fillText("GAME OVER — NHẤN SPACE", W / 2, H / 2 - 10);
+        c.fillText("GAME OVER — CHƠI LẠI", W / 2, H / 2 - 10);
         c.globalAlpha = 1;
         c.textAlign = "left";
         c.textBaseline = "alphabetic";
@@ -397,16 +441,28 @@ const GAMES = [
 
     function onKeyDown(e: KeyboardEvent): void {
       if (id === "pong") {
-        if (e.key === "ArrowUp") pongUp = true;
-        if (e.key === "ArrowDown") pongDown = true;
-      } else {
-        const map: Record<string, string> = {
-          ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
-          w: "up", s: "down", a: "left", d: "right",
-        };
-        const dir = map[e.key];
-        if (dir && snake) snakeQueueDir(snake, dir);
-        if (e.key === " " && snake?.over) snake = snakeInit();
+        if (e.key === "ArrowUp") {
+          pongUp = true;
+          e.preventDefault();
+        }
+        if (e.key === "ArrowDown") {
+          pongDown = true;
+          e.preventDefault();
+        }
+        return;
+      }
+      const map: Record<string, string> = {
+        ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+        w: "up", s: "down", a: "left", d: "right",
+      };
+      const dir = map[e.key];
+      if (dir && snake) {
+        snakeQueueDir(snake, dir as Parameters<typeof snakeQueueDir>[1]);
+        e.preventDefault();
+      }
+      if (e.key === " " && snake?.over) {
+        restartSnake();
+        e.preventDefault();
       }
     }
     function onKeyUp(e: KeyboardEvent): void {
@@ -415,25 +471,118 @@ const GAMES = [
         if (e.key === "ArrowDown") pongDown = false;
       }
     }
-    function onMouseMove(e: MouseEvent): void {
+
+    function updatePongPointer(e: PointerEvent): void {
       if (id !== "pong") return;
       const rect = canvas!.getBoundingClientRect();
-      pongMouseY = ((e.clientY - rect.top) / rect.height) * 540;
+      pongPointerY = mapPointerYToPong(e.clientY, rect, PONG_H);
+    }
+    function releasePongPointer(e: PointerEvent): void {
+      if (id !== "pong" || pongPointerId !== e.pointerId) return;
+      pongPointerId = null;
+      pongPointerY = null;
+      if (canvas!.hasPointerCapture(e.pointerId)) canvas!.releasePointerCapture(e.pointerId);
+    }
+    function onPointerDown(e: PointerEvent): void {
+      if (id !== "pong" || pongPointerId !== null) return;
+      e.preventDefault();
+      pongPointerId = e.pointerId;
+      canvas!.setPointerCapture(e.pointerId);
+      updatePongPointer(e);
+    }
+    function onPointerMove(e: PointerEvent): void {
+      if (id !== "pong") return;
+      if (pongPointerId === e.pointerId) updatePongPointer(e);
+      else if (e.pointerType === "mouse") updatePongPointer(e);
+    }
+    function onPointerUp(e: PointerEvent): void {
+      releasePongPointer(e);
+    }
+    function onPointerCancel(e: PointerEvent): void {
+      releasePongPointer(e);
+    }
+    function onPointerLeave(e: PointerEvent): void {
+      // A mouse may move away without capture; keyboard should work again.
+      if (e.pointerType === "mouse" && pongPointerId === null) pongPointerY = null;
     }
 
+    function setPongControl(direction: "up" | "down", pressed: boolean): void {
+      if (direction === "up") pongUp = pressed;
+      else pongDown = pressed;
+    }
+    function onPongControlDown(e: PointerEvent): void {
+      if (id !== "pong") return;
+      const direction = (e.currentTarget as HTMLElement).dataset.pongControl as "up" | "down";
+      e.preventDefault();
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      setPongControl(direction, true);
+    }
+    function onPongControlUp(e: PointerEvent): void {
+      if (id !== "pong") return;
+      const direction = (e.currentTarget as HTMLElement).dataset.pongControl as "up" | "down";
+      setPongControl(direction, false);
+    }
+    function onPongControlClick(e: MouseEvent): void {
+      // Keyboard activation of a button has detail=0; pointer activation already handled above.
+      if (id !== "pong" || e.detail !== 0 || !pong) return;
+      const direction = (e.currentTarget as HTMLElement).dataset.pongControl as "up" | "down";
+      pongStep(pong, { up: direction === "up", down: direction === "down", pointerY: null });
+    }
+
+    function onSnakeDirection(e: Event): void {
+      if (!snake) return;
+      const button = e.currentTarget as HTMLElement;
+      const direction = button.dataset.snakeDir as Parameters<typeof snakeQueueDir>[1];
+      snakeQueueDir(snake, direction);
+    }
+    function restartSnake(): void {
+      if (id !== "snake") return;
+      snake = snakeInit();
+      snakeAcc = 0;
+      lastTs = 0;
+      lastScore = 0;
+      setStatus("snake", "score-snake", "SCORE 0");
+      if (snake) renderSnake(ctx!, snake);
+    }
+    function onPauseClick(): void {
+      paused = !paused;
+      if (pauseBtn) {
+        pauseBtn.setAttribute("aria-pressed", String(paused));
+        pauseBtn.textContent = paused ? "▶ TIẾP TỤC" : "⏸ TẠM DỪNG";
+      }
+    }
+
+    const pongControlButtons = overlay.querySelectorAll<HTMLButtonElement>("[data-pong-control]");
+    const snakeDirectionButtons = overlay.querySelectorAll<HTMLButtonElement>("[data-snake-dir]");
     if (id === "pong") {
       pong = pongInit();
-      pongMouseY = 240;
       document.addEventListener("keydown", onKeyDown);
       document.addEventListener("keyup", onKeyUp);
-      canvas.addEventListener("mousemove", onMouseMove);
+      canvas.addEventListener("pointerdown", onPointerDown);
+      canvas.addEventListener("pointermove", onPointerMove);
+      canvas.addEventListener("pointerup", onPointerUp);
+      canvas.addEventListener("pointercancel", onPointerCancel);
+      canvas.addEventListener("lostpointercapture", onPointerCancel);
+      canvas.addEventListener("pointerleave", onPointerLeave);
+      pongControlButtons.forEach((button) => {
+        button.addEventListener("pointerdown", onPongControlDown);
+        button.addEventListener("pointerup", onPongControlUp);
+        button.addEventListener("pointercancel", onPongControlUp);
+        button.addEventListener("lostpointercapture", onPongControlUp);
+        button.addEventListener("click", onPongControlClick);
+      });
     } else {
       snake = snakeInit();
       document.addEventListener("keydown", onKeyDown);
+      snakeDirectionButtons.forEach((button) => {
+        button.addEventListener("pointerdown", onSnakeDirection);
+        button.addEventListener("click", onSnakeDirection);
+      });
     }
+    pauseBtn?.addEventListener("click", onPauseClick);
+    restartBtn?.addEventListener("click", restartSnake);
     visibilityHandler = () => {
       if (document.hidden && !disposed) {
-        // pause: hủy rAF, resume khi visible lại
         cancelAnimationFrame(raf);
         lastTs = 0;
       } else if (!document.hidden && !disposed) {
@@ -451,9 +600,27 @@ const GAMES = [
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("keyup", onKeyUp);
-      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointercancel", onPointerCancel);
+      canvas.removeEventListener("lostpointercapture", onPointerCancel);
+      canvas.removeEventListener("pointerleave", onPointerLeave);
+      pongControlButtons.forEach((button) => {
+        button.removeEventListener("pointerdown", onPongControlDown);
+        button.removeEventListener("pointerup", onPongControlUp);
+        button.removeEventListener("pointercancel", onPongControlUp);
+        button.removeEventListener("lostpointercapture", onPongControlUp);
+        button.removeEventListener("click", onPongControlClick);
+      });
+      snakeDirectionButtons.forEach((button) => {
+        button.removeEventListener("pointerdown", onSnakeDirection);
+        button.removeEventListener("click", onSnakeDirection);
+      });
+      pauseBtn?.removeEventListener("click", onPauseClick);
+      restartBtn?.removeEventListener("click", restartSnake);
+      closeBtns.forEach((b) => b.removeEventListener("click", onClose));
       if (visibilityHandler) document.removeEventListener("visibilitychange", visibilityHandler);
-      closeBtns.forEach((b) => (b.onclick = null));
     };
   }
 

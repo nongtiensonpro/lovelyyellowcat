@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { init, step, serve, reset, PONG_W, PONG_H, PAD_H } from "../../src/lib/games/pongCore";
 
-const IN = { up: false, down: false, mouseY: null as number | null };
+const IN = { up: false, down: false, pointerY: null as number | null };
 
 describe("PONG.SYS core", () => {
   it("init: bóng giữa sân, score 0, cool 0", () => {
@@ -82,11 +82,17 @@ describe("PONG.SYS core", () => {
     expect(s.ballX).toBe(x0);
   });
 
-  it("chuột mouseY đặt paddle ngay (ưu tiên phím)", () => {
+  it("pointerY đặt paddle ngay", () => {
     const s = init();
-    step(s, { up: true, down: false, mouseY: 400 });
-    // mouseY 400 → paddle đỉnh = 400 - 40 = 360
+    step(s, { up: true, down: false, pointerY: 400 });
+    // pointerY 400 → paddle đỉnh = 400 - 40 = 360
     expect(s.playerY).toBe(360);
+  });
+
+  it("keyboard remains active when no pointer is active", () => {
+    const s = init();
+    step(s, { up: true, down: false, pointerY: null });
+    expect(s.playerY).toBeLessThan((PONG_H - PAD_H) / 2);
   });
 
   it("reset = init", () => {

@@ -4,7 +4,7 @@
 export interface PongInput {
   up: boolean;
   down: boolean;
-  mouseY: number | null;
+  pointerY: number | null;
 }
 
 export interface PongState {
@@ -74,9 +74,9 @@ export function step(s: PongState, input: PongInput): PongState {
   s.t += 1;
   s.flash *= 0.88;
   if (s.flash < 0.02) s.flash = 0;
-  // ── P1: chuột ưu tiên, phím phụ
-  if (input.mouseY !== null) {
-    s.playerY = clamp(input.mouseY - PAD_H / 2, 0, PONG_H - PAD_H);
+  // ── P1: pointer (chuột/touch/pen) ưu tiên, phím phụ
+  if (input.pointerY !== null) {
+    s.playerY = clamp(input.pointerY - PAD_H / 2, 0, PONG_H - PAD_H);
   } else {
     const v = (input.down ? PLAYER_SPEED : 0) - (input.up ? PLAYER_SPEED : 0);
     s.playerY = clamp(s.playerY + v, 0, PONG_H - PAD_H);
