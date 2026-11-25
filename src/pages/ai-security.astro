@@ -11,7 +11,7 @@ const userProfile = await getCurrentUserProfile(supabase);
 
 <BaseLayout
   title="VAPOR_ENCRYPT.SYS // NGUYÊN TẮC BẢO MẬT AI — LOVELYYELLOWCAT"
-  description="Chi tiết mã hóa đầu-cuối E2EE cho Trạm AI: AES-GCM 256, PBKDF2, lưu trữ vĩnh viễn, admin không thể đọc."
+  description="Chi tiết mã hóa đầu-cuối E2EE cho Trạm AI: AES-GCM 256, PBKDF2, lưu trữ bảo vệ tối đa 6 tháng, admin không thể đọc."
   userProfile={userProfile}
 >
   <div class="text-center py-6">
@@ -38,8 +38,8 @@ const userProfile = await getCurrentUserProfile(supabase);
           <p class="text-[11px] text-win-darkest leading-snug">Chỉ tài khoản đã đăng nhập và <strong>không bị chặn</strong> mới được tạo khóa và sử dụng AI. Ẩn danh / bị chặn → <code class="bg-red-100 px-1">401/403</code>.</p>
         </div>
         <div class="bg-white border border-win-dark p-3 space-y-1">
-          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">♾️ Lưu trữ vĩnh viễn</h3>
-          <p class="text-[11px] text-win-darkest leading-snug">Lịch sử gắn với <strong>tài khoản của bạn</strong>, lưu <strong>vĩnh viễn</strong> đến khi bạn tự xóa. Chỉ xóa tài khoản mới xóa cascade.</p>
+          <h3 class="font-bold text-vapor-purple uppercase text-xs flex items-center gap-1">⏱️ Lưu trữ tối đa 6 tháng</h3>
+          <p class="text-[11px] text-win-darkest leading-snug">Lịch sử gắn với <strong>tài khoản của bạn</strong>, lưu <strong>tối đa 6 tháng</strong> theo Luật 91/2025. Bạn có thể xuất/xóa phiên bất cứ lúc nào hoặc xóa cascade khi xóa tài khoản.</p>
         </div>
       </div>
 
@@ -63,7 +63,8 @@ const userProfile = await getCurrentUserProfile(supabase);
 
         <div class="flex flex-wrap gap-2">
           <a href="/ai" class="win95-btn text-xs px-4 py-2 no-underline font-bold">⬅️ Quay lại Trạm AI</a>
-          <a href="/terms" class="win95-btn text-xs px-4 py-2 no-underline">📜 Xem Điều Khoản</a>
+          <a href="/terms" class="win95-btn text-xs px-4 py-2 no-underline">📜 Điều Khoản</a>
+          <a href="/privacy" class="win95-btn text-xs px-4 py-2 no-underline">🔒 Quyền Riêng Tư</a>
           <span class="text-[10px] text-win-dark self-center ml-auto">PBKDF2 · AES-GCM 256 · iv 12B random · Base64 · Web Crypto API</span>
         </div>
       </div>

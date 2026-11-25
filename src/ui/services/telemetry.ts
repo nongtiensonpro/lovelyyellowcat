@@ -2,6 +2,8 @@
 // Thu thập Web Vitals + island error. KHÔNG PII: không URL query, không input,
 // không user id thô (hash per-session). Mặc định console-only; chỉ POST khi endpoint bật.
 
+import { hasPerformanceConsent } from "../../lib/consent";
+
 export interface VitalPayload {
   /** metric name: LCP | CLS | INP | TTFB | FCP */
   metric: string;
@@ -81,7 +83,8 @@ export function sendTelemetry(endpoint: string, payload: VitalPayload): void {
 /** Đo Web Vitals bằng PerformanceObserver native (không thư viện, ~0KB deps). */
 export function initWebVitals(endpoint: string | null): void {
   if (typeof window === "undefined" || typeof PerformanceObserver === "undefined") return;
-  if (!endpoint || !isSampled()) return;
+  // Tuân thủ Luật 91/2025: chỉ thu thập telemetry khi người dùng đã chấp thuận
+  if (!endpoint || !isSampled() || !hasPerformanceConsent()) return;
   const sid = getSessionId();
   const fx = document.documentElement.getAttribute("data-fx") || "unknown";
   const path = safePath();

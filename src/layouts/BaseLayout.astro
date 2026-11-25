@@ -7,6 +7,7 @@ import MarqueeTicker from "../components/MarqueeTicker.astro";
 import CassettePlayer from "../components/CassettePlayer.astro";
 import AppShell from "../ui/shell/AppShell.astro";
 import DialogHost from "../ui/wm95/DialogHost";
+import ConsentBanner from "../components/ConsentBanner.astro";
 
 interface Props {
   title: string;
@@ -110,14 +111,36 @@ const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
       )
     }
 
-    <!-- Google reCAPTCHA v2 Library — chỉ tải tại trang gửi tranh để giảm trọng lượng mọi trang khác -->
+    <!-- Google reCAPTCHA Library — Chỉ nạp tại trang gửi tranh KHI người dùng đã đồng ý qua Consent Banner (Tuân thủ Luật 91/2025) -->
     {
       Astro.url.pathname.startsWith("/submit") && (
-        <script
-          src="https://www.google.com/recaptcha/api.js?render=6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5"
-          async
-          defer
-        />
+        <script is:inline>
+          (function() {
+            function loadRecaptcha() {
+              if (document.getElementById('google-recaptcha-script')) return;
+              try {
+                const raw = localStorage.getItem('lyc_privacy_consent_v1');
+                if (raw) {
+                  const consent = JSON.parse(raw);
+                  if (consent && consent.security) {
+                    const s = document.createElement('script');
+                    s.id = 'google-recaptcha-script';
+                    s.src = 'https://www.google.com/recaptcha/api.js?render=6Lfn8vgsAAAAANOYL9Am9tLGE1dQteNn_3rKm8g5';
+                    s.async = true;
+                    s.defer = true;
+                    document.head.appendChild(s);
+                  }
+                }
+              } catch { /* ignore */ }
+            }
+            loadRecaptcha();
+            window.addEventListener('lyc-consent-updated', function(e) {
+              if (e.detail && e.detail.security) {
+                loadRecaptcha();
+              }
+            });
+          })();
+        </script>
       )
     }
   </head>
@@ -275,6 +298,18 @@ const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
               <a href="/terms" class="text-link-blue hover:underline font-bold"
                 >Điều Khoản (Terms)</a
               >
+              <span class="text-win-dark">|</span>
+              <a href="/privacy" class="text-link-blue hover:underline font-bold"
+                >Quyền Riêng Tư (Privacy)</a
+              >
+              <span class="text-win-dark">|</span>
+              <a href="/ai-disclosure" class="text-link-blue hover:underline font-bold"
+                >Minh Bạch AI</a
+              >
+              <span class="text-win-dark">|</span>
+              <a href="/report" class="text-link-blue hover:underline font-bold"
+                >Báo Cáo Vi Phạm</a
+              >
             </div>
           </div>
 
@@ -327,6 +362,14 @@ const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
               >
                 ✉️ nongtiensonpro@gmail.com
               </a>
+              <span class="text-win-dark">|</span>
+              <button
+                type="button"
+                data-open-privacy-settings
+                class="text-black font-bold hover:underline text-[10px] bg-transparent border-0 cursor-pointer p-0"
+              >
+                ⚙️ Quyền Riêng Tư
+              </button>
             </div>
           </div>
         </footer>
@@ -444,5 +487,7 @@ const bannerIdToken = siteAnnouncement ? safeIdToken(siteAnnouncement.id) : "";
         });
       })();
     </script>
+    <!-- Consent Management Banner & Privacy Settings Modal (Luật 91/2025) -->
+    <ConsentBanner />
   </body>
 </html>

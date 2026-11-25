@@ -1,0 +1,242 @@
+---
+// src/components/ConsentBanner.astro — Biểu ngữ chấp thuận quyền riêng tư theo Luật 91/2025/QH15
+---
+
+<!-- Consent Banner Floating Window (Mặc định ẩn, client script sẽ kiểm tra localStorage) -->
+<div
+  id="privacy-consent-banner"
+  class="fixed bottom-3 left-3 right-3 sm:left-6 sm:right-auto sm:max-w-xl z-50 font-retro text-black hidden"
+  role="region"
+  aria-label="Thông báo chấp thuận dữ liệu cá nhân"
+>
+  <div class="win95-container bg-win-gray border-2 border-win-dark shadow-[4px_4px_0px_rgba(0,0,0,0.8)]">
+    <!-- Window Title Bar -->
+    <div class="win95-header bg-gradient-to-r from-vapor-purple to-vapor-pink flex justify-between items-center text-white p-1">
+      <span class="flex items-center gap-1.5 text-xs font-bold">
+        <span>🔒</span> PRIVACY_CONSENT.EXE
+      </span>
+      <span class="text-[9px] bg-black text-vapor-green font-mono px-1">LUẬT 91/2025</span>
+    </div>
+
+    <!-- Content Body -->
+    <div class="p-3 text-xs space-y-2.5 bg-white border border-win-dark m-1">
+      <div class="flex items-start gap-2">
+        <span class="text-2xl shrink-0">🛡️</span>
+        <div class="space-y-1">
+          <p class="font-bold text-[11px] uppercase text-black">
+            Lựa chọn quyền riêng tư & Dữ liệu kỹ thuật
+          </p>
+          <p class="text-[11px] leading-relaxed text-win-dark">
+            LovelyYellowCat chỉ thu thập dữ liệu kỹ thuật khi có sự chấp thuận chủ động của bạn:
+            <strong>Google reCAPTCHA</strong> (chống bot spam tại form gửi bài) và <strong>Telemetry</strong> (đo lường hiệu năng Web Vitals không chứa PII).
+            Xem chi tiết tại <a href="/privacy" class="text-link-blue underline font-bold" target="_blank">Chính Sách Quyền Riêng Tư</a>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-win-dark/30">
+        <button
+          id="consent-accept-all-btn"
+          class="win95-btn bg-vapor-green/20 text-black font-bold text-[11px] px-3 py-1 flex items-center gap-1 hover:bg-vapor-green/40"
+        >
+          ✅ Đồng ý tất cả
+        </button>
+        <button
+          id="consent-customize-btn"
+          class="win95-btn bg-win-gray text-black font-bold text-[11px] px-2.5 py-1 hover:bg-win-light"
+        >
+          ⚙️ Tùy chỉnh
+        </button>
+        <button
+          id="consent-essential-only-btn"
+          class="win95-btn bg-win-gray text-black font-normal text-[11px] px-2.5 py-1 text-win-dark hover:bg-win-light"
+        >
+          Chỉ chấp nhận thiết yếu
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tùy chỉnh chi tiết (Consent Settings Modal) -->
+<div
+  id="privacy-settings-modal"
+  class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 font-retro text-black hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="privacy-modal-title"
+>
+  <div class="win95-container bg-win-gray border-2 border-win-dark shadow-[6px_6px_0px_rgba(0,0,0,0.9)] max-w-lg w-full">
+    <!-- Modal Titlebar -->
+    <div class="win95-header bg-win-titlebar flex justify-between items-center text-white p-1.5">
+      <span id="privacy-modal-title" class="flex items-center gap-1.5 text-xs font-bold">
+        <span>⚙️</span> CÀI ĐẶT QUYỀN RIÊNG TƯ & DỮ LIỆU
+      </span>
+      <button
+        id="privacy-modal-close-btn"
+        class="win95-btn py-0 px-1.5 text-[10px] font-bold"
+        aria-label="Đóng cửa sổ"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-4 space-y-3 bg-win-gray text-xs">
+      <p class="text-[11px] text-win-dark leading-relaxed">
+        Bạn có quyền chủ động bật/tắt từng nhóm dữ liệu kỹ thuật theo quy định của Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15. Các thay đổi sẽ có hiệu lực ngay lập tức.
+      </p>
+
+      <div class="space-y-2 bg-white border border-win-dark p-3">
+        <!-- 1. Thiết yếu -->
+        <div class="flex items-start gap-2.5 pb-2 border-b border-win-dark/20">
+          <input type="checkbox" checked disabled class="mt-0.5 cursor-not-allowed" />
+          <div class="text-[11px]">
+            <strong class="text-black block">1. Chức năng cốt lõi (Thiết yếu)</strong>
+            <span class="text-win-dark text-[10px] block leading-snug">
+              Xác thực đăng nhập tài khoản Supabase Auth, bảo mật phiên làm việc và mã hóa lịch sử AI (E2EE). Không thể vô hiệu hóa.
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. reCAPTCHA -->
+        <div class="flex items-start gap-2.5 pb-2 border-b border-win-dark/20">
+          <input type="checkbox" id="consent-toggle-security" class="mt-0.5 cursor-pointer" />
+          <div class="text-[11px]">
+            <label for="consent-toggle-security" class="text-black font-bold block cursor-pointer">
+              2. Google reCAPTCHA (An ninh & Chống Bot)
+            </label>
+            <span class="text-win-dark text-[10px] block leading-snug">
+              Kiểm tra bot tự động tại trang gửi tác phẩm nghệ thuật. Dữ liệu gồm IP và hành vi tương tác chuột được xử lý bởi Google LLC.
+            </span>
+          </div>
+        </div>
+
+        <!-- 3. Telemetry -->
+        <div class="flex items-start gap-2.5">
+          <input type="checkbox" id="consent-toggle-performance" class="mt-0.5 cursor-pointer" />
+          <div class="text-[11px]">
+            <label for="consent-toggle-performance" class="text-black font-bold block cursor-pointer">
+              3. Đo lường kỹ thuật Web Vitals (Hiệu năng)
+            </label>
+            <span class="text-win-dark text-[10px] block leading-snug">
+              Thu thập thông số thời gian tải trang (LCP, CLS, FID) để cải thiện độ mượt của website. Hoàn toàn không chứa thông tin định danh (Non-PII).
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex justify-between items-center pt-2">
+        <a href="/privacy" class="text-link-blue underline text-[11px]" target="_blank">
+          Đọc toàn văn chính sách ↗
+        </a>
+        <div class="flex gap-2">
+          <button
+            id="privacy-modal-save-btn"
+            class="win95-btn bg-vapor-pink/20 font-bold px-4 py-1 text-xs hover:bg-vapor-pink/40"
+          >
+            💾 Lưu cấu hình
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Client Logic điều khiển Banner & Modal -->
+<script>
+  import {
+    getConsent,
+    saveConsent,
+    hasConsentChoice,
+  } from "../lib/consent";
+
+  const banner = document.getElementById("privacy-consent-banner");
+  const modal = document.getElementById("privacy-settings-modal");
+  const acceptAllBtn = document.getElementById("consent-accept-all-btn");
+  const customizeBtn = document.getElementById("consent-customize-btn");
+  const essentialOnlyBtn = document.getElementById("consent-essential-only-btn");
+
+  const modalCloseBtn = document.getElementById("privacy-modal-close-btn");
+  const modalSaveBtn = document.getElementById("privacy-modal-save-btn");
+  const toggleSecurity = document.getElementById("consent-toggle-security") as HTMLInputElement | null;
+  const togglePerformance = document.getElementById("consent-toggle-performance") as HTMLInputElement | null;
+
+  function syncModalToggles() {
+    const current = getConsent();
+    if (toggleSecurity) toggleSecurity.checked = current ? current.security : false;
+    if (togglePerformance) togglePerformance.checked = current ? current.performance : false;
+  }
+
+  function showBanner() {
+    if (banner) banner.classList.remove("hidden");
+  }
+
+  function hideBanner() {
+    if (banner) banner.classList.add("hidden");
+  }
+
+  function openModal() {
+    syncModalToggles();
+    if (modal) modal.classList.remove("hidden");
+  }
+
+  function closeModal() {
+    if (modal) modal.classList.add("hidden");
+  }
+
+  // Khởi động: nếu người dùng chưa chọn -> hiện banner
+  if (!hasConsentChoice()) {
+    showBanner();
+  }
+
+  // Các nút trên banner
+  if (acceptAllBtn) {
+    acceptAllBtn.addEventListener("click", () => {
+      saveConsent({ security: true, performance: true });
+      hideBanner();
+    });
+  }
+
+  if (essentialOnlyBtn) {
+    essentialOnlyBtn.addEventListener("click", () => {
+      saveConsent({ security: false, performance: false });
+      hideBanner();
+    });
+  }
+
+  if (customizeBtn) {
+    customizeBtn.addEventListener("click", () => {
+      hideBanner();
+      openModal();
+    });
+  }
+
+  // Nút trên modal
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener("click", closeModal);
+  }
+
+  if (modalSaveBtn) {
+    modalSaveBtn.addEventListener("click", () => {
+      const security = toggleSecurity ? toggleSecurity.checked : false;
+      const performance = togglePerformance ? togglePerformance.checked : false;
+      saveConsent({ security, performance });
+      closeModal();
+      hideBanner();
+    });
+  }
+
+  // Lắng nghe sự kiện mở modal từ các nút ở chân trang hoặc bất kỳ đâu
+  window.addEventListener("open-privacy-settings", openModal);
+
+  // Gắn sự kiện cho các link có data-open-privacy-settings
+  document.querySelectorAll("[data-open-privacy-settings]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      openModal();
+    });
+  });
+</script>

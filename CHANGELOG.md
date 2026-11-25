@@ -1,5 +1,20 @@
 # CHANGELOG — lovelyyellowcat v5 "ULTIMATE OVERENGINEER"
 
+## [5.12] — Tuân thủ pháp lý 2026 (Luật BVDLCN 91/2025, Luật AI 134/2025, NĐ 17/2023)
+
+### Added
+- **Trang công khai mới**: `/privacy` (`src/pages/privacy.astro`), `/ai-disclosure` (`src/pages/ai-disclosure.astro`), `/login` (`src/pages/login.astro`), `/report` (`src/pages/report.astro`).
+- **Consent Management**: `src/lib/consent.ts` + `src/components/ConsentBanner.astro` chặn Google reCAPTCHA và Web Vitals telemetry trước khi người dùng opt-in; nút `⚙️ Quyền Riêng Tư` ở footer.
+- **Quyền dữ liệu cá nhân**: `/api/account/export` (xuất JSON), `/api/account/delete` (xóa Cloudinary + RPC `delete_own_account` cascade + email xác nhận) tích hợp vào `ProfileEditor.tsx`.
+- **Minh bạch AI & Bảo vệ BYOK**: Banner AI disclosure đầu phiên, nhãn `🤖 NỘI DUNG DO AI TẠO` & nút báo cáo trên từng phản hồi AI, modal xác nhận trách nhiệm & khuyến nghị Free Tier trước khi lưu BYOK, tự động dọn phiên AI quá 6 tháng tại `/api/ai/sessions`.
+- **SQL & Tài liệu vận hành**: `supabase_sql/legal_compliance_2026.sql`, `docs/runbooks/incident-response.md`, và hồ sơ quản trị nội bộ trong `tailieu/`.
+- **Unit tests**: `tests/unit/consent.test.ts` (4 tests) & `tests/unit/accountCompliance.test.ts` (6 tests).
+
+### Changed
+- Cập nhật `/terms`, `/ai-security`, `/ai` và `AiChatStation.tsx` thống nhất thời hạn lưu trữ AI tối đa 6 tháng, tách bạch SLA bản quyền 72h với thông báo sự cố dữ liệu 72h, và bổ sung giấy phép UGC giới hạn.
+- `SubmissionWizard.tsx` + `/api/submissions`: thêm cam kết bản quyền bắt buộc, nhãn `ai_generated`, honeypot và fallback rate-limit khi người dùng từ chối reCAPTCHA.
+- Ratchet `artifacts/ui-budgets.json`: `js_total_bytes` `660000` → `680000`, `css_total_bytes` `192000` → `195000`, `test_files_min` `20` → `36` (giữ nguyên giới hạn hydration và largest chunk).
+
 ## [5.11.1] — Fix Gate 7 UI budget sau mobile touch controls
 
 ### Fixed

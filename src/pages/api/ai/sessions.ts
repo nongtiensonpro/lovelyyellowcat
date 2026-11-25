@@ -21,6 +21,15 @@ export const GET: APIRoute = async (context) => {
   if ("error" in auth) return auth.error;
   const { supabase, user } = auth;
 
+  // Tuân thủ giới hạn lưu trữ 6 tháng (Luật 91/2025/QH15): tự động dọn phiên quá 180 ngày của user
+  const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
+  const retentionCutoff = new Date(Date.now() - SIX_MONTHS_MS).toISOString();
+  await supabase
+    .from("ai_sessions")
+    .delete()
+    .eq("user_id", user.id)
+    .lt("updated_at", retentionCutoff);
+
   const url = new URL(context.request.url);
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 100);
   const offset = Math.max(parseInt(url.searchParams.get("offset") || "0"), 0);

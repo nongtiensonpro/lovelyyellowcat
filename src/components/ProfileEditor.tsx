@@ -41,6 +41,12 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
     redirectUrl?: string | null;
   } | null>(null);
 
+  // Trạng thái xóa tài khoản (Luật 91/2025/QH15)
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const closeAlertBox = () => {
@@ -49,6 +55,39 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
     setAlertBox(null);
     if (targetUrl) {
       window.location.href = targetUrl;
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim() !== "XOA TAI KHOAN") {
+      setDeleteError("Vui lòng nhập chính xác cụm từ 'XOA TAI KHOAN' để xác nhận.");
+      return;
+    }
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "XOA TAI KHOAN" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error || "Không thể thực hiện xóa tài khoản.");
+        setIsDeleting(false);
+        return;
+      }
+      setShowDeleteModal(false);
+      setAlertBox({
+        show: true,
+        title: "TÀI KHOẢN ĐÃ ĐƯỢC XÓA",
+        message: "Toàn bộ dữ liệu cá nhân, tranh ảnh và lịch sử đã được xóa sạch. Cảm ơn bạn đã tham gia cùng LovelyYellowCat.",
+        type: "info",
+        redirectUrl: "/",
+      });
+    } catch {
+      setDeleteError("Lỗi kết nối máy chủ khi xử lý yêu cầu xóa.");
+      setIsDeleting(false);
     }
   };
 
@@ -365,6 +404,129 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ profile }) => {
           </div>
         </form>
       </div>
+
+      {/* Privacy & Data Rights Section (Tuân thủ Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15) */}
+      <div className="win95-container bg-win-gray border border-win-dark p-4 mt-6 text-black shadow-sm">
+        <div className="flex items-center gap-2 border-b border-win-dark pb-2 mb-3">
+          <span className="text-base">🔒</span>
+          <h3 className="font-bold text-xs uppercase text-black">
+            Quyền dữ liệu cá nhân & Quản trị tài khoản (Luật 91/2025/QH15)
+          </h3>
+          <span className="ml-auto text-[10px] text-win-dark font-mono bg-white px-1.5 py-0.5 border border-win-dark">
+            DATA RIGHTS
+          </span>
+        </div>
+
+        <p className="text-[11px] text-win-dark leading-relaxed mb-4">
+          Bạn có toàn quyền đối với dữ liệu cá nhân của mình: tải về bản sao lưu hoàn chỉnh (Data Export) hoặc yêu cầu xóa vĩnh viễn tài khoản và toàn bộ hình ảnh, bình luận, lịch sử hội thoại AI liên quan khỏi hệ thống.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            href="/api/account/export"
+            download
+            className="win95-btn font-bold px-4 py-2 text-xs text-black no-underline flex items-center gap-1.5 hover:bg-vapor-green/30"
+          >
+            <span>📦</span> Xuất dữ liệu của tôi (.json)
+          </a>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteConfirmText("");
+              setDeleteError(null);
+              setShowDeleteModal(true);
+            }}
+            className="win95-btn font-bold px-4 py-2 text-xs text-red-700 flex items-center gap-1.5 hover:bg-red-100"
+          >
+            <span>🗑️</span> Xóa tài khoản vĩnh viễn...
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 z-[9999]">
+          <div className="win95-container w-full max-w-md bg-win-gray text-black shadow-2xl border-2 border-win-dark">
+            <div className="win95-header bg-red-800 text-white flex justify-between items-center p-1.5">
+              <span className="font-bold text-xs flex items-center gap-1.5">
+                <span>⚠️</span> XÁC NHẬN XÓA TÀI KHOẢN VĨNH VIỄN
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="win95-btn py-0 px-1.5 text-[10px] font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3.5 bg-win-gray text-xs">
+              <div className="bg-red-50 border-2 border-red-500 p-3 space-y-2 text-red-900">
+                <p className="font-bold text-xs">HÀNH ĐỘNG NÀY KHÔNG THỂ HOÀN TÁC!</p>
+                <ul className="list-disc pl-4 space-y-1 text-[11px] leading-tight">
+                  <li>Toàn bộ thông tin hồ sơ và tác phẩm tranh sẽ bị xóa.</li>
+                  <li>Mọi tệp ảnh của bạn trên Cloudinary CDN sẽ bị thanh lọc.</li>
+                  <li>Lịch sử hội thoại AI (mã hóa E2EE) sẽ bị hủy bỏ vĩnh viễn.</li>
+                  <li>Bình luận, lượt thích, huy hiệu và điểm XP sẽ bị xóa hoàn toàn.</li>
+                </ul>
+              </div>
+
+              <div className="bg-vapor-yellow/20 border border-win-dark p-2.5 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-black leading-snug">
+                  Nên tải bản sao lưu dữ liệu trước khi xóa:
+                </span>
+                <a
+                  href="/api/account/export"
+                  download
+                  className="win95-btn px-2.5 py-1 text-[11px] font-bold text-black no-underline shrink-0 bg-white hover:bg-vapor-green/30"
+                >
+                  📦 Tải JSON
+                </a>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="pe-delete-confirm" className="font-bold text-[11px] block text-black">
+                  Để xác nhận, vui lòng nhập chính xác chữ: <code className="bg-black text-vapor-pink px-1.5 py-0.5">XOA TAI KHOAN</code>
+                </label>
+                <input
+                  id="pe-delete-confirm"
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="XOA TAI KHOAN"
+                  className="w-full p-2 border border-win-dark bg-white text-xs outline-none font-mono font-bold"
+                />
+              </div>
+
+              {deleteError && (
+                <p className="text-red-700 font-bold text-[11px] bg-red-100 p-2 border border-red-400">
+                  ⚠️ {deleteError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-win-dark/30">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setShowDeleteModal(false)}
+                  className="win95-btn px-4 py-1.5 text-xs font-bold"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting || deleteConfirmText.trim() !== "XOA TAI KHOAN"}
+                  onClick={handleDeleteAccount}
+                  className="win95-btn px-4 py-1.5 text-xs font-bold bg-red-700 text-white hover:bg-red-800 disabled:opacity-50"
+                >
+                  {isDeleting ? "Đang xử lý xóa..." : "Xác nhận xóa vĩnh viễn"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Retro Windows 95 Message Box Dialog Alert overlay */}
       {alertBox && alertBox.show && (

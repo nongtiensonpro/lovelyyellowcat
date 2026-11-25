@@ -39,6 +39,9 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>(["vaporwave"]);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [websiteHp, setWebsiteHp] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,12 +130,27 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
       return;
     }
 
+    if (!rightsConfirmed) {
+      setMessage({
+        type: "error",
+        text: "Vui lòng tích chọn xác nhận quyền tác giả và đồng ý hiển thị tác phẩm trước khi gửi.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setMessage(null);
 
     const token = await executeRecaptcha("submit_artwork");
-    if (!token) {
-      setMessage({ type: "error", text: "Hệ thống bảo vệ (reCAPTCHA) gặp sự cố, vui lòng thử lại." });
+    const isSecurityConsented =
+      typeof window !== "undefined" &&
+      localStorage.getItem("lyc_privacy_consent_v1")?.includes('"security":true');
+
+    if (!token && isSecurityConsented) {
+      setMessage({
+        type: "error",
+        text: "Hệ thống bảo vệ (reCAPTCHA) đang khởi động hoặc gặp sự cố, vui lòng thử lại sau vài giây.",
+      });
       setIsSubmitting(false);
       return;
     }
@@ -147,7 +165,11 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
           image_url: imageUrl,
           image_pid: imagePid,
           tags: selectedTags,
-          recaptcha_token: token
+          recaptcha_token: token,
+          recaptcha_declined: !token && !isSecurityConsented,
+          website_hp: websiteHp,
+          rights_confirmed: rightsConfirmed,
+          is_ai_generated: isAiGenerated,
         })
       });
 
@@ -173,6 +195,9 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
     setTitle("");
     setDescription("");
     setSelectedTags(["vaporwave"]);
+    setRightsConfirmed(false);
+    setIsAiGenerated(false);
+    setWebsiteHp("");
     setMessage(null);
   };
 
@@ -350,6 +375,53 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
                 ))}
               </div>
             </div>
+
+            {/* Honeypot chống bot khi không dùng reCAPTCHA (ẩn với người dùng thật) */}
+            <div className="hidden" aria-hidden="true">
+              <label htmlFor="sw-website-hp">Website</label>
+              <input
+                id="sw-website-hp"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={websiteHp}
+                onChange={(e) => setWebsiteHp(e.target.value)}
+              />
+            </div>
+
+            {/* Nhãn AI & Cam kết bản quyền / đồng ý xử lý DLCN (Điều 18 NĐ 142/2026 & Luật 91/2025) */}
+            <div className="border-t border-win-dark pt-3 space-y-2.5">
+              <div className="bg-white border border-win-dark p-2.5">
+                <label className="flex items-start gap-2 cursor-pointer text-[11px] leading-snug">
+                  <input
+                    type="checkbox"
+                    checked={isAiGenerated}
+                    onChange={(e) => setIsAiGenerated(e.target.checked)}
+                    className="mt-0.5 cursor-pointer"
+                  />
+                  <span>
+                    <strong>🤖 Gắn nhãn nội dung AI (Điều 18 NĐ 142/2026):</strong> Tác phẩm này được tạo mới hoặc chỉnh sửa đáng kể bằng công cụ Trí tuệ nhân tạo (AI).
+                  </span>
+                </label>
+              </div>
+
+              <div className="bg-vapor-yellow/25 border border-win-dark p-2.5">
+                <label className="flex items-start gap-2 cursor-pointer text-[11px] leading-snug">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={rightsConfirmed}
+                    onChange={(e) => setRightsConfirmed(e.target.checked)}
+                    className="mt-0.5 cursor-pointer"
+                  />
+                  <span>
+                    <strong>⚖️ Cam kết bản quyền & Đồng ý hiển thị (*):</strong> Tôi xác nhận là tác giả hoặc có quyền hợp pháp đăng tải tác phẩm này, và đồng ý cho LovelyYellowCat hiển thị phi thương mại theo{" "}
+                    <a href="/terms" target="_blank" className="text-link-blue underline font-bold">Điều khoản</a> &{" "}
+                    <a href="/privacy" target="_blank" className="text-link-blue underline font-bold">Chính sách quyền riêng tư</a>.
+                  </span>
+                </label>
+              </div>
+            </div>
           </form>
         )}
 
@@ -402,8 +474,8 @@ export const SubmissionWizard: React.FC<SubmissionWizardProps> = ({ currentUser 
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || !title.trim()}
-              className="win95-btn font-bold px-6 py-1.5 text-black bg-vapor-green/30 border-2 border-black"
+              disabled={isSubmitting || !title.trim() || !rightsConfirmed}
+              className="win95-btn font-bold px-6 py-1.5 text-black bg-vapor-green/30 border-2 border-black disabled:opacity-50"
               style={{ minHeight: "36px" }}
             >
               {isSubmitting ? "⏳ Đang Gửi..." : "💾 Hoàn Tất & Gửi Duyệt"}

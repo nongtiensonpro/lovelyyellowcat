@@ -659,3 +659,44 @@ export async function sendCommentDeletedEmail(
 </body></html>`;
   return sendEmail({ to: payload.recipientEmail, subject: `💬 [${SITE_NAME}] Bình luận của bạn đã bị xóa`, html, runtimeEnv });
 }
+
+// ══════════════════════════════════════════════════
+// 8. Email Xác Nhận Xóa Tài Khoản (Luật 91/2025/QH15)
+// ══════════════════════════════════════════════════
+
+export interface AccountDeletedEmailPayload {
+  recipientEmail: string;
+  recipientName: string;
+  purgedMediaCount: number;
+}
+
+export async function sendAccountDeletedEmail(
+  payload: AccountDeletedEmailPayload,
+  runtimeEnv?: EmailRuntimeEnv
+): Promise<EmailResult> {
+  const html = `<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0a0a0f;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border:2px solid #05ffa1;">
+    <div style="background:linear-gradient(90deg,#05ffa1,#01cdfe,#b967ff);padding:4px 16px;">
+      <span style="color:#0a0a0f;font-weight:bold;font-size:12px;font-family:'Courier New',monospace;">🔒 DATA_ERASURE_CONFIRMED.SYS</span>
+    </div>
+    <div style="padding:24px 28px;">
+      <h1 style="color:#05ffa1;font-size:20px;font-weight:bold;margin:0 0 16px;font-family:'Courier New',monospace;">Xác Nhận Xóa Tài Khoản Thành Công</h1>
+      <p style="color:#e0e0e0;font-size:14px;line-height:1.6;margin:0 0 12px;">Xin chào ${escapeHtml(payload.recipientName)},</p>
+      <p style="color:#e0e0e0;font-size:14px;line-height:1.6;margin:0 0 12px;">
+        Theo yêu cầu của bạn theo Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15, tài khoản và toàn bộ dữ liệu cá nhân liên quan trên <strong>${SITE_NAME}</strong> đã được xóa hoàn toàn khỏi cơ sở dữ liệu (bao gồm hồ sơ, bình luận, phiên AI đã mã hóa và ${payload.purgedMediaCount} tệp ảnh trên CDN).
+      </p>
+      <p style="color:#aaa;font-size:12px;line-height:1.5;margin:16px 0 0;">
+        Email này không lưu trữ bất kỳ dữ liệu cá nhân nào ngoài địa chỉ nhận thông báo xác nhận một lần. Nếu bạn có thắc mắc, vui lòng liên hệ ${CONTACT_EMAIL}.
+      </p>
+    </div>
+  </div>
+</body></html>`;
+  return sendEmail({
+    to: payload.recipientEmail,
+    subject: `🔒 [${SITE_NAME}] Xác nhận đã xóa tài khoản và dữ liệu cá nhân`,
+    html,
+    runtimeEnv,
+  });
+}

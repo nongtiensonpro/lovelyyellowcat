@@ -1,0 +1,356 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+const userProfile = await getCurrentUserProfile(supabase);
+---
+
+<BaseLayout
+  title="PRIVACY_POLICY.SYS // CHÍNH SÁCH BẢO VỆ DỮ LIỆU CÁ NHÂN"
+  description="Chính sách bảo vệ dữ liệu cá nhân của Tạp chí nghệ thuật số LovelyYellowCat theo Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15."
+  userProfile={userProfile}
+>
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1
+      class="text-3xl md:text-4xl font-extrabold uppercase tracking-widest text-vapor-pink font-retro"
+    >
+      🔒 CHÍNH SÁCH BẢO VỆ DỮ LIỆU CÁ NHÂN
+    </h1>
+    <p
+      class="text-xs tracking-wider text-vapor-blue mt-2 font-retro uppercase"
+    >
+      -- TUÂN THỦ LUẬT BẢO VỆ DỮ LIỆU CÁ NHÂN SỐ 91/2025/QH15 & NGHỊ ĐỊNH 356/2025/NĐ-CP --
+    </p>
+  </div>
+
+  <!-- Main Content Window -->
+  <div class="win95-container font-retro text-black mb-10 w-full">
+    <div class="win95-header">
+      <span>PRIVACY_POLICY.SYS</span>
+      <span class="text-[10px] text-vapor-yellow font-bold uppercase"
+        >PHIÊN BẢN 2.0 // HIỆU LỰC TỪ 01/2026</span
+      >
+    </div>
+
+    <div class="p-4 sm:p-6 bg-win-gray space-y-6 text-xs leading-relaxed text-black/85">
+      <!-- Alert Box -->
+      <div class="bg-white border-2 border-win-dark p-4 flex gap-4 items-start shadow-inner">
+        <span class="text-3xl">🛡️</span>
+        <div class="space-y-1.5 text-win-dark">
+          <p class="font-bold text-black uppercase">
+            CAM KẾT MINH BẠCH VÀ BẢO VỆ QUYỀN RIÊNG TƯ:
+          </p>
+          <p>
+            LovelyYellowCat là dự án tạp chí nghệ thuật số hoài cổ phi thương mại, tôn trọng tối đa quyền tự quyết của người dùng đối với dữ liệu của mình. Chính sách này công khai minh bạch toàn bộ các loại dữ liệu được thu thập, mục đích, hạ tầng lưu trữ và quyền lợi của bạn theo đúng quy định của pháp luật Việt Nam.
+          </p>
+        </div>
+      </div>
+
+      <!-- Section 1: Introduction & Operator Identity -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">1</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Thông tin về Chủ thể vận hành website
+          </h2>
+        </div>
+        <div class="space-y-2">
+          <p>
+            Dự án được xây dựng và duy trì bởi cá nhân <strong>nongtiensonpro</strong> với tư cách là một dự án phần mềm mã nguồn mở (MIT License), phi thương mại, không thu lợi nhuận.
+          </p>
+          <ul class="list-disc pl-5 space-y-1 text-win-dark">
+            <li><strong>Chủ dự án / Người kiểm soát dữ liệu:</strong> Cá nhân <code>nongtiensonpro</code></li>
+            <li><strong>Hòm thư liên hệ duy nhất:</strong> <a href="mailto:nongtiensonpro@gmail.com" class="text-link-blue underline font-bold">nongtiensonpro@gmail.com</a></li>
+            <li><strong>Kho lưu trữ mã nguồn:</strong> <a href="https://github.com/nongtiensonpro/lovelyyellowcat" target="_blank" rel="noopener noreferrer" class="text-link-blue underline">github.com/nongtiensonpro/lovelyyellowcat</a></li>
+            <li><strong>Mô hình:</strong> Hoàn toàn phi lợi nhuận, không kinh doanh hay bán dữ liệu người dùng.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 2: Data Collected -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">2</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Các loại dữ liệu cá nhân thu thập
+          </h2>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <strong class="text-vapor-purple">a. Dữ liệu cá nhân cơ bản:</strong>
+            <ul class="list-disc pl-5 space-y-1 mt-1 text-win-dark">
+              <li>Thông tin định danh qua Google OAuth: Địa chỉ email, Họ tên hiển thị, Đường dẫn ảnh đại diện Google.</li>
+              <li>Thông tin hồ sơ tự cung cấp: Giới thiệu bản thân (Bio), Ảnh bìa (Banner), Đường dẫn mạng xã hội.</li>
+              <li>Nội dung tương tác: Bình luận, lượt yêu thích tranh, tác phẩm tranh nghệ thuật gửi tham gia triển lãm.</li>
+            </ul>
+          </div>
+          <div>
+            <strong class="text-vapor-purple">b. Dữ liệu hội thoại AI:</strong>
+            <p class="text-win-dark mt-1">
+              Lời nhắc nghệ thuật (prompts) và phản hồi từ hệ thống trợ lý AI. Toàn bộ nội dung này được mã hóa đầu-cuối (E2EE) trước khi gửi tới cơ sở dữ liệu.
+            </p>
+          </div>
+          <div>
+            <strong class="text-vapor-purple">c. Dữ liệu kỹ thuật & vận hành:</strong>
+            <ul class="list-disc pl-5 space-y-1 mt-1 text-win-dark">
+              <li>Địa chỉ IP, thông số thiết bị cơ bản và hành vi trình duyệt phục vụ nhận diện bot qua Google reCAPTCHA.</li>
+              <li>Dữ liệu đo lường hiệu năng hiển thị Web Vitals (không chứa thông tin định danh cá nhân - Non-PII).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Purposes and Legal Basis -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">3</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Mục đích xử lý & Căn cứ pháp lý
+          </h2>
+        </div>
+        <div class="space-y-3">
+          <p>
+            Chúng tôi chỉ xử lý dữ liệu cho các mục đích hợp pháp, phù hợp với Điều 11 Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15:
+          </p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse border border-win-dark bg-white">
+              <thead>
+                <tr class="bg-black/10 font-bold border-b border-win-dark">
+                  <th class="p-2 border-r border-win-dark">Mục đích xử lý</th>
+                  <th class="p-2 border-r border-win-dark">Dữ liệu sử dụng</th>
+                  <th class="p-2">Căn cứ pháp lý</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-win-dark">
+                <tr>
+                  <td class="p-2 border-r border-win-dark">Xác thực đăng nhập & quản lý phiên</td>
+                  <td class="p-2 border-r border-win-dark">Google Email, Name, Avatar</td>
+                  <td class="p-2">Sự đồng ý chủ động của người dùng (OAuth)</td>
+                </tr>
+                <tr>
+                  <td class="p-2 border-r border-win-dark">Hiển thị triển lãm tranh cộng đồng</td>
+                  <td class="p-2 border-r border-win-dark">Tác phẩm tranh, tên tác giả, mô tả</td>
+                  <td class="p-2">Sự đồng ý khi gửi biểu mẫu (Submit form)</td>
+                </tr>
+                <tr>
+                  <td class="p-2 border-r border-win-dark">Trợ lý sáng tác nghệ thuật AI</td>
+                  <td class="p-2 border-r border-win-dark">Lời nhắc nghệ thuật (mã hóa E2EE)</td>
+                  <td class="p-2">Sự đồng ý trước khi khởi tạo phiên AI</td>
+                </tr>
+                <tr>
+                  <td class="p-2 border-r border-win-dark">Chống bot spam & phòng vệ an ninh</td>
+                  <td class="p-2 border-r border-win-dark">IP, token reCAPTCHA</td>
+                  <td class="p-2">Sự đồng ý qua Consent Banner & An ninh hệ thống</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Third Parties & Cross-Border Transfer -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">4</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Bên thứ ba xử lý & Chuyển dữ liệu ra nước ngoài
+          </h2>
+        </div>
+        <div class="space-y-3">
+          <p>
+            Để vận hành hạ tầng ứng dụng web hiện đại, dữ liệu kỹ thuật và dữ liệu tài khoản được lưu trữ và xử lý thông qua các nhà cung cấp dịch vụ công nghệ tiêu chuẩn quốc tế:
+          </p>
+          <ul class="list-disc pl-5 space-y-2 text-win-dark">
+            <li><strong>Supabase Inc. (Hoa Kỳ / Singapore):</strong> Cung cấp dịch vụ cơ sở dữ liệu đám mây PostgreSQL và xác thực người dùng. Dữ liệu AI lưu tại Supabase được mã hóa đầu-cuối, Supabase không thể đọc được nội dung gốc.</li>
+            <li><strong>Cloudflare, Inc. (Toàn cầu / Việt Nam):</strong> Cung cấp mạng phân phối biên (CDN), tường lửa WAF và môi trường chạy Workers.</li>
+            <li><strong>Cloudinary Ltd. (Hoa Kỳ):</strong> Lưu trữ và tối ưu hóa hình ảnh nghệ thuật công khai và avatar.</li>
+            <li><strong>Google LLC (Hoa Kỳ):</strong> Cung cấp dịch vụ đăng nhập (Google Identity), chống bot (reCAPTCHA) và mô hình ngôn ngữ (Google Gemini API).</li>
+          </ul>
+          <p class="bg-vapor-yellow/20 p-2.5 border border-win-dark text-[11px]">
+            <strong>Bảo vệ khi chuyển dữ liệu:</strong> Toàn bộ dữ liệu truyền tải đều được bảo vệ bởi giao thức HTTPS/TLS 1.3 và các thỏa thuận xử lý dữ liệu (DPA) tuân thủ tiêu chuẩn an toàn thông tin quốc tế.
+          </p>
+        </div>
+      </div>
+
+      <!-- Section 5: Data Retention Policy -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">5</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Thời hạn lưu giữ dữ liệu (Data Retention)
+          </h2>
+        </div>
+        <div class="space-y-2">
+          <p>
+            Chúng tôi tuân thủ nguyên tắc giới hạn thời gian lưu trữ theo quy định pháp luật:
+          </p>
+          <ul class="list-disc pl-5 space-y-1.5 text-win-dark">
+            <li><strong>Dữ liệu tài khoản & hồ sơ:</strong> Lưu trữ đến khi người dùng yêu cầu xóa tài khoản.</li>
+            <li><strong>Lịch sử hội thoại AI:</strong> Lưu trữ <strong>tối đa 6 tháng</strong> kể từ ngày tạo, sau đó tự động xóa; hoặc bị xóa ngay khi người dùng chủ động xóa phiên / xóa tài khoản. Không áp dụng chính sách lưu trữ vĩnh viễn.</li>
+            <li><strong>Tác phẩm tranh nghệ thuật:</strong> Lưu trữ trên triển lãm đến khi tác giả yêu cầu gỡ bỏ hoặc xóa tài khoản.</li>
+            <li><strong>Dữ liệu đo lường kỹ thuật (Telemetry):</strong> Lưu trữ tối đa 6 tháng dưới dạng thống kê tổng hợp, không lưu thông tin cá nhân.</li>
+            <li><strong>Bản sao lưu dự phòng (Backups):</strong> Tự động ghi đè theo chu kỳ lưu trữ của nhà cung cấp hạ tầng (tối đa 30 ngày).</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 6: Data Subject Rights -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">6</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Quyền và nghĩa vụ của Chủ thể dữ liệu
+          </h2>
+        </div>
+        <div class="space-y-3">
+          <p>Theo Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15, bạn có đầy đủ các quyền sau:</p>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="bg-black/5 p-2.5 border border-win-dark">
+              <strong class="text-vapor-purple">1. Quyền được biết:</strong> Được thông báo minh bạch về mọi hoạt động thu thập và xử lý dữ liệu của mình.
+            </div>
+            <div class="bg-black/5 p-2.5 border border-win-dark">
+              <strong class="text-vapor-purple">2. Quyền đồng ý / rút đồng ý:</strong> Quyết định cho phép hoặc rút lại sự đồng ý bất kỳ lúc nào qua cài đặt tài khoản.
+            </div>
+            <div class="bg-black/5 p-2.5 border border-win-dark">
+              <strong class="text-vapor-purple">3. Quyền xem & chỉnh sửa:</strong> Tự do truy cập và cập nhật hồ sơ cá nhân trong trang cài đặt.
+            </div>
+            <div class="bg-black/5 p-2.5 border border-win-dark">
+              <strong class="text-vapor-purple">4. Quyền xuất dữ liệu:</strong> Tải về toàn bộ bản sao dữ liệu cá nhân của bạn dưới định dạng tiêu chuẩn (JSON).
+            </div>
+            <div class="bg-black/5 p-2.5 border border-win-dark">
+              <strong class="text-vapor-purple">5. Quyền xóa dữ liệu (Đầy đủ):</strong> Yêu cầu hủy bỏ tài khoản và thanh lọc toàn bộ dữ liệu liên quan khỏi hệ thống.
+            </div>
+            <div class="bg-black/5 p-2.5 border border-win-dark">
+              <strong class="text-vapor-purple">6. Quyền khiếu nại:</strong> Gửi thắc mắc, phản ánh về quyền riêng tư tới địa chỉ email của Ban Quản Trị.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 7: Account Deletion & Export Process -->
+      <div class="win95-container bg-white p-4 shadow-sm border-2 border-vapor-purple">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">7</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Quy trình Xóa tài khoản đầy đủ & Xuất dữ liệu
+          </h2>
+          <span class="ml-auto bg-vapor-purple text-white text-[9px] font-bold px-2 py-0.5 border border-black">ĐẦY ĐỦ · CASCADE</span>
+        </div>
+        <div class="space-y-3">
+          <p>
+            Khi bạn lựa chọn <strong>Xóa tài khoản vĩnh viễn</strong> trong trang chỉnh sửa hồ sơ (<a href="/profile/edit" class="text-link-blue underline font-bold">/profile/edit</a>), hệ thống triển khai quy trình bảo vệ đầy đủ:
+          </p>
+          <ol class="list-decimal pl-5 space-y-1.5 text-win-dark">
+            <li><strong>Xuất dữ liệu trước khi xóa (Data Export):</strong> Bạn có thể tải tệp trích xuất toàn bộ dữ liệu cá nhân (.json) trực tiếp ngay trong hộp thoại xác nhận hoặc qua <code>/api/account/export</code>.</li>
+            <li><strong>Xác nhận chống thao tác nhầm:</strong> Bạn phải nhập chính xác cụm từ <code>XOA TAI KHOAN</code> để xác nhận ý chí tự nguyện xóa bỏ dữ liệu.</li>
+            <li><strong>Thanh lọc vĩnh viễn (Hard-Delete Cascade):</strong> Ngay khi xác nhận, hệ thống xóa bỏ tầng bậc hoàn toàn: xóa tài khoản đăng nhập và hồ sơ trên Supabase (cascade toàn bộ tác phẩm, bình luận, lượt thích, huy hiệu, phiên AI đã mã hóa), gỡ bỏ hình ảnh trên Cloudinary CDN và thu hồi phiên đăng nhập.</li>
+            <li><strong>Email thông báo hoàn tất:</strong> Một email xác nhận hoàn tất xóa dữ liệu sẽ được gửi tới địa chỉ email của bạn (nội dung thư không lưu trữ thêm dữ liệu cá nhân).</li>
+            <li><strong>Bản sao lưu hạ tầng:</strong> Các bản sao lưu dự phòng tự động của nhà cung cấp hạ tầng (Supabase/Cloudflare) sẽ tự động ghi đè theo chu kỳ tối đa 30 ngày.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Section 8: AI & BYOK Terms -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">8</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Trí tuệ nhân tạo (AI) & Điều khoản Bring Your Own Key (BYOK)
+          </h2>
+        </div>
+        <div class="space-y-3">
+          <p>
+            Hệ thống Mèo Vàng AI hoạt động như một công cụ hỗ trợ sáng tác nghệ thuật kỹ thuật số. Người dùng có quyền lựa chọn sử dụng API Key hệ thống hoặc <strong>Tự cung cấp khóa API cá nhân (BYOK)</strong>:
+          </p>
+          <div class="bg-vapor-yellow/20 p-3 border border-win-dark space-y-2 text-win-dark">
+            <p><strong>⚠️ Quy chế bắt buộc đối với tính năng BYOK:</strong></p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>Trách nhiệm người dùng:</strong> Khi nhập API Key, khóa của bạn được gửi trực tiếp từ trình duyệt của bạn tới Google Gemini API. LovelyYellowCat <strong>không bao giờ lưu trữ khóa của bạn trên máy chủ</strong>.</li>
+              <li><strong>Khuyến nghị khóa miễn phí (Free Tier):</strong> Để loại bỏ mọi nguy cơ tài chính ngoài ý muốn, chúng tôi khuyến cáo người dùng <strong>chỉ sử dụng API Key miễn phí (Google AI Studio Free Tier - không gắn thẻ thanh toán)</strong> khi trải nghiệm.</li>
+              <li><strong>Miễn trừ chi phí:</strong> LovelyYellowCat không tính phí và hoàn toàn không chịu trách nhiệm đối với bất kỳ chi phí phát sinh, hạn mức vượt mức hoặc tranh chấp nào giữa bạn và Google liên quan đến API Key của bạn.</li>
+              <li><strong>Bảo mật khóa:</strong> Bạn có trách nhiệm tự bảo vệ khóa, không dùng trên thiết bị công cộng và thu hồi khóa ngay trên bảng điều khiển Google nếu nghi ngờ bị lộ.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 9: Cookie, reCAPTCHA & Telemetry Consent -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">9</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Cookie, Công nghệ chống bot & Đo lường kỹ thuật
+          </h2>
+        </div>
+        <div class="space-y-2">
+          <p>
+            Chúng tôi tuân thủ nguyên tắc <strong>chỉ nạp công nghệ theo dõi khi có sự đồng ý (Opt-In Consent)</strong>:
+          </p>
+          <ul class="list-disc pl-5 space-y-1.5 text-win-dark">
+            <li><strong>Cookie thiết yếu:</strong> Dùng để duy trì phiên đăng nhập bảo mật của bạn qua Supabase Auth.</li>
+            <li><strong>Google reCAPTCHA:</strong> Chỉ nạp tại trang gửi tranh khi bạn đã đồng ý thông qua Consent Banner. Nếu từ chối, bạn vẫn có thể gửi bài thông qua cơ chế phòng thủ an toàn thay thế (honeypot / rate limit).</li>
+            <li><strong>Telemetry Web Vitals:</strong> Đo lường tốc độ hiển thị trang và trải nghiệm người dùng, chỉ kích hoạt khi bạn đồng ý.</li>
+            <li>Bạn có thể thay đổi hoặc rút lại lựa chọn của mình bất kỳ lúc nào thông qua nút <strong>"Cài đặt quyền riêng tư"</strong> ở chân trang.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 10: Security & Incident Response -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">10</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Biện pháp an toàn & Quy trình xử lý sự cố (72 Giờ)
+          </h2>
+        </div>
+        <div class="space-y-2">
+          <p>
+            LovelyYellowCat áp dụng các biện pháp kỹ thuật nghiêm ngặt: mã hóa E2EE cho hội thoại AI (AES-GCM 256), kiểm soát truy cập cấp hàng (Row Level Security), lưu trữ an toàn bí mật hệ thống trên Supabase Vault.
+          </p>
+          <p>
+            <strong>Thông báo sự cố dữ liệu 72 giờ:</strong> Trong trường hợp phát hiện sự cố an ninh mạng dẫn đến rò rỉ hoặc mất an toàn dữ liệu cá nhân của người dùng, Ban Quản Trị cam kết sẽ tiến hành cô lập sự cố và thông báo tới <strong>Cục An ninh mạng và phòng, chống tội phạm sử dụng công nghệ cao (A05) - Bộ Công an trong vòng 72 giờ</strong> kể từ thời điểm phát hiện theo đúng quy định của pháp luật Việt Nam, đồng thời phát đi thông báo khuyến nghị bảo vệ tới các tài khoản bị ảnh hưởng.
+          </p>
+        </div>
+      </div>
+
+      <!-- Section 11: Contact & Grievance Mechanism -->
+      <div class="win95-container bg-vapor-yellow/10 border-2 border-win-dark p-6 shadow-sm text-center space-y-3">
+        <div class="text-4xl">📬</div>
+        <h3 class="font-bold text-black uppercase tracking-wider text-sm">
+          ĐẦU MỐI LIÊN HỆ & BẢO VỆ DỮ LIỆU CÁ NHÂN
+        </h3>
+        <p class="text-xs leading-relaxed max-w-2xl mx-auto text-black/80">
+          Nếu bạn có bất kỳ câu hỏi, yêu cầu thực hiện quyền dữ liệu (xem, sửa, xuất dữ liệu, xóa tài khoản) hoặc phản ánh khiếu nại về quyền riêng tư, vui lòng liên hệ trực tiếp:
+        </p>
+        <div class="inline-block bg-black text-vapor-green font-mono text-sm sm:text-base px-4 py-2 border-2 border-win-dark shadow-inner select-all">
+          nongtiensonpro@gmail.com
+        </div>
+        <p class="text-[10px] text-win-dark uppercase italic">
+          -- Phản hồi và hướng dẫn xử lý yêu cầu quyền dữ liệu trong tối đa 72 giờ làm việc --
+        </p>
+      </div>
+
+      <!-- Navigation buttons -->
+      <div class="flex justify-center gap-4 pt-2">
+        <a
+          href="/"
+          class="win95-btn font-bold px-6 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
+        >
+          ⬅️ QUAY LẠI TRANG CHỦ
+        </a>
+        <a
+          href="/terms"
+          class="win95-btn font-bold px-6 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
+        >
+          📜 XEM ĐIỀU KHOẢN (TERMS)
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

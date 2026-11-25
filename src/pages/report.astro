@@ -1,0 +1,208 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+const userProfile = await getCurrentUserProfile(supabase);
+const reportType = Astro.url.searchParams.get("type") === "ai" ? "ai" : "copyright";
+---
+
+<BaseLayout
+  title="REPORT_CENTER.SYS // BÁO CÁO VI PHẠM BẢN QUYỀN & NỘI DUNG AI"
+  description="Kênh tiếp nhận yêu cầu gỡ bỏ nội dung vi phạm bản quyền (Notice & Takedown) và phản ánh nội dung AI sai lệch tại LovelyYellowCat."
+  userProfile={userProfile}
+>
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1 class="text-3xl md:text-4xl font-extrabold uppercase tracking-widest text-vapor-pink font-retro">
+      🚩 TRUNG TÂM BÁO CÁO & KHIẾU NẠI
+    </h1>
+    <p class="text-xs tracking-wider text-vapor-blue mt-2 font-retro uppercase">
+      -- NOTICE & TAKEDOWN (NĐ 17/2023/NĐ-CP) · MINH BẠCH AI (LUẬT 134/2025/QH15) --
+    </p>
+  </div>
+
+  <!-- Main Content Window -->
+  <div class="win95-container font-retro text-black mb-10 w-full max-w-3xl mx-auto">
+    <div class="win95-header bg-gradient-to-r from-red-800 to-vapor-purple text-white flex justify-between items-center">
+      <span>REPORT_WIZARD.EXE</span>
+      <span class="text-[10px] bg-black text-vapor-yellow px-2 py-0.5 font-mono">SLA: 72 GIỜ LÀM VIỆC</span>
+    </div>
+
+    <div class="p-4 sm:p-6 bg-win-gray space-y-5 text-xs leading-relaxed">
+      <div class="bg-white border-2 border-win-dark p-3 flex items-start gap-3 shadow-inner">
+        <span class="text-2xl">⚖️</span>
+        <div class="text-[11px] text-win-dark space-y-1">
+          <p class="font-bold text-black uppercase">Quy trình tiếp nhận chính thức:</p>
+          <p>
+            Điền biểu mẫu bên dưới để tạo hồ sơ khiếu nại chuẩn hóa (bao gồm dấu mốc thời gian và cam kết pháp lý) và gửi trực tiếp tới hòm thư Ban Quản Trị <strong>nongtiensonpro@gmail.com</strong>. Với khiếu nại bản quyền hợp lệ, BQT cam kết tạm gỡ hoặc chặn truy cập trong tối đa <strong>72 giờ làm việc</strong>.
+          </p>
+        </div>
+      </div>
+
+      <form id="report-form" class="win95-container bg-white p-4 border border-win-dark space-y-4">
+        <div class="space-y-1">
+          <label for="rep-type" class="font-bold block uppercase text-black">Loại yêu cầu (*):</label>
+          <select id="rep-type" class="w-full p-2 border border-win-dark bg-white text-xs font-mono text-black">
+            <option value="copyright" selected={reportType === "copyright"}>
+              ©️ Khiếu nại Bản quyền / Yêu cầu gỡ bỏ tác phẩm (Notice & Takedown)
+            </option>
+            <option value="ai" selected={reportType === "ai"}>
+              🤖 Báo cáo nội dung AI sai lệch / Deepfake / Vi phạm
+            </option>
+            <option value="privacy">
+              🔒 Yêu cầu về Dữ liệu cá nhân / Quyền riêng tư (Luật 91/2025)
+            </option>
+          </select>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label for="rep-name" class="font-bold block uppercase text-black">Họ tên / Tổ chức (*):</label>
+            <input
+              id="rep-name"
+              type="text"
+              required
+              placeholder="VD: Nguyễn Văn A"
+              class="w-full p-2 border border-win-dark bg-white text-xs text-black"
+            />
+          </div>
+          <div class="space-y-1">
+            <label for="rep-email" class="font-bold block uppercase text-black">Email liên hệ (*):</label>
+            <input
+              id="rep-email"
+              type="email"
+              required
+              placeholder="email@example.com"
+              class="w-full p-2 border border-win-dark bg-white text-xs text-black"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label for="rep-url" class="font-bold block uppercase text-black">Đường dẫn (URL) nội dung bị báo cáo (*):</label>
+          <input
+            id="rep-url"
+            type="url"
+            required
+            placeholder="https://lovelyyellowcat.../gallery?art=..."
+            class="w-full p-2 border border-win-dark bg-white text-xs font-mono text-black"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="rep-evidence" class="font-bold block uppercase text-black">
+            Mô tả chi tiết & Bằng chứng quyền sở hữu (*):
+          </label>
+          <textarea
+            id="rep-evidence"
+            rows={4}
+            required
+            placeholder="Mô tả rõ phần nội dung vi phạm, liên kết tác phẩm gốc, số giấy chứng nhận hoặc đoạn hội thoại AI có vấn đề..."
+            class="w-full p-2 border border-win-dark bg-white text-xs text-black"
+          ></textarea>
+        </div>
+
+        <div class="bg-vapor-yellow/20 border border-win-dark p-2.5">
+          <label class="flex items-start gap-2 cursor-pointer text-[11px]">
+            <input id="rep-confirm" type="checkbox" required class="mt-0.5" />
+            <span>
+              Tôi cam đoan các thông tin cung cấp ở trên là trung thực, chính xác và chịu trách nhiệm trước pháp luật nếu thông báo sai sự thật gây thiệt hại cho bên thứ ba.
+            </span>
+          </label>
+        </div>
+
+        <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-win-dark/30">
+          <button
+            type="button"
+            id="rep-copy-btn"
+            class="win95-btn px-3 py-2 text-xs font-bold bg-white text-black"
+          >
+            📋 Sao chép nội dung đơn
+          </button>
+          <button
+            type="submit"
+            class="win95-btn px-5 py-2 text-xs font-bold bg-vapor-pink/30 border border-black text-black hover:bg-vapor-pink/50"
+          >
+            ✉️ Mở ứng dụng Email để Gửi Đơn
+          </button>
+        </div>
+        <p id="rep-status" class="text-[11px] font-bold text-vapor-purple hidden"></p>
+      </form>
+
+      <div class="flex flex-wrap justify-center gap-4 pt-1">
+        <a href="/terms" class="win95-btn px-4 py-1.5 text-xs font-bold no-underline text-black">📜 Xem Điều Khoản</a>
+        <a href="/privacy" class="win95-btn px-4 py-1.5 text-xs font-bold no-underline text-black">🔒 Chính Sách Riêng Tư</a>
+        <a href="/ai-disclosure" class="win95-btn px-4 py-1.5 text-xs font-bold no-underline text-black">🤖 Minh Bạch AI</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("report-form") as HTMLFormElement | null;
+    const copyBtn = document.getElementById("rep-copy-btn");
+    const statusEl = document.getElementById("rep-status");
+
+    function buildReportBody() {
+      const type = (document.getElementById("rep-type") as HTMLSelectElement)?.value || "copyright";
+      const name = (document.getElementById("rep-name") as HTMLInputElement)?.value.trim() || "";
+      const email = (document.getElementById("rep-email") as HTMLInputElement)?.value.trim() || "";
+      const url = (document.getElementById("rep-url") as HTMLInputElement)?.value.trim() || "";
+      const evidence = (document.getElementById("rep-evidence") as HTMLTextAreaElement)?.value.trim() || "";
+      const labels: Record<string, string> = {
+        copyright: "[KHIẾU NẠI BẢN QUYỀN - NOTICE & TAKEDOWN]",
+        ai: "[BÁO CÁO NỘI DUNG AI]",
+        privacy: "[YÊU CẦU DỮ LIỆU CÁ NHÂN]",
+      };
+      const subject = `${labels[type] || "[BÁO CÁO]"} LovelyYellowCat`;
+      const body = [
+        `Loại yêu cầu: ${labels[type] || type}`,
+        `Thời điểm tạo đơn: ${new Date().toISOString()}`,
+        `Người gửi: ${name}`,
+        `Email liên hệ: ${email}`,
+        `URL nội dung bị báo cáo: ${url}`,
+        ``,
+        `Nội dung chi tiết & Bằng chứng:`,
+        evidence,
+        ``,
+        `Cam kết: Tôi cam đoan thông tin trên là trung thực và chịu trách nhiệm trước pháp luật.`,
+      ].join("\n");
+      return { subject, body };
+    }
+
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const { subject, body } = buildReportBody();
+        const mailto = `mailto:nongtiensonpro@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailto;
+        if (statusEl) {
+          statusEl.textContent = "✓ Đã khởi tạo email. Nếu trình duyệt không mở ứng dụng thư, hãy bấm 'Sao chép nội dung đơn' và gửi tới nongtiensonpro@gmail.com.";
+          statusEl.classList.remove("hidden");
+        }
+      });
+    }
+
+    if (copyBtn) {
+      copyBtn.addEventListener("click", async () => {
+        const { subject, body } = buildReportBody();
+        try {
+          await navigator.clipboard.writeText(`Tiêu đề: ${subject}\n\n${body}`);
+          if (statusEl) {
+            statusEl.textContent = "✓ Đã sao chép mẫu đơn! Vui lòng gửi về địa chỉ nongtiensonpro@gmail.com.";
+            statusEl.classList.remove("hidden");
+          }
+        } catch {
+          if (statusEl) {
+            statusEl.textContent = "Không thể tự động sao chép, vui lòng copy thủ công và gửi tới nongtiensonpro@gmail.com.";
+            statusEl.classList.remove("hidden");
+          }
+        }
+      });
+    }
+  </script>
+</BaseLayout>

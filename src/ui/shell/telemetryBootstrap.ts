@@ -13,6 +13,13 @@ export const TELEMETRY_ENDPOINT: string | null = "/api/ui-telemetry";
 if (typeof window !== "undefined") {
   window.__LYC_TELEMETRY_ENDPOINT__ = TELEMETRY_ENDPOINT;
   initWebVitals(TELEMETRY_ENDPOINT);
+
+  window.addEventListener("lyc-consent-updated", (e: Event) => {
+    const customEvent = e as CustomEvent<{ performance?: boolean }>;
+    if (customEvent.detail?.performance) {
+      initWebVitals(TELEMETRY_ENDPOINT);
+    }
+  });
 }
 
 export { reportIslandError };

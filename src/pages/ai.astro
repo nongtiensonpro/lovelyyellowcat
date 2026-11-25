@@ -47,13 +47,26 @@ const userProfile = await getCurrentUserProfile(supabase);
     </div>
   </div>
 
-  <!-- 🔐 Nguyên tắc Bảo mật — Rút gọn 1 dòng -->
-  <div class="win95-container bg-cosmic-black border border-vapor-purple max-w-7xl mx-auto mb-6 flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
+  <!-- 🔐 Nguyên tắc Bảo mật & Lưu trữ -->
+  <div class="win95-container bg-cosmic-black border border-vapor-purple max-w-7xl mx-auto mb-4 flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
     <span class="w-2 h-2 bg-vapor-green rounded-full animate-pulse shrink-0"></span>
     <span class="font-bold text-vapor-green">🔐 E2EE BẮT BUỘC</span>
     <span class="text-win-darkest hidden sm:inline">—</span>
-    <span class="text-[11px] text-win-darkest leading-snug">Lịch sử mã hóa AES-GCM 256 ngay trên trình duyệt, lưu vĩnh viễn theo tài khoản, admin không thể đọc.</span>
-    <a href="/ai-security" class="win95-btn ml-auto text-[10px] px-3 py-1.5 no-underline font-bold shrink-0">📜 Xem chi tiết →</a>
+    <span class="text-[11px] text-win-darkest leading-snug">Lịch sử mã hóa AES-GCM 256 ngay trên trình duyệt, lưu tối đa 6 tháng theo tài khoản (Luật 91/2025), admin không thể đọc.</span>
+    <a href="/ai-security" class="win95-btn ml-auto text-[10px] px-3 py-1.5 no-underline font-bold shrink-0">📜 Bảo mật E2EE →</a>
+  </div>
+
+  <!-- 🤖 Thông báo Minh bạch Hệ thống AI (Luật Trí tuệ nhân tạo số 134/2025/QH15) -->
+  <div class="win95-sunken bg-vapor-yellow/20 border-2 border-win-dark max-w-7xl mx-auto mb-6 p-2.5 font-retro text-xs text-black flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shadow-xs">
+    <div class="flex items-center gap-2">
+      <span class="text-lg">🤖</span>
+      <span class="text-[11px] text-black/90 leading-tight">
+        <strong>Thông báo AI:</strong> Bạn đang tương tác với hệ thống Trí tuệ nhân tạo (Google Gemini). Phản hồi mang tính chất thử nghiệm nghệ thuật số, không thay thế tư vấn chuyên môn.
+      </span>
+    </div>
+    <a href="/ai-disclosure" class="win95-btn text-[10px] px-3 py-1 font-bold no-underline text-vapor-purple shrink-0 hover:bg-vapor-yellow/40">
+      ℹ️ Minh bạch hệ thống AI ↗
+    </a>
   </div>
 
   {/* Main AI Chat Workstation Component */}

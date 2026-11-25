@@ -1,0 +1,209 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+const userProfile = await getCurrentUserProfile(supabase);
+---
+
+<BaseLayout
+  title="AI_DISCLOSURE.SYS // BẢN MINH BẠCH HỆ THỐNG TRÍ TUỆ NHÂN TẠO"
+  description="Bản công khai minh bạch hệ thống Trí tuệ nhân tạo LovelyYellowCat theo Luật Trí tuệ nhân tạo số 134/2025/QH15 và Nghị định 142/2026/NĐ-CP."
+  userProfile={userProfile}
+>
+  <!-- Header -->
+  <div class="text-center py-6">
+    <h1
+      class="text-3xl md:text-4xl font-extrabold uppercase tracking-widest text-vapor-pink font-retro"
+    >
+      🤖 MINH BẠCH HỆ THỐNG TRÍ TUỆ NHÂN TẠO (AI)
+    </h1>
+    <p
+      class="text-xs tracking-wider text-vapor-blue mt-2 font-retro uppercase"
+    >
+      -- TUÂN THỦ LUẬT TRÍ TUỆ NHÂN TẠO SỐ 134/2025/QH15 & NGHỊ ĐỊNH 142/2026/NĐ-CP --
+    </p>
+  </div>
+
+  <!-- Main Content Window -->
+  <div class="win95-container font-retro text-black mb-10 w-full max-w-5xl mx-auto">
+    <div class="win95-header bg-gradient-to-r from-vapor-purple to-vapor-blue flex justify-between items-center text-white">
+      <span>AI_SYSTEM_CARD.SYS</span>
+      <span class="text-[10px] text-vapor-yellow font-bold uppercase"
+        >PHIÊN BẢN 2026 // MINH BẠCH HỆ THỐNG</span
+      >
+    </div>
+
+    <div class="p-4 sm:p-6 bg-win-gray space-y-6 text-xs leading-relaxed text-black/85">
+      <!-- Alert Box -->
+      <div class="bg-white border-2 border-win-dark p-4 flex gap-4 items-start shadow-inner">
+        <span class="text-3xl">⚠️</span>
+        <div class="space-y-1 text-win-dark">
+          <p class="font-bold text-black uppercase text-xs">
+            THÔNG BÁO QUAN TRỌNG ĐỐI VỚI NGƯỜI DÙNG:
+          </p>
+          <p>
+            Bạn đang tương tác với một hệ thống Trí tuệ nhân tạo tạo sinh (Generative AI). Phản hồi từ các nhân cách (Mèo Vàng Cybernetic, Nhà Phê Bình Nghệ Thuật 1995, Hacker Y2K, Synthwave DJ) được sinh tự động bởi mô hình ngôn ngữ lớn (Google Gemini), hoàn toàn mang tính chất thử nghiệm và sáng tạo nghệ thuật số.
+          </p>
+        </div>
+      </div>
+
+      <!-- Section 1: AI Provider & Architecture -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">1</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Nhà cung cấp mô hình nền tảng & Kiến trúc
+          </h2>
+        </div>
+        <div class="space-y-2">
+          <p>
+            LovelyYellowCat không tự huấn luyện mô hình nền tảng riêng từ đầu mà đóng vai trò là <strong>Bên triển khai ứng dụng AI (AI Deployer)</strong>, kết nối với hạ tầng trí tuệ nhân tạo của bên thứ ba:
+          </p>
+          <ul class="list-disc pl-5 space-y-1 text-win-dark">
+            <li><strong>Nhà cung cấp mô hình:</strong> Google LLC (dịch vụ Google AI Studio / Gemini API).</li>
+            <li><strong>Các dòng mô hình sử dụng:</strong> Gemini 2.5 Flash, Gemini 2.0 Flash Lite, Gemini 1.5 Pro (tự động luân chuyển fallback).</li>
+            <li><strong>Phương thức kết nối:</strong> Request trực tiếp từ trình duyệt người dùng (Client-Direct Engine) thông qua khóa hệ thống được cấp phát hoặc khóa cá nhân của người dùng (BYOK).</li>
+            <li><strong>Quản lý bảo mật:</strong> Mọi phiên hội thoại lưu tại cơ sở dữ liệu đều được mã hóa đầu-cuối AES-GCM 256. Quản trị viên website và Supabase không thể đọc được nội dung gốc.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 2: Purpose & Risk Classification -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">2</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Mục đích sử dụng & Phân loại rủi ro
+          </h2>
+        </div>
+        <div class="space-y-2">
+          <p>
+            Căn cứ theo tiêu chí phân loại rủi ro của Luật Trí tuệ nhân tạo số 134/2025/QH15:
+          </p>
+          <div class="bg-black/5 p-3 border border-win-dark space-y-1.5">
+            <strong class="text-vapor-purple text-[11px] block">● Phân loại: Hệ thống AI rủi ro tối thiểu (Minimal Risk AI)</strong>
+            <p class="text-win-dark text-[11px]">
+              Hệ thống được thiết kế thuần túy phục vụ giải trí, hỗ trợ ý tưởng sáng tác nghệ thuật hoài cổ (Vaporwave, Y2K, Cyberpunk), bình luận phong cách tranh và trải nghiệm công nghệ văn hóa mạng.
+            </p>
+          </div>
+          <p class="font-bold text-red-700 text-[11px]">
+            🚫 CÁC TRƯỜNG HỢP TUYỆT ĐỐI KHÔNG SỬ DỤNG:
+          </p>
+          <ul class="list-disc pl-5 space-y-1 text-win-dark">
+            <li>Không sử dụng làm căn cứ tư vấn y tế, pháp lý, đầu tư tài chính hoặc an toàn tính mạng.</li>
+            <li>Không sử dụng để tạo ra nội dung giả mạo người thật (deepfake), tin giả hoặc hành vi lừa đảo trực tuyến.</li>
+            <li>Không sử dụng để xâm phạm quyền sở hữu trí tuệ, danh dự, nhân phẩm của tổ chức, cá nhân khác.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 3: Labeling and Transparency Obligation -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">3</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Nghĩa vụ gắn nhãn nhận diện nội dung AI (Điều 18 Nghị định 142/2026/NĐ-CP)
+          </h2>
+        </div>
+        <div class="space-y-3">
+          <p>
+            Để đảm bảo công chúng luôn phân biệt rõ ràng giữa nội dung do con người sáng tạo và nội dung do máy móc tạo ra:
+          </p>
+          <ul class="list-disc pl-5 space-y-1.5 text-win-dark">
+            <li><strong>Nhãn tương tác hội thoại:</strong> Mọi tin nhắn phản hồi từ các nhân cách AI trong Trạm Trí tuệ nhân tạo đều được gắn nhãn nhận diện rõ ràng: <code>🤖 NỘI DUNG DO AI TẠO</code> kèm thông tin định danh mô hình.</li>
+            <li><strong>Đối với tranh nghệ thuật AI tải lên Triển lãm:</strong> Nghệ sĩ gửi tranh có sử dụng Generative AI (Midjourney, DALL-E, Stable Diffusion...) có trách nhiệm gắn nhãn hoặc tích chọn tag "AI Art" tại biểu mẫu gửi tác phẩm để minh bạch với cộng đồng thưởng ngoạn.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 4: Bring Your Own Key (BYOK) Safety Policy -->
+      <div class="win95-container bg-white p-4 shadow-sm border-2 border-vapor-purple">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">4</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Quy chế an toàn đối với khóa cá nhân (BYOK)
+          </h2>
+          <span class="ml-auto bg-vapor-purple text-white text-[9px] font-bold px-2 py-0.5 border border-black">KHUYẾN NGHỊ FREE KEY</span>
+        </div>
+        <div class="space-y-3">
+          <p>
+            LovelyYellowCat hỗ trợ cơ chế cho phép người dùng tự cung cấp Google Gemini API Key để tận hưởng hạn mức trò chuyện không giới hạn:
+          </p>
+          <div class="bg-vapor-yellow/20 p-3 border border-win-dark space-y-2 text-win-dark">
+            <strong class="text-black uppercase text-[11px] block">✦ 4 Nguyên tắc bảo vệ người dùng BYOK:</strong>
+            <ol class="list-decimal pl-4 space-y-1">
+              <li><strong>Khuyến nghị dùng key miễn phí (Free Tier):</strong> Để tránh mọi rủi ro tài chính, chúng tôi khuyến cáo bạn <strong>chỉ nên tạo API Key từ tài khoản Google AI Studio miễn phí (không liên kết thẻ tín dụng)</strong>.</li>
+              <li><strong>Máy chủ không lưu khóa:</strong> API Key cá nhân của bạn được lưu trong bộ nhớ tạm (localStorage) trên thiết bị của bạn và gửi thẳng từ trình duyệt tới Google. LovelyYellowCat <strong>không bao giờ nhận hoặc lưu khóa này trên máy chủ</strong>.</li>
+              <li><strong>Người dùng tự kiểm soát chi phí:</strong> Nếu bạn chọn dùng khóa có hạn mức thanh toán trả phí, bạn hoàn toàn tự chịu trách nhiệm về mọi chi phí sử dụng API phát sinh giữa bạn và Google.</li>
+              <li><strong>Xóa khóa tức thì:</strong> Bạn có thể bấm nút "🗑️ Xóa Key" bất kỳ lúc nào trong Trạm AI để hủy bỏ hoàn toàn khóa khỏi trình duyệt.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: Data Retention & User Control -->
+      <div class="win95-container bg-white p-4 shadow-sm border border-win-dark">
+        <div class="flex items-center gap-2 border-b-2 border-win-dark pb-2 mb-3">
+          <span class="text-xl">5</span>
+          <h2 class="font-bold text-sm uppercase text-black">
+            Lưu giữ dữ liệu AI & Quyền kiểm soát của người dùng
+          </h2>
+        </div>
+        <div class="space-y-2">
+          <p>
+            Theo quy định về bảo vệ dữ liệu cá nhân, chúng tôi thiết lập cơ chế kiểm soát tối đa cho bạn:
+          </p>
+          <ul class="list-disc pl-5 space-y-1.5 text-win-dark">
+            <li><strong>Thời hạn lưu trữ 6 tháng:</strong> Lịch sử phiên hội thoại AI được lưu trữ tối đa 06 tháng kể từ ngày khởi tạo, sau đó tự động xóa; không lưu trữ vĩnh viễn.</li>
+            <li><strong>Quyền xuất dữ liệu:</strong> Bạn có thể xuất toàn bộ lịch sử trò chuyện dưới dạng file văn bản (.txt) hoặc file dữ liệu (.json) ngay trong giao diện Trạm AI.</li>
+            <li><strong>Quyền xóa tức thì:</strong> Bạn có thể xóa từng phiên chat hoặc xóa toàn bộ lịch sử bất cứ lúc nào chỉ với một cú click chuột.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Section 6: AI Content Feedback & Reporting -->
+      <div class="win95-container bg-vapor-yellow/10 border-2 border-win-dark p-6 shadow-sm text-center space-y-3">
+        <div class="text-4xl">🚩</div>
+        <h3 class="font-bold text-black uppercase tracking-wider text-sm">
+          TIẾP NHẬN BÁO CÁO VỀ NỘI DUNG AI SAI LỆCH HOẶC VI PHẠM
+        </h3>
+        <p class="text-xs leading-relaxed max-w-2xl mx-auto text-black/80">
+          Nếu bạn phát hiện câu trả lời của AI có dấu hiệu xúc phạm, sai lệch nghiêm trọng, vi phạm bản quyền hoặc vi phạm quy định pháp luật Việt Nam, vui lòng thông báo cho chúng tôi:
+        </p>
+        <div class="inline-block bg-black text-vapor-green font-mono text-sm sm:text-base px-4 py-2 border-2 border-win-dark shadow-inner select-all">
+          nongtiensonpro@gmail.com
+        </div>
+        <p class="text-[10px] text-win-dark uppercase italic">
+          -- Tiêu đề ghi rõ: [BÁO CÁO NỘI DUNG AI] kèm ảnh chụp màn hình hoặc nội dung chi tiết --
+        </p>
+      </div>
+
+      <!-- Navigation buttons -->
+      <div class="flex flex-wrap justify-center gap-4 pt-2">
+        <a
+          href="/ai"
+          class="win95-btn font-bold px-6 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
+        >
+          ⬅️ QUAY LẠI TRẠM AI
+        </a>
+        <a
+          href="/privacy"
+          class="win95-btn font-bold px-6 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
+        >
+          🔒 CHÍNH SÁCH QUYỀN RIÊNG TƯ
+        </a>
+        <a
+          href="/terms"
+          class="win95-btn font-bold px-6 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
+        >
+          📜 ĐIỀU KHOẢN DỊCH VỤ
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

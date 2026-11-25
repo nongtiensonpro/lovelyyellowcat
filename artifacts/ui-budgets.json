@@ -1,8 +1,8 @@
 {
-  "_comment": "Phase 9 budget gates (ratchet) — nguồn: build sau mobile touch controls (Pong/Snake). Mọi thay đổi tăng phải cập nhật budgets.json + ghi lý do trong PR/commit.",
-  "js_total_bytes": 660000,
+  "_comment": "Phase 9 budget gates (ratchet) — cập nhật cho tính năng tuân thủ pháp lý 2026 (ConsentBanner, /privacy, /ai-disclosure, /login, /report, Export/Xóa TK, BYOK modal & nhãn AI). Không thêm thư viện ngoài, giữ nguyên hydration limits.",
+  "js_total_bytes": 680000,
   "js_largest_chunk_bytes": 210000,
-  "css_total_bytes": 192000,
+  "css_total_bytes": 195000,
   "hydration": {
     "client:load": 4,
     "client:idle": 6,
@@ -10,5 +10,5 @@
   },
   "tests_min": 226,
   "bundle_files": 40,
-  "test_files_min": 20
+  "test_files_min": 36
 }

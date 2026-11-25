@@ -52,10 +52,12 @@ const userProfile = await getCurrentUserProfile(supabase);
                     </p>
                     <p class="leading-relaxed">
                         Hệ thống này được xây dựng hoàn toàn phục vụ mục đích
-                        học tập, lưu trữ phi lợi nhuận và trải nghiệm công nghệ
-                        (Vibecoding). Bằng việc truy cập hoặc tương tác trên
-                        website, bạn mặc định đồng ý với các chính sách miễn trừ
-                        trách nhiệm pháp lý được nêu chi tiết dưới đây.
+                        học tập, lưu trữ phi lợi nhuận và trải nghiệm nghệ thuật số
+                        (Vibecoding). Việc xử lý dữ liệu cá nhân của bạn được thực hiện
+                        trên cơ sở sự đồng ý chủ động theo quy định của Luật Bảo vệ
+                        dữ liệu cá nhân số 91/2025/QH15. Vui lòng tham khảo chi tiết tại
+                        <a href="/privacy" class="text-link-blue underline font-bold">Chính Sách Quyền Riêng Tư</a>
+                        và các điều khoản dịch vụ dưới đây.
                     </p>
                 </div>
             </div>
@@ -89,8 +91,9 @@ const userProfile = await getCurrentUserProfile(supabase);
                         thương mại nào (như Google AdSense hoặc các mạng lưới tiếp
                         thị liên kết), không thu phí người dùng dưới mọi hình thức
                         (như tài khoản nâng cấp, phí tải ảnh, hay quyên góp), không
-                        kinh doanh hoặc chuyển giao dữ liệu người dùng cho bên thứ
-                        ba.
+                        kinh doanh hay bán dữ liệu người dùng cho bên thứ ba. Dữ liệu
+                        kỹ thuật chỉ được chuyển tới các đối tác hạ tầng thiết yếu
+                        (Supabase, Cloudflare, Cloudinary, Google) theo <a href="/privacy" class="text-link-blue underline">Chính Sách Quyền Riêng Tư</a>.
                     </p>
                     <p>
                         <strong class="text-vapor-purple"
@@ -155,13 +158,15 @@ const userProfile = await getCurrentUserProfile(supabase);
                                     thư điện tử liên lạc công khai.
                                 </p>
                                 <p>
-                                    • <em>Thời gian xử lý nhanh chóng:</em> Ngay sau
+                                    • <em>Thời gian xử lý nhanh chóng (SLA bản quyền):</em> Ngay sau
                                     khi tiếp nhận yêu cầu gỡ bỏ hợp lệ kèm theo chứng
                                     cứ rõ ràng, BQT cam kết sẽ thực hiện tạm gỡ bỏ
                                     hoặc ngăn chặn việc truy nhập tới nội dung bị
                                     báo cáo trong vòng tối đa <strong
-                                        >72 giờ</strong
-                                    > theo đúng quy định pháp luật.
+                                        >72 giờ làm việc</strong
+                                    > theo đúng quy định tại Nghị định 17/2023/NĐ-CP
+                                    (Lưu ý: Đây là thời hạn xử lý khiếu nại nội dung bản quyền,
+                                    tách biệt với nghĩa vụ thông báo sự cố dữ liệu 72 giờ theo Luật Bảo vệ dữ liệu cá nhân).
                                 </p>
                             </div>
                         </li>
@@ -211,8 +216,14 @@ const userProfile = await getCurrentUserProfile(supabase);
                         phong cách. Nếu bất kỳ cá nhân, đơn vị sở hữu bản quyền nào
                         của các tác phẩm được hiển thị trên trang không muốn tác phẩm
                         xuất hiện tại không gian trưng bày phi thương mại này, vui
-                        lòng liên hệ trực tiếp, tác phẩm của bạn sẽ được gỡ bỏ ngay
-                        lập tức.
+                        lòng liên hệ trực tiếp qua email hoặc
+                        <a href="/report" class="text-link-blue underline font-bold">Trung tâm Báo cáo (/report)</a>,
+                        tác phẩm sẽ được tạm gỡ trong vòng tối đa 72 giờ làm việc.
+                    </p>
+                    <p>
+                        <strong class="text-vapor-purple"
+                            >✦ Giấy phép nội dung người dùng cấp cho website (UGC License):</strong
+                        > Khi gửi tác phẩm tranh vẽ hoặc bình luận lên LovelyYellowCat, bạn giữ nguyên toàn bộ quyền sở hữu trí tuệ đối với tác phẩm của mình. Bạn chỉ cấp cho website một giấy phép giới hạn, không độc quyền, miễn phí bản quyền và hoàn toàn phi thương mại để: hiển thị công khai trên triển lãm, thay đổi kích thước/tối ưu hóa tệp ảnh và phân phối qua bộ nhớ đệm CDN (Cloudinary/Cloudflare) kèm ghi nhận tên tác giả (attribution). Bạn có quyền rút lại nội dung hoặc xóa tác phẩm bất kỳ lúc nào.
                     </p>
                 </div>
             </div>
@@ -336,11 +347,21 @@ const userProfile = await getCurrentUserProfile(supabase);
                     </div>
 
                     <div>
-                        <strong class="text-vapor-purple">✦ Lưu trữ vĩnh viễn theo tài khoản:</strong>
+                        <strong class="text-vapor-purple">✦ Thời hạn lưu trữ có giới hạn (Tối đa 6 tháng):</strong>
                         <ul class="list-disc pl-5 space-y-1.5 mt-2 text-win-dark">
-                            <li>Dữ liệu được lưu <strong class="text-black">vĩnh viễn</strong> trong các bảng <code class="bg-black text-vapor-green px-1">ai_sessions</code> / <code class="bg-black text-vapor-green px-1">ai_messages</code> gắn với <code class="bg-black text-vapor-green px-1">user_id</code> của bạn, chỉ xóa khi bạn chủ động xóa phiên hoặc xóa tài khoản (cascade).</li>
-                            <li>Bạn có toàn quyền: <strong class="text-black">xem, xuất file (.txt/.json), xóa từng phiên hoặc xóa toàn bộ vĩnh viễn</strong> ngay trong Trạm AI (tab Cấu hình).</li>
-                            <li>Không có tự động xóa sau 30/90 ngày — trừ khi bạn yêu cầu.</li>
+                            <li>Dữ liệu hội thoại AI được mã hóa và lưu trữ <strong class="text-black">tối đa 6 tháng</strong> kể từ ngày tạo theo nguyên tắc giới hạn thời gian lưu trữ dữ liệu của Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15. Sau 6 tháng, các phiên cũ sẽ được tự động dọn dẹp khỏi cơ sở dữ liệu.</li>
+                            <li>Bạn có toàn quyền chủ động bất cứ lúc nào: <strong class="text-black">xem, trích xuất dữ liệu (.json/.txt), xóa từng phiên hoặc xóa toàn bộ lịch sử</strong> ngay trong Trạm AI.</li>
+                            <li>Khi thực hiện xóa tài khoản, toàn bộ lịch sử AI được xóa tầng bậc (cascade) vĩnh viễn.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-vapor-yellow/20 p-3 border border-win-dark space-y-2">
+                        <strong class="text-black uppercase text-[11px]">✦ Quy chế sử dụng khóa API cá nhân (BYOK - Bring Your Own Key):</strong>
+                        <ul class="list-disc pl-5 space-y-1 text-win-dark">
+                            <li>Người dùng có quyền tự nhập khóa cá nhân Google Gemini API Key để tương tác với AI. Khóa này được gửi trực tiếp từ trình duyệt của bạn tới Google API; LovelyYellowCat <strong>không lưu trữ khóa trên máy chủ</strong>.</li>
+                            <li><strong>Khuyến cáo an toàn:</strong> Chúng tôi khuyến nghị người dùng <strong>chỉ sử dụng API Key miễn phí (Google AI Studio Free Tier - không kích hoạt thanh toán)</strong> để tránh phát sinh chi phí ngoài ý muốn.</li>
+                            <li><strong>Miễn trừ chi phí:</strong> LovelyYellowCat không chịu bất kỳ trách nhiệm pháp lý hoặc tài chính nào đối với các khoản phí, hạn mức sử dụng hoặc thiệt hại phát sinh từ việc sử dụng API Key của bạn.</li>
+                            <li>Bạn tự chịu trách nhiệm bảo mật khóa và tuân thủ Điều khoản sử dụng của nhà cung cấp dịch vụ AI (Google).</li>
                         </ul>
                     </div>
 
@@ -399,13 +420,19 @@ const userProfile = await getCurrentUserProfile(supabase);
                 </p>
             </div>
 
-            <!-- Back Button -->
-            <div class="flex justify-center pt-2">
+            <!-- Back and Privacy Buttons -->
+            <div class="flex flex-wrap justify-center gap-4 pt-2">
                 <a
                     href="/"
-                    class="win95-btn font-bold px-8 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
+                    class="win95-btn font-bold px-6 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
                 >
                     ⬅️ QUAY LẠI TRANG CHỦ
+                </a>
+                <a
+                    href="/privacy"
+                    class="win95-btn font-bold px-6 py-2 bg-win-gray border border-white text-black no-underline text-xs flex items-center gap-1.5 hover:bg-win-light"
+                >
+                    🔒 CHÍNH SÁCH QUYỀN RIÊNG TƯ (PRIVACY)
                 </a>
             </div>
         </div>

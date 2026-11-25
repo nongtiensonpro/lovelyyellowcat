@@ -1,0 +1,90 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { createSupabaseServerClient, getCurrentUserProfile } from "../lib/supabase";
+
+const supabase = createSupabaseServerClient({
+  request: Astro.request,
+  cookies: Astro.cookies,
+});
+
+const userProfile = await getCurrentUserProfile(supabase);
+const rawNext = Astro.url.searchParams.get("next") || "/";
+const safeNext = rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\") ? rawNext : "/";
+
+if (userProfile) {
+  return Astro.redirect(safeNext, 302);
+}
+---
+
+<BaseLayout
+  title="LOGIN_CONSENT.SYS // ĐĂNG NHẬP & CHẤP THUẬN DỮ LIỆU CÁ NHÂN"
+  description="Đăng nhập tài khoản LovelyYellowCat thông qua Google OAuth kèm xác nhận đồng ý xử lý dữ liệu cá nhân theo Luật 91/2025/QH15."
+  userProfile={userProfile}
+>
+  <div class="max-w-lg mx-auto my-10 font-retro text-black">
+    <div class="win95-container bg-win-gray border-2 border-win-dark shadow-2xl">
+      <div class="win95-header bg-gradient-to-r from-vapor-purple to-vapor-blue text-white flex justify-between items-center">
+        <span>🔐 GOOGLE_OAUTH_CONSENT.EXE</span>
+        <span class="text-[10px] bg-black text-vapor-green px-2 py-0.5 font-mono">LUẬT 91/2025</span>
+      </div>
+
+      <form action="/api/auth/signin" method="get" class="p-5 space-y-4 text-xs">
+        <input type="hidden" name="consent" value="accepted" />
+        <input type="hidden" name="next" value={safeNext} />
+
+        <div class="text-center space-y-2">
+          <div class="text-4xl">🔑</div>
+          <h1 class="font-bold text-sm uppercase text-black">Đăng nhập bằng Google</h1>
+          <p class="text-[11px] text-win-dark leading-relaxed">
+            Trước khi chuyển tới Google để xác thực, vui lòng xem và xác nhận phạm vi dữ liệu cá nhân được thu thập.
+          </p>
+        </div>
+
+        <div class="bg-white border-2 border-win-dark p-3 space-y-1.5 text-[11px] text-win-dark">
+          <p class="font-bold text-black uppercase">Dữ liệu thu thập từ Google OAuth:</p>
+          <ul class="list-disc pl-4 space-y-1">
+            <li><strong>Địa chỉ Email, Tên hiển thị, Ảnh đại diện:</strong> Dùng để tạo hồ sơ thành viên và xác thực phiên đăng nhập.</li>
+            <li><strong>Nơi lưu trữ:</strong> Cơ sở dữ liệu Supabase (bảo vệ bởi Row Level Security).</li>
+            <li><strong>Quyền của bạn:</strong> Có thể xem, sửa, xuất dữ liệu (.json) hoặc xóa tài khoản vĩnh viễn bất kỳ lúc nào trong trang cá nhân.</li>
+          </ul>
+        </div>
+
+        <div class="bg-vapor-yellow/25 border border-win-dark p-3">
+          <label class="flex items-start gap-2 cursor-pointer text-[11px] leading-snug">
+            <input id="login-consent-checkbox" type="checkbox" required class="mt-0.5 cursor-pointer" />
+            <span>
+              Tôi đồng ý cho LovelyYellowCat thu thập và xử lý dữ liệu tài khoản Google theo{" "}
+              <a href="/privacy" target="_blank" class="text-link-blue underline font-bold">Chính sách bảo vệ dữ liệu cá nhân</a>{" "}
+              và <a href="/terms" target="_blank" class="text-link-blue underline font-bold">Điều khoản sử dụng</a>.
+            </span>
+          </label>
+        </div>
+
+        <div class="flex flex-wrap gap-2 pt-2">
+          <a href="/" class="win95-btn px-4 py-2 text-xs font-bold no-underline text-black">
+            ⬅️ Hủy bỏ
+          </a>
+          <button
+            type="submit"
+            id="login-submit-btn"
+            disabled
+            class="win95-btn flex-1 py-2 px-4 text-xs font-bold bg-white border-2 border-black text-black disabled:opacity-50"
+          >
+            🔑 Đồng ý & Tiếp tục với Google
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const cb = document.getElementById("login-consent-checkbox") as HTMLInputElement | null;
+    const btn = document.getElementById("login-submit-btn") as HTMLButtonElement | null;
+    if (cb && btn) {
+      btn.disabled = !cb.checked;
+      cb.addEventListener("change", () => {
+        btn.disabled = !cb.checked;
+      });
+    }
+  </script>
+</BaseLayout>

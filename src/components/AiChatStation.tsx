@@ -340,6 +340,11 @@ const AiChatStationInner: React.FC = () => {
   const [inlineKeyInput, setInlineKeyInput] = useState<string>("");
   const [keyRequiredNotice, setKeyRequiredNotice] = useState(false);
 
+  // ===== BYOK Safety Modal States (Luật Trí tuệ nhân tạo số 134/2025/QH15) =====
+  const [showByokModal, setShowByokModal] = useState(false);
+  const [pendingCustomKey, setPendingCustomKey] = useState("");
+  const [byokDisclaimerChecked, setByokDisclaimerChecked] = useState(false);
+
   // ===== E2EE Zero-Knowledge States (bắt buộc) =====
   const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -679,7 +684,7 @@ const AiChatStationInner: React.FC = () => {
     scrollToBottom();
   }, [currentSession?.messages, isTyping]);
 
-  // Lưu Custom API Key khi người dùng muốn tự đổi
+  // Lưu Custom API Key khi người dùng muốn tự đổi (Bảo vệ BYOK - Luật 134/2025)
   const handleSaveCustomApiKey = (keyToSave: string) => {
     const trimmed = keyToSave.trim();
     if (!trimmed) {
@@ -691,12 +696,30 @@ const AiChatStationInner: React.FC = () => {
         ? "Đã xóa Key cá nhân khỏi thiết bị. Hệ thống sẽ dùng Key miễn phí trực tiếp trong trình duyệt."
         : "Đã xóa API Key khỏi thiết bị. Hãy nhập key để tiếp tục trò chuyện.", "byok-removed");
     } else {
-      localStorage.setItem(API_KEY_STORAGE, trimmed);
-      setUserCustomApiKey(trimmed);
-      setInlineKeyInput(trimmed);
-      setKeyRequiredNotice(false);
-      uiAlert("✓ Đã lưu API Key BYOK trên thiết bị và kích hoạt gọi trực tiếp!", "byok-saved");
+      setPendingCustomKey(trimmed);
+      setByokDisclaimerChecked(false);
+      setShowByokModal(true);
     }
+  };
+
+  const confirmSaveCustomApiKey = () => {
+    if (!pendingCustomKey) return;
+    localStorage.setItem(API_KEY_STORAGE, pendingCustomKey);
+    setUserCustomApiKey(pendingCustomKey);
+    setInlineKeyInput(pendingCustomKey);
+    setKeyRequiredNotice(false);
+    setShowByokModal(false);
+    uiAlert("✓ Đã lưu API Key BYOK trên thiết bị và kích hoạt gọi trực tiếp!", "byok-saved");
+  };
+
+  const handleReportAiMessage = () => {
+    uiConfirm(
+      "Bạn muốn báo cáo phản hồi AI này sai lệch hoặc vi phạm?\n\nNhấn OK để mở Trung tâm Báo cáo (/report) hoặc Hủy để ở lại Trạm AI."
+    ).then((goToReport) => {
+      if (goToReport) {
+        window.open("/report?type=ai", "_blank", "noopener,noreferrer");
+      }
+    });
   };
 
   // Xử lý gửi tin nhắn — E2EE bắt buộc
@@ -1195,7 +1218,7 @@ const AiChatStationInner: React.FC = () => {
                 ) : (
                   <p>Nhập <strong>mật khẩu mã hóa</strong> để mở khóa lịch sử. Máy chủ <strong>không bao giờ</strong> thấy mật khẩu hay nội dung chat.</p>
                 )}
-                <p className="mt-2 text-[10px] text-win-dark">Chỉ tài khoản hoạt động mới được sử dụng AI. Dữ liệu lưu vĩnh viễn theo tài khoản, tuân thủ <a href="/terms" target="_blank" className="underline text-vapor-purple">/terms</a>.</p>
+                <p className="mt-2 text-[10px] text-win-dark">Chỉ tài khoản hoạt động mới được sử dụng AI. Dữ liệu lưu tối đa 6 tháng theo tài khoản, tuân thủ <a href="/terms" target="_blank" className="underline text-vapor-purple">/terms</a> & <a href="/privacy" target="_blank" className="underline text-vapor-purple">/privacy</a>.</p>
               </div>
               <input
                 type="password"
@@ -1245,6 +1268,79 @@ const AiChatStationInner: React.FC = () => {
         </div>
       )}
 
+      {/* BYOK Safety & Terms Modal (Luật Trí tuệ nhân tạo số 134/2025/QH15) */}
+      {showByokModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 font-retro">
+          <div className="win95-container bg-win-gray w-full max-w-lg shadow-2xl border-2 border-win-dark">
+            <div className="win95-header bg-gradient-to-r from-vapor-purple to-vapor-pink flex justify-between items-center text-white p-1.5">
+              <span className="font-bold text-xs flex items-center gap-1.5">
+                <span>🔑</span> ĐIỀU KHOẢN & BẢO VỆ API KEY CÁ NHÂN (BYOK)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowByokModal(false)}
+                className="win95-btn py-0 px-1.5 text-[10px] font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 space-y-3 bg-win-gray text-xs text-black">
+              <div className="bg-vapor-yellow/30 border-2 border-win-dark p-3 space-y-2 text-win-dark">
+                <p className="font-bold text-black uppercase text-xs">
+                  ⚠️ XÁC NHẬN TRÁCH NHIỆM KHI SỬ DỤNG KEY CÁ NHÂN:
+                </p>
+                <ul className="list-disc pl-4 space-y-1.5 text-[11px] leading-tight">
+                  <li>
+                    <strong>Gửi trực tiếp:</strong> API Key được gửi thẳng từ trình duyệt của bạn tới Google Gemini API. LovelyYellowCat <strong>không bao giờ lưu trữ khóa trên máy chủ</strong>.
+                  </li>
+                  <li>
+                    <strong>Khuyến nghị Free Tier:</strong> Để tránh rủi ro tài chính, chúng tôi khuyến cáo bạn <strong>chỉ sử dụng API Key miễn phí (Google AI Studio Free Tier - không liên kết thẻ thanh toán)</strong>.
+                  </li>
+                  <li>
+                    <strong>Miễn trừ chi phí:</strong> LovelyYellowCat không chịu trách nhiệm đối với bất kỳ chi phí phát sinh hoặc hạn mức vượt mức nào trên tài khoản Google của bạn.
+                  </li>
+                  <li>
+                    <strong>Bảo mật khóa:</strong> Bạn có trách nhiệm tự bảo vệ khóa và thu hồi khóa trên Google Cloud / AI Studio nếu nghi ngờ bị lộ.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-white border border-win-dark p-2.5">
+                <label className="flex items-start gap-2 cursor-pointer text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={byokDisclaimerChecked}
+                    onChange={(e) => setByokDisclaimerChecked(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-black leading-snug">
+                    Tôi đã đọc, hiểu và đồng ý với <strong>Điều khoản BYOK</strong> và cam kết tự chịu trách nhiệm về API Key của mình.
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-win-dark/30">
+                <button
+                  type="button"
+                  onClick={() => setShowByokModal(false)}
+                  className="win95-btn px-4 py-1.5 text-xs font-bold"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  disabled={!byokDisclaimerChecked}
+                  onClick={confirmSaveCustomApiKey}
+                  className="win95-btn px-4 py-1.5 text-xs font-bold bg-vapor-green text-black disabled:opacity-50"
+                >
+                  ✅ Đồng ý & Kích hoạt Key
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Trạng thái cần đăng nhập / bị chặn — TOÀN TRANG, chặn mọi tương tác */}
       {needsLogin && (
         <div className="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1254,7 +1350,7 @@ const AiChatStationInner: React.FC = () => {
               <div className="text-5xl">🔐</div>
               <h2 className="font-bold text-sm">VUI LÒNG ĐĂNG NHẬP ĐỂ TIẾP TỤC</h2>
               <p className="text-xs leading-relaxed max-w-md mx-auto">
-                Trạm AI yêu cầu <strong>tài khoản hoạt động</strong> (E2EE bắt buộc). Toàn bộ hội thoại được mã hóa <strong>AES-GCM 256</strong> ngay trên trình duyệt và lưu <strong>vĩnh viễn theo tài khoản</strong>. Vui lòng đăng nhập bằng Google để mở khóa.
+                Trạm AI yêu cầu <strong>tài khoản hoạt động</strong> (E2EE bắt buộc). Toàn bộ hội thoại được mã hóa <strong>AES-GCM 256</strong> ngay trên trình duyệt và lưu <strong>tối đa 6 tháng theo tài khoản</strong>. Vui lòng đăng nhập bằng Google để mở khóa.
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center">
                 <a href="/api/auth/signin" className="win95-btn px-6 py-3 bg-white font-bold no-underline text-sm flex items-center justify-center gap-2">🔑 ĐĂNG NHẬP VỚI GOOGLE</a>
@@ -1564,7 +1660,7 @@ const AiChatStationInner: React.FC = () => {
                     <div className="text-center py-16 space-y-3">
                       <p className="text-4xl">🔐</p>
                       <p className="font-bold text-sm">Phiên đang khóa — E2EE bắt buộc</p>
-                      <p className="text-xs text-win-dark max-w-md mx-auto">Lịch sử được mã hóa AES-GCM 256 và lưu vĩnh viễn theo tài khoản. Chỉ bạn với mật khẩu mới giải mã được. Admin không thể đọc (cam kết /terms).</p>
+                      <p className="text-xs text-win-dark max-w-md mx-auto">Lịch sử được mã hóa AES-GCM 256 và lưu tối đa 6 tháng theo tài khoản. Chỉ bạn với mật khẩu mới giải mã được. Admin không thể đọc (cam kết /terms & /privacy).</p>
                       <button type="button" onClick={() => setShowPassphraseModal(true)} className="win95-btn px-6 py-2 bg-vapor-purple text-white font-bold">🔓 MỞ KHÓA ĐỂ XEM</button>
                       {isE2EELoading && <p className="text-xs">⏳ Đang giải mã...</p>}
                     </div>
@@ -1591,8 +1687,13 @@ const AiChatStationInner: React.FC = () => {
                       >
                         {/* Header of message */}
                         <div className="flex items-center justify-between text-[10px] font-mono border-b pb-1 mb-1.5 border-black/10">
-                          <span className="font-bold flex items-center gap-1 text-vapor-purple">
+                          <span className="font-bold flex items-center gap-1.5 text-vapor-purple">
                             {msg.role === "user" ? "👤 BẠN" : `${activePersonaObj.icon} ${activePersonaObj.name.toUpperCase()}`}
+                            {msg.role === "model" && (
+                              <span className="text-[9px] bg-black text-vapor-green font-mono px-1 py-0.5 border border-win-dark font-bold tracking-tight">
+                                🤖 NỘI DUNG DO AI TẠO
+                              </span>
+                            )}
                           </span>
                           <div className="flex items-center gap-2 text-win-dark font-normal">
                             {msg.durationMs && <span>⚡ {msg.durationMs}ms</span>}
@@ -1788,16 +1889,26 @@ const AiChatStationInner: React.FC = () => {
                             <span>{copiedId === msg.id ? "✓ Đã Chép!" : "📋 Sao chép"}</span>
                           </button>
                           {msg.role === "model" && (
-                            <button
-                              type="button"
-                              onClick={() => handleSpeakText(msg.id, msg.content)}
-                              className={`hover:underline flex items-center gap-0.5 ${
-                                speakingId === msg.id ? "text-vapor-pink font-bold" : "text-win-darkest"
-                              }`}
-                              title="Đọc to bằng giọng nói"
-                            >
-                              <span>{speakingId === msg.id ? "⏹️ Đang Đọc..." : "🔊 Đọc to"}</span>
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleSpeakText(msg.id, msg.content)}
+                                className={`hover:underline flex items-center gap-0.5 ${
+                                  speakingId === msg.id ? "text-vapor-pink font-bold" : "text-win-darkest"
+                                }`}
+                                title="Đọc to bằng giọng nói"
+                              >
+                                <span>{speakingId === msg.id ? "⏹️ Đang Đọc..." : "🔊 Đọc to"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleReportAiMessage}
+                                className="hover:underline text-win-darkest hover:text-red-700 flex items-center gap-0.5"
+                                title="Báo cáo phản hồi AI không phù hợp hoặc sai lệch"
+                              >
+                                <span>🚩 Báo cáo</span>
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -1971,7 +2082,7 @@ const AiChatStationInner: React.FC = () => {
                     <h4 className="font-bold text-vapor-purple uppercase flex items-center gap-1">🔐 Trạng thái Mã hóa E2EE</h4>
                     <div className="text-[11px] leading-relaxed space-y-1">
                       <p><strong>Chế độ:</strong> BẮT BUỘC — mọi phiên và tin nhắn được mã hóa AES-GCM 256 trước khi lưu Supabase.</p>
-                      <p><strong>Lưu trữ:</strong> Vĩnh viễn theo tài khoản, chỉ bạn giải mã được. Admin <strong>không thể đọc</strong> (cam kết /terms).</p>
+                      <p><strong>Lưu trữ:</strong> Tối đa 6 tháng theo tài khoản (tự động xóa phiên quá hạn), chỉ bạn giải mã được. Admin <strong>không thể đọc</strong> (cam kết /terms & /privacy).</p>
                       <p><strong>Yêu cầu:</strong> Chỉ tài khoản hoạt động (không bị chặn) mới được dùng.</p>
                       <p className="flex items-center gap-2">Trạng thái: {isUnlocked ? <span className="bg-vapor-green text-black px-1 font-bold">🔓 ĐÃ MỞ KHÓA</span> : <span className="bg-red-600 text-white px-1 font-bold">🔒 ĐANG KHÓA</span>}
                         {isUnlocked && <button type="button" onClick={handleLock} className="win95-btn text-[10px] py-1 px-2 bg-red-100 text-red-700">Khóa lại</button>}
@@ -2049,7 +2160,8 @@ const AiChatStationInner: React.FC = () => {
                       </a>
                     </div>
                     <p className="text-[11px] text-black leading-relaxed font-body">
-                      Trạm AI cấp Key hệ thống miễn phí giới hạn xuống trình duyệt để request đi thẳng tới Google, không qua proxy AI. Người dùng có thể xem key này trong DevTools. Bạn vẫn có thể nhập key riêng để dùng hạn mức riêng; key riêng chỉ lưu trên thiết bị.
+                      Trạm AI cho phép dùng Key hệ thống hoặc <strong>Key cá nhân (BYOK)</strong> để request đi thẳng tới Google. Key riêng chỉ lưu trong trình duyệt của bạn, máy chủ không bao giờ lưu. 
+                      <strong className="text-red-700"> Khuyến nghị:</strong> Bạn nên dùng <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" className="underline text-blue-700 font-bold">API Key miễn phí (Google AI Studio Free Tier)</a> để không phát sinh chi phí ngoài ý muốn. <a href="/ai-disclosure" target="_blank" className="underline text-vapor-purple font-bold">Xem Điều khoản BYOK ↗</a>
                     </p>
                     <div className="flex gap-2">
                       <input
